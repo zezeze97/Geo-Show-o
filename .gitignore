@@ -1,0 +1,5 @@
+**/*.pyc
+wandb/*
+outputs/
+pretrained_ckpt/
+data/

@@ -15,6 +15,7 @@
 
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
+os.environ["WANDB_MODE"]="offline"
 from PIL import Image
 from tqdm import tqdm
 import numpy as np
@@ -70,7 +71,7 @@ if __name__ == '__main__':
     vq_model.requires_grad_(False)
     vq_model.eval()
 
-    vision_tower_name = "openai/clip-vit-large-patch14-336"
+    vision_tower_name = "pretrained_ckpt/clip-vit-large-patch14-336" # "openai/clip-vit-large-patch14-336"
     vision_tower =  CLIPVisionTower(vision_tower_name).to(device)
     clip_image_processor = CLIPImageProcessor.from_pretrained(vision_tower_name)
 

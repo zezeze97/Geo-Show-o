@@ -16,6 +16,7 @@
 import os
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
+os.environ["WANDB_MODE"]="offline"
 from PIL import Image
 from tqdm import tqdm
 import numpy as np
