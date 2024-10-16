@@ -5,7 +5,7 @@ wandb:
 
 experiment:
     project: "training"
-    name: "show-o-finetuning"
+    name: "show-o-finetuning-512x512"
     output_dir: "outputs/show-o-finetuning-512x512"
     # max_train_examples_t2i: 20000000
     # max_train_examples_mmu: 40000000

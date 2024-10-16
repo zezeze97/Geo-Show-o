@@ -1,0 +1,637 @@
+[2024-10-16 15:34:37,056] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2024-10-16 15:34:56,514] torch.distributed.run: [WARNING] 
+[2024-10-16 15:34:56,514] torch.distributed.run: [WARNING] *****************************************
+[2024-10-16 15:34:56,514] torch.distributed.run: [WARNING] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+[2024-10-16 15:34:56,514] torch.distributed.run: [WARNING] *****************************************
+[2024-10-16 15:35:16,453] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2024-10-16 15:35:16,459] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2024-10-16 15:35:16,466] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2024-10-16 15:35:16,469] [INFO] [real_accelerator.py:203:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-devel package with yum
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+[93m [WARNING] [0m Please specify the CUTLASS repo directory as environment variable $CUTLASS_PATH
+[93m [WARNING] [0m async_io: please install the libaio-devel package with yum
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+[93m [WARNING] [0m Please specify the CUTLASS repo directory as environment variable $CUTLASS_PATH
+[93m [WARNING] [0m async_io: please install the libaio-devel package with yum
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+[93m [WARNING] [0m Please specify the CUTLASS repo directory as environment variable $CUTLASS_PATH
+[93m [WARNING] [0m async_io requires the dev libaio .so object and headers but these were not found.
+[93m [WARNING] [0m async_io: please install the libaio-devel package with yum
+[93m [WARNING] [0m If libaio is already installed (perhaps from source), try setting the CFLAGS and LDFLAGS environment variables to where it can be found.
+[93m [WARNING] [0m Please specify the CUTLASS repo directory as environment variable $CUTLASS_PATH
+[93m [WARNING] [0m sparse_attn requires a torch version >= 1.5 and < 2.0 but detected 2.2
+[93m [WARNING] [0m using untested triton version (2.2.0), only 1.0.0 is known to be compatible
+[93m [WARNING] [0m sparse_attn requires a torch version >= 1.5 and < 2.0 but detected 2.2
+[93m [WARNING] [0m using untested triton version (2.2.0), only 1.0.0 is known to be compatible
+[93m [WARNING] [0m sparse_attn requires a torch version >= 1.5 and < 2.0 but detected 2.2
+[93m [WARNING] [0m using untested triton version (2.2.0), only 1.0.0 is known to be compatible
+[93m [WARNING] [0m sparse_attn requires a torch version >= 1.5 and < 2.0 but detected 2.2
+[93m [WARNING] [0m using untested triton version (2.2.0), only 1.0.0 is known to be compatible
+/lustre/home/2001110054/miniconda3/envs/show-o/lib/python3.10/site-packages/accelerate/utils/dataclasses.py:610: UserWarning: DeepSpeed Zero3 Init flag is only applicable for ZeRO Stage 3. Setting it to False.
+  warnings.warn("DeepSpeed Zero3 Init flag is only applicable for ZeRO Stage 3. Setting it to False.")
+/lustre/home/2001110054/miniconda3/envs/show-o/lib/python3.10/site-packages/accelerate/utils/dataclasses.py:610: UserWarning: DeepSpeed Zero3 Init flag is only applicable for ZeRO Stage 3. Setting it to False.
+  warnings.warn("DeepSpeed Zero3 Init flag is only applicable for ZeRO Stage 3. Setting it to False.")
+/lustre/home/2001110054/miniconda3/envs/show-o/lib/python3.10/site-packages/accelerate/utils/dataclasses.py:610: UserWarning: DeepSpeed Zero3 Init flag is only applicable for ZeRO Stage 3. Setting it to False.
+  warnings.warn("DeepSpeed Zero3 Init flag is only applicable for ZeRO Stage 3. Setting it to False.")
+/lustre/home/2001110054/miniconda3/envs/show-o/lib/python3.10/site-packages/accelerate/utils/dataclasses.py:610: UserWarning: DeepSpeed Zero3 Init flag is only applicable for ZeRO Stage 3. Setting it to False.
+  warnings.warn("DeepSpeed Zero3 Init flag is only applicable for ZeRO Stage 3. Setting it to False.")
+[2024-10-16 15:35:23,852] [INFO] [comm.py:637:init_distributed] cdb=None
+[2024-10-16 15:35:23,852] [INFO] [comm.py:637:init_distributed] cdb=None
+[2024-10-16 15:35:23,854] [INFO] [comm.py:637:init_distributed] cdb=None
+[2024-10-16 15:35:23,858] [INFO] [comm.py:637:init_distributed] cdb=None
+[2024-10-16 15:35:23,858] [INFO] [comm.py:668:init_distributed] Initializing TorchBackend in DeepSpeed with backend nccl
+10/16/2024 15:35:23 - INFO - __main__ - Distributed environment: DEEPSPEED  Backend: nccl
+Num processes: 4
+Process index: 0
+Local process index: 0
+Device: cuda:0
+
+Mixed precision type: bf16
+ds_config: {'train_batch_size': 'auto', 'train_micro_batch_size_per_gpu': 8, 'gradient_accumulation_steps': 1, 'zero_optimization': {'stage': 2, 'offload_optimizer': {'device': 'none', 'nvme_path': None}, 'offload_param': {'device': 'none', 'nvme_path': None}, 'stage3_gather_16bit_weights_on_model_save': False}, 'steps_per_print': inf, 'bf16': {'enabled': True}, 'fp16': {'enabled': False}}
+
+10/16/2024 15:35:24 - INFO - __main__ - Distributed environment: DEEPSPEED  Backend: nccl
+Num processes: 4
+Process index: 3
+Local process index: 3
+Device: cuda:3
+
+Mixed precision type: bf16
+ds_config: {'train_batch_size': 'auto', 'train_micro_batch_size_per_gpu': 8, 'gradient_accumulation_steps': 1, 'zero_optimization': {'stage': 2, 'offload_optimizer': {'device': 'none', 'nvme_path': None}, 'offload_param': {'device': 'none', 'nvme_path': None}, 'stage3_gather_16bit_weights_on_model_save': False}, 'steps_per_print': inf, 'bf16': {'enabled': True}, 'fp16': {'enabled': False}}
+
+10/16/2024 15:35:24 - INFO - __main__ - Distributed environment: DEEPSPEED  Backend: nccl
+Num processes: 4
+Process index: 1
+Local process index: 1
+Device: cuda:1
+
+Mixed precision type: bf16
+ds_config: {'train_batch_size': 'auto', 'train_micro_batch_size_per_gpu': 8, 'gradient_accumulation_steps': 1, 'zero_optimization': {'stage': 2, 'offload_optimizer': {'device': 'none', 'nvme_path': None}, 'offload_param': {'device': 'none', 'nvme_path': None}, 'stage3_gather_16bit_weights_on_model_save': False}, 'steps_per_print': inf, 'bf16': {'enabled': True}, 'fp16': {'enabled': False}}
+
+10/16/2024 15:35:24 - INFO - __main__ - Distributed environment: DEEPSPEED  Backend: nccl
+Num processes: 4
+Process index: 2
+Local process index: 2
+Device: cuda:2
+
+Mixed precision type: bf16
+ds_config: {'train_batch_size': 'auto', 'train_micro_batch_size_per_gpu': 8, 'gradient_accumulation_steps': 1, 'zero_optimization': {'stage': 2, 'offload_optimizer': {'device': 'none', 'nvme_path': None}, 'offload_param': {'device': 'none', 'nvme_path': None}, 'stage3_gather_16bit_weights_on_model_save': False}, 'steps_per_print': inf, 'bf16': {'enabled': True}, 'fp16': {'enabled': False}}
+
+special tokens : 
+ special tokens : 
+ special tokens : 
+ {'<|soi|>': tensor([50296]), '<|eoi|>': tensor([50297]), '<|sov|>': tensor([50298]), '<|eov|>': tensor([50299]), '<|t2i|>': tensor([50300]), '<|mmu|>': tensor([50301]), '<|t2v|>': tensor([50302]), '<|v2v|>': tensor([50303]), '<|lvg|>': tensor([50304]), '<|sot|>': tensor([50256]), '<|eot|>': tensor([50256]), '<|pad|>': tensor([50295])}
+{'<|soi|>': tensor([50296]), '<|eoi|>': tensor([50297]), '<|sov|>': tensor([50298]), '<|eov|>': tensor([50299]), '<|t2i|>': tensor([50300]), '<|mmu|>': tensor([50301]), '<|t2v|>': tensor([50302]), '<|v2v|>': tensor([50303]), '<|lvg|>': tensor([50304]), '<|sot|>': tensor([50256]), '<|eot|>': tensor([50256]), '<|pad|>': tensor([50295])}{'<|soi|>': tensor([50296]), '<|eoi|>': tensor([50297]), '<|sov|>': tensor([50298]), '<|eov|>': tensor([50299]), '<|t2i|>': tensor([50300]), '<|mmu|>': tensor([50301]), '<|t2v|>': tensor([50302]), '<|v2v|>': tensor([50303]), '<|lvg|>': tensor([50304]), '<|sot|>': tensor([50256]), '<|eot|>': tensor([50256]), '<|pad|>': tensor([50295])}
+
+Working with z of shape (1, 13, 16, 16) = 3328 dimensions.
+Working with z of shape (1, 13, 16, 16) = 3328 dimensions.
+Working with z of shape (1, 13, 16, 16) = 3328 dimensions.
+Look-up free quantizer with codebook size: 8192
+Look-up free quantizer with codebook size: 8192
+Look-up free quantizer with codebook size: 8192
+The config attributes {'mask_token_id': 58497} were passed to Showo, but are not expected and will be ignored. Please verify your config.json configuration file.
+The config attributes {'mask_token_id': 58497} were passed to Showo, but are not expected and will be ignored. Please verify your config.json configuration file.
+The config attributes {'mask_token_id': 58497} were passed to Showo, but are not expected and will be ignored. Please verify your config.json configuration file.
+/lustre/home/2001110054/miniconda3/envs/show-o/lib/python3.10/site-packages/huggingface_hub/file_download.py:1132: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
+  warnings.warn(
+/lustre/home/2001110054/miniconda3/envs/show-o/lib/python3.10/site-packages/huggingface_hub/file_download.py:1132: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
+  warnings.warn(
+/lustre/home/2001110054/miniconda3/envs/show-o/lib/python3.10/site-packages/huggingface_hub/file_download.py:1132: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
+  warnings.warn(
+attention implementation:  sdpaattention implementation: 
+ sdpa
+attention implementation:  sdpa
+/lustre/home/2001110054/Show-o/models/modeling_showo.py:49: FutureWarning: Accessing config attribute `w_clip_vit` directly via 'Showo' object attribute is deprecated. Please access 'w_clip_vit' over 'Showo's config object instead, e.g. 'unet.config.w_clip_vit'.
+  if self.w_clip_vit:
+/lustre/home/2001110054/Show-o/models/modeling_showo.py:49: FutureWarning: Accessing config attribute `w_clip_vit` directly via 'Showo' object attribute is deprecated. Please access 'w_clip_vit' over 'Showo's config object instead, e.g. 'unet.config.w_clip_vit'.
+  if self.w_clip_vit:
+/lustre/home/2001110054/Show-o/models/modeling_showo.py:49: FutureWarning: Accessing config attribute `w_clip_vit` directly via 'Showo' object attribute is deprecated. Please access 'w_clip_vit' over 'Showo's config object instead, e.g. 'unet.config.w_clip_vit'.
+  if self.w_clip_vit:
+wandb: Tracking run with wandb version 0.17.0
+wandb: W&B syncing is set to `offline` in this directory.  
+wandb: Run `wandb online` or set WANDB_MODE=online to enable cloud syncing.
+10/16/2024 15:35:38 - INFO - root - Saving config to outputs/show-o-finetuning/config.yaml
+10/16/2024 15:35:38 - INFO - __main__ - Loading models and optimizer
+special tokens : 
+ {'<|soi|>': tensor([50296]), '<|eoi|>': tensor([50297]), '<|sov|>': tensor([50298]), '<|eov|>': tensor([50299]), '<|t2i|>': tensor([50300]), '<|mmu|>': tensor([50301]), '<|t2v|>': tensor([50302]), '<|v2v|>': tensor([50303]), '<|lvg|>': tensor([50304]), '<|sot|>': tensor([50256]), '<|eot|>': tensor([50256]), '<|pad|>': tensor([50295])}
+Working with z of shape (1, 13, 16, 16) = 3328 dimensions.
+Look-up free quantizer with codebook size: 8192
+The config attributes {'mask_token_id': 58497} were passed to Showo, but are not expected and will be ignored. Please verify your config.json configuration file.
+/lustre/home/2001110054/miniconda3/envs/show-o/lib/python3.10/site-packages/huggingface_hub/file_download.py:1132: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
+  warnings.warn(
+attention implementation:  sdpa
+/lustre/home/2001110054/Show-o/models/modeling_showo.py:49: FutureWarning: Accessing config attribute `w_clip_vit` directly via 'Showo' object attribute is deprecated. Please access 'w_clip_vit' over 'Showo's config object instead, e.g. 'unet.config.w_clip_vit'.
+  if self.w_clip_vit:
+/lustre/home/2001110054/Show-o/training/finetuning.py:206: FutureWarning: Accessing config attribute `mask_token_id` directly via 'Showo' object attribute is deprecated. Please access 'mask_token_id' over 'Showo's config object instead, e.g. 'unet.config.mask_token_id'.
+  mask_id = model.mask_token_id
+/lustre/home/2001110054/Show-o/training/finetuning.py:206: FutureWarning: Accessing config attribute `mask_token_id` directly via 'Showo' object attribute is deprecated. Please access 'mask_token_id' over 'Showo's config object instead, e.g. 'unet.config.mask_token_id'.
+  mask_id = model.mask_token_id
+/lustre/home/2001110054/Show-o/training/finetuning.py:206: FutureWarning: Accessing config attribute `mask_token_id` directly via 'Showo' object attribute is deprecated. Please access 'mask_token_id' over 'Showo's config object instead, e.g. 'unet.config.mask_token_id'.
+  mask_id = model.mask_token_id
+/lustre/home/2001110054/Show-o/training/finetuning.py:206: FutureWarning: Accessing config attribute `mask_token_id` directly via 'Showo' object attribute is deprecated. Please access 'mask_token_id' over 'Showo's config object instead, e.g. 'unet.config.mask_token_id'.
+  mask_id = model.mask_token_id
+10/16/2024 15:36:02 - INFO - __main__ - Creating dataloaders and lr_scheduler
+10/16/2024 15:36:02 - INFO - __main__ - Preparing model, optimizer and dataloaders
+[2024-10-16 15:36:02,671] [INFO] [logging.py:96:log_dist] [Rank 0] DeepSpeed info: version=0.14.2, git-hash=unknown, git-branch=unknown
+[2024-10-16 15:36:03,428] [INFO] [logging.py:96:log_dist] [Rank 0] DeepSpeed Flops Profiler Enabled: False
+[2024-10-16 15:36:03,429] [INFO] [logging.py:96:log_dist] [Rank 0] Using client Optimizer as basic optimizer
+[2024-10-16 15:36:03,429] [INFO] [logging.py:96:log_dist] [Rank 0] Removing param_group that has no 'params' in the basic Optimizer
+[2024-10-16 15:36:03,474] [INFO] [logging.py:96:log_dist] [Rank 0] DeepSpeed Basic Optimizer = AdamW
+[2024-10-16 15:36:03,474] [INFO] [utils.py:56:is_zero_supported_optimizer] Checking ZeRO support for optimizer=AdamW type=<class 'torch.optim.adamw.AdamW'>
+[2024-10-16 15:36:03,474] [INFO] [logging.py:96:log_dist] [Rank 0] Creating torch.bfloat16 ZeRO stage 2 optimizer
+[2024-10-16 15:36:03,475] [INFO] [stage_1_and_2.py:148:__init__] Reduce bucket size 500,000,000
+[2024-10-16 15:36:03,475] [INFO] [stage_1_and_2.py:149:__init__] Allgather bucket size 500,000,000
+[2024-10-16 15:36:03,475] [INFO] [stage_1_and_2.py:150:__init__] CPU Offload: False
+[2024-10-16 15:36:03,475] [INFO] [stage_1_and_2.py:151:__init__] Round robin gradient partitioning: False
+[2024-10-16 15:36:05,759] [INFO] [utils.py:779:see_memory_usage] Before initializing optimizer states
+[2024-10-16 15:36:05,766] [INFO] [utils.py:780:see_memory_usage] MA 4.41 GB         Max_MA 4.41 GB         CA 4.46 GB         Max_CA 4 GB 
+[2024-10-16 15:36:05,766] [INFO] [utils.py:787:see_memory_usage] CPU Virtual Memory:  used = 22.51 GB, percent = 4.5%
+[2024-10-16 15:36:06,028] [INFO] [utils.py:779:see_memory_usage] After initializing optimizer states
+[2024-10-16 15:36:06,029] [INFO] [utils.py:780:see_memory_usage] MA 4.41 GB         Max_MA 5.76 GB         CA 5.81 GB         Max_CA 6 GB 
+[2024-10-16 15:36:06,029] [INFO] [utils.py:787:see_memory_usage] CPU Virtual Memory:  used = 22.65 GB, percent = 4.5%
+[2024-10-16 15:36:06,030] [INFO] [stage_1_and_2.py:543:__init__] optimizer state initialized
+[2024-10-16 15:36:06,231] [INFO] [utils.py:779:see_memory_usage] After initializing ZeRO optimizer
+[2024-10-16 15:36:06,232] [INFO] [utils.py:780:see_memory_usage] MA 4.41 GB         Max_MA 4.41 GB         CA 5.81 GB         Max_CA 6 GB 
+[2024-10-16 15:36:06,232] [INFO] [utils.py:787:see_memory_usage] CPU Virtual Memory:  used = 22.78 GB, percent = 4.5%
+[2024-10-16 15:36:06,235] [INFO] [logging.py:96:log_dist] [Rank 0] DeepSpeed Final Optimizer = AdamW
+[2024-10-16 15:36:06,235] [INFO] [logging.py:96:log_dist] [Rank 0] DeepSpeed using client LR scheduler
+[2024-10-16 15:36:06,235] [INFO] [logging.py:96:log_dist] [Rank 0] DeepSpeed LR Scheduler = None
+[2024-10-16 15:36:06,235] [INFO] [logging.py:96:log_dist] [Rank 0] step=0, skipped=0, lr=[0.0, 0.0], mom=[(0.9, 0.999), (0.9, 0.999)]
+[2024-10-16 15:36:06,236] [INFO] [config.py:996:print] DeepSpeedEngine configuration:
+[2024-10-16 15:36:06,236] [INFO] [config.py:1000:print]   activation_checkpointing_config  {
+    "partition_activations": false, 
+    "contiguous_memory_optimization": false, 
+    "cpu_checkpointing": false, 
+    "number_checkpoints": null, 
+    "synchronize_checkpoint_boundary": false, 
+    "profile": false
+}
+[2024-10-16 15:36:06,236] [INFO] [config.py:1000:print]   aio_config ................... {'block_size': 1048576, 'queue_depth': 8, 'thread_count': 1, 'single_submit': False, 'overlap_events': True}
+[2024-10-16 15:36:06,236] [INFO] [config.py:1000:print]   amp_enabled .................. False
+[2024-10-16 15:36:06,236] [INFO] [config.py:1000:print]   amp_params ................... False
+[2024-10-16 15:36:06,237] [INFO] [config.py:1000:print]   autotuning_config ............ {
+    "enabled": false, 
+    "start_step": null, 
+    "end_step": null, 
+    "metric_path": null, 
+    "arg_mappings": null, 
+    "metric": "throughput", 
+    "model_info": null, 
+    "results_dir": "autotuning_results", 
+    "exps_dir": "autotuning_exps", 
+    "overwrite": true, 
+    "fast": true, 
+    "start_profile_step": 3, 
+    "end_profile_step": 5, 
+    "tuner_type": "gridsearch", 
+    "tuner_early_stopping": 5, 
+    "tuner_num_trials": 50, 
+    "model_info_path": null, 
+    "mp_size": 1, 
+    "max_train_batch_size": null, 
+    "min_train_batch_size": 1, 
+    "max_train_micro_batch_size_per_gpu": 1.024000e+03, 
+    "min_train_micro_batch_size_per_gpu": 1, 
+    "num_tuning_micro_batch_sizes": 3
+}
+[2024-10-16 15:36:06,237] [INFO] [config.py:1000:print]   bfloat16_enabled ............. True
+[2024-10-16 15:36:06,237] [INFO] [config.py:1000:print]   bfloat16_immediate_grad_update  False
+[2024-10-16 15:36:06,237] [INFO] [config.py:1000:print]   checkpoint_parallel_write_pipeline  False
+[2024-10-16 15:36:06,237] [INFO] [config.py:1000:print]   checkpoint_tag_validation_enabled  True
+[2024-10-16 15:36:06,237] [INFO] [config.py:1000:print]   checkpoint_tag_validation_fail  False
+[2024-10-16 15:36:06,237] [INFO] [config.py:1000:print]   comms_config ................. <deepspeed.comm.config.DeepSpeedCommsConfig object at 0x7f516dac49a0>
+[2024-10-16 15:36:06,237] [INFO] [config.py:1000:print]   communication_data_type ...... None
+[2024-10-16 15:36:06,237] [INFO] [config.py:1000:print]   compile_config ............... enabled=False backend='inductor' kwargs={}
+[2024-10-16 15:36:06,237] [INFO] [config.py:1000:print]   compression_config ........... {'weight_quantization': {'shared_parameters': {'enabled': False, 'quantizer_kernel': False, 'schedule_offset': 0, 'quantize_groups': 1, 'quantize_verbose': False, 'quantization_type': 'symmetric', 'quantize_weight_in_forward': False, 'rounding': 'nearest', 'fp16_mixed_quantize': False, 'quantize_change_ratio': 0.001}, 'different_groups': {}}, 'activation_quantization': {'shared_parameters': {'enabled': False, 'quantization_type': 'symmetric', 'range_calibration': 'dynamic', 'schedule_offset': 1000}, 'different_groups': {}}, 'sparse_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'row_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'head_pruning': {'shared_parameters': {'enabled': False, 'method': 'topk', 'schedule_offset': 1000}, 'different_groups': {}}, 'channel_pruning': {'shared_parameters': {'enabled': False, 'method': 'l1', 'schedule_offset': 1000}, 'different_groups': {}}, 'layer_reduction': {'enabled': False}}
+[2024-10-16 15:36:06,238] [INFO] [config.py:1000:print]   curriculum_enabled_legacy .... False
+[2024-10-16 15:36:06,238] [INFO] [config.py:1000:print]   curriculum_params_legacy ..... False
+[2024-10-16 15:36:06,238] [INFO] [config.py:1000:print]   data_efficiency_config ....... {'enabled': False, 'seed': 1234, 'data_sampling': {'enabled': False, 'num_epochs': 1000, 'num_workers': 0, 'curriculum_learning': {'enabled': False}}, 'data_routing': {'enabled': False, 'random_ltd': {'enabled': False, 'layer_token_lr_schedule': {'enabled': False}}}}
+[2024-10-16 15:36:06,238] [INFO] [config.py:1000:print]   data_efficiency_enabled ...... False
+[2024-10-16 15:36:06,238] [INFO] [config.py:1000:print]   dataloader_drop_last ......... False
+[2024-10-16 15:36:06,238] [INFO] [config.py:1000:print]   disable_allgather ............ False
+[2024-10-16 15:36:06,238] [INFO] [config.py:1000:print]   dump_state ................... False
+[2024-10-16 15:36:06,238] [INFO] [config.py:1000:print]   dynamic_loss_scale_args ...... None
+[2024-10-16 15:36:06,238] [INFO] [config.py:1000:print]   eigenvalue_enabled ........... False
+[2024-10-16 15:36:06,238] [INFO] [config.py:1000:print]   eigenvalue_gas_boundary_resolution  1
+[2024-10-16 15:36:06,238] [INFO] [config.py:1000:print]   eigenvalue_layer_name ........ bert.encoder.layer
+[2024-10-16 15:36:06,238] [INFO] [config.py:1000:print]   eigenvalue_layer_num ......... 0
+[2024-10-16 15:36:06,238] [INFO] [config.py:1000:print]   eigenvalue_max_iter .......... 100
+[2024-10-16 15:36:06,238] [INFO] [config.py:1000:print]   eigenvalue_stability ......... 1e-06
+[2024-10-16 15:36:06,238] [INFO] [config.py:1000:print]   eigenvalue_tol ............... 0.01
+[2024-10-16 15:36:06,238] [INFO] [config.py:1000:print]   eigenvalue_verbose ........... False
+[2024-10-16 15:36:06,239] [INFO] [config.py:1000:print]   elasticity_enabled ........... False
+[2024-10-16 15:36:06,239] [INFO] [config.py:1000:print]   flops_profiler_config ........ {
+    "enabled": false, 
+    "recompute_fwd_factor": 0.0, 
+    "profile_step": 1, 
+    "module_depth": -1, 
+    "top_modules": 1, 
+    "detailed": true, 
+    "output_file": null
+}
+[2024-10-16 15:36:06,239] [INFO] [config.py:1000:print]   fp16_auto_cast ............... None
+[2024-10-16 15:36:06,239] [INFO] [config.py:1000:print]   fp16_enabled ................. False
+[2024-10-16 15:36:06,239] [INFO] [config.py:1000:print]   fp16_master_weights_and_gradients  False
+[2024-10-16 15:36:06,239] [INFO] [config.py:1000:print]   global_rank .................. 0
+[2024-10-16 15:36:06,239] [INFO] [config.py:1000:print]   grad_accum_dtype ............. None
+[2024-10-16 15:36:06,239] [INFO] [config.py:1000:print]   gradient_accumulation_steps .. 1
+[2024-10-16 15:36:06,239] [INFO] [config.py:1000:print]   gradient_clipping ............ 0.0
+[2024-10-16 15:36:06,239] [INFO] [config.py:1000:print]   gradient_predivide_factor .... 1.0
+[2024-10-16 15:36:06,239] [INFO] [config.py:1000:print]   graph_harvesting ............. False
+[2024-10-16 15:36:06,239] [INFO] [config.py:1000:print]   hybrid_engine ................ enabled=False max_out_tokens=512 inference_tp_size=1 release_inference_cache=False pin_parameters=True tp_gather_partition_size=8
+[2024-10-16 15:36:06,239] [INFO] [config.py:1000:print]   initial_dynamic_scale ........ 1
+[2024-10-16 15:36:06,239] [INFO] [config.py:1000:print]   load_universal_checkpoint .... False
+[2024-10-16 15:36:06,239] [INFO] [config.py:1000:print]   loss_scale ................... 1.0
+[2024-10-16 15:36:06,240] [INFO] [config.py:1000:print]   memory_breakdown ............. False
+[2024-10-16 15:36:06,240] [INFO] [config.py:1000:print]   mics_hierarchial_params_gather  False
+[2024-10-16 15:36:06,240] [INFO] [config.py:1000:print]   mics_shard_size .............. -1
+[2024-10-16 15:36:06,240] [INFO] [config.py:1000:print]   monitor_config ............... tensorboard=TensorBoardConfig(enabled=False, output_path='', job_name='DeepSpeedJobName') wandb=WandbConfig(enabled=False, group=None, team=None, project='deepspeed') csv_monitor=CSVConfig(enabled=False, output_path='', job_name='DeepSpeedJobName') enabled=False
+[2024-10-16 15:36:06,240] [INFO] [config.py:1000:print]   nebula_config ................ {
+    "enabled": false, 
+    "persistent_storage_path": null, 
+    "persistent_time_interval": 100, 
+    "num_of_version_in_retention": 2, 
+    "enable_nebula_load": true, 
+    "load_path": null
+}
+[2024-10-16 15:36:06,240] [INFO] [config.py:1000:print]   optimizer_legacy_fusion ...... False
+[2024-10-16 15:36:06,240] [INFO] [config.py:1000:print]   optimizer_name ............... None
+[2024-10-16 15:36:06,240] [INFO] [config.py:1000:print]   optimizer_params ............. None
+[2024-10-16 15:36:06,240] [INFO] [config.py:1000:print]   pipeline ..................... {'stages': 'auto', 'partition': 'best', 'seed_layers': False, 'activation_checkpoint_interval': 0, 'pipe_partitioned': True, 'grad_partitioned': True}
+[2024-10-16 15:36:06,240] [INFO] [config.py:1000:print]   pld_enabled .................. False
+[2024-10-16 15:36:06,240] [INFO] [config.py:1000:print]   pld_params ................... False
+[2024-10-16 15:36:06,240] [INFO] [config.py:1000:print]   prescale_gradients ........... False
+[2024-10-16 15:36:06,240] [INFO] [config.py:1000:print]   scheduler_name ............... None
+[2024-10-16 15:36:06,240] [INFO] [config.py:1000:print]   scheduler_params ............. None
+[2024-10-16 15:36:06,241] [INFO] [config.py:1000:print]   seq_parallel_communication_data_type  torch.float32
+[2024-10-16 15:36:06,241] [INFO] [config.py:1000:print]   sparse_attention ............. None
+[2024-10-16 15:36:06,241] [INFO] [config.py:1000:print]   sparse_gradients_enabled ..... False
+[2024-10-16 15:36:06,241] [INFO] [config.py:1000:print]   steps_per_print .............. inf
+[2024-10-16 15:36:06,241] [INFO] [config.py:1000:print]   train_batch_size ............. 32
+[2024-10-16 15:36:06,241] [INFO] [config.py:1000:print]   train_micro_batch_size_per_gpu  8
+[2024-10-16 15:36:06,241] [INFO] [config.py:1000:print]   use_data_before_expert_parallel_  False
+[2024-10-16 15:36:06,241] [INFO] [config.py:1000:print]   use_node_local_storage ....... False
+[2024-10-16 15:36:06,241] [INFO] [config.py:1000:print]   wall_clock_breakdown ......... False
+[2024-10-16 15:36:06,241] [INFO] [config.py:1000:print]   weight_quantization_config ... None
+[2024-10-16 15:36:06,241] [INFO] [config.py:1000:print]   world_size ................... 4
+[2024-10-16 15:36:06,241] [INFO] [config.py:1000:print]   zero_allow_untested_optimizer  True
+[2024-10-16 15:36:06,241] [INFO] [config.py:1000:print]   zero_config .................. stage=2 contiguous_gradients=True reduce_scatter=True reduce_bucket_size=500,000,000 use_multi_rank_bucket_allreduce=True allgather_partitions=True allgather_bucket_size=500,000,000 overlap_comm=False load_from_fp32_weights=True elastic_checkpoint=False offload_param=DeepSpeedZeroOffloadParamConfig(device='none', nvme_path=None, buffer_count=5, buffer_size=100,000,000, max_in_cpu=1,000,000,000, pin_memory=False) offload_optimizer=DeepSpeedZeroOffloadOptimizerConfig(device='none', nvme_path=None, buffer_count=4, pin_memory=False, pipeline=False, pipeline_read=False, pipeline_write=False, fast_init=False, ratio=1.0) sub_group_size=1,000,000,000 cpu_offload_param=None cpu_offload_use_pin_memory=None cpu_offload=None prefetch_bucket_size=50,000,000 param_persistence_threshold=100,000 model_persistence_threshold=sys.maxsize max_live_parameters=1,000,000,000 max_reuse_distance=1,000,000,000 gather_16bit_weights_on_model_save=False stage3_gather_fp16_weights_on_model_save=False ignore_unused_parameters=True legacy_stage1=False round_robin_gradients=False zero_hpz_partition_size=1 zero_quantized_weights=False zero_quantized_nontrainable_weights=False zero_quantized_gradients=False mics_shard_size=-1 mics_hierarchical_params_gather=False memory_efficient_linear=True pipeline_loading_checkpoint=False override_module_apply=True
+[2024-10-16 15:36:06,241] [INFO] [config.py:1000:print]   zero_enabled ................. True
+[2024-10-16 15:36:06,241] [INFO] [config.py:1000:print]   zero_force_ds_cpu_optimizer .. True
+[2024-10-16 15:36:06,242] [INFO] [config.py:1000:print]   zero_optimization_stage ...... 2
+[2024-10-16 15:36:06,242] [INFO] [config.py:986:print_user_config]   json = {
+    "train_batch_size": 32, 
+    "train_micro_batch_size_per_gpu": 8, 
+    "gradient_accumulation_steps": 1, 
+    "zero_optimization": {
+        "stage": 2, 
+        "offload_optimizer": {
+            "device": "none", 
+            "nvme_path": null
+        }, 
+        "offload_param": {
+            "device": "none", 
+            "nvme_path": null
+        }, 
+        "stage3_gather_16bit_weights_on_model_save": false
+    }, 
+    "steps_per_print": inf, 
+    "bf16": {
+        "enabled": true
+    }, 
+    "fp16": {
+        "enabled": false
+    }, 
+    "zero_allow_untested_optimizer": true
+}
+10/16/2024 15:36:06 - INFO - __main__ - ***** Running training *****
+10/16/2024 15:36:06 - INFO - __main__ -   Instantaneous batch size per device = 8
+10/16/2024 15:36:06 - INFO - __main__ -   Total train batch size (w. parallel, distributed & accumulation) = 128
+10/16/2024 15:36:06 - INFO - __main__ -   Gradient Accumulation steps = 4
+10/16/2024 15:36:16 - INFO - __main__ - Input ids: tensor([[50295, 50295, 50295,  ..., 58497, 52654, 50297],
+        [50295, 50295, 50295,  ..., 58497, 52653, 50297],
+        [50295, 50295, 50295,  ..., 58497, 52650, 50297],
+        ...,
+        [50301, 50296, 52523,  ..., 50295, 50295, 50295],
+        [50301, 50296, 52524,  ..., 50295, 50295, 50295],
+        [50301, 50296, 52523,  ..., 50295, 50295, 50295]], device='cuda:0')
+10/16/2024 15:36:16 - INFO - __main__ - Labels: tensor([[ -100,  -100,  -100,  ..., 58027,  -100, 50297],
+        [ -100,  -100,  -100,  ..., 53435,  -100, 50297],
+        [ -100,  -100,  -100,  ..., 52650,  -100, 50297],
+        ...,
+        [ -100,  -100,  -100,  ...,  -100,  -100,  -100],
+        [ -100,  -100,  -100,  ...,  -100,  -100,  -100],
+        [ -100,  -100,  -100,  ...,  -100,  -100,  -100]], device='cuda:0')
+10/16/2024 15:37:54 - INFO - __main__ - Step: 50 Loss_t2i: 5.3639 Loss_mmu: 3.7868 Loss_lm: 3.6938 Data (t): 0.0006, 16.25/s/gpu Batch (t): 1.9691 LR: 0.000000
+10/16/2024 15:39:32 - INFO - __main__ - Step: 100 Loss_t2i: 7.6451 Loss_mmu: 3.5573 Loss_lm: 3.8085 Data (t): 0.0005, 16.35/s/gpu Batch (t): 1.9567 LR: 0.000000
+10/16/2024 15:41:10 - INFO - __main__ - Step: 150 Loss_t2i: 3.9647 Loss_mmu: 3.2647 Loss_lm: 3.1665 Data (t): 0.0007, 16.30/s/gpu Batch (t): 1.9635 LR: 0.000001
+10/16/2024 15:42:48 - INFO - __main__ - Step: 200 Loss_t2i: 3.8230 Loss_mmu: 2.3304 Loss_lm: 2.7896 Data (t): 0.0008, 16.31/s/gpu Batch (t): 1.9625 LR: 0.000001
+10/16/2024 15:44:26 - INFO - __main__ - Step: 250 Loss_t2i: 4.4175 Loss_mmu: 1.6212 Loss_lm: 1.8062 Data (t): 0.0006, 16.48/s/gpu Batch (t): 1.9416 LR: 0.000001
+10/16/2024 15:46:04 - INFO - __main__ - Step: 300 Loss_t2i: 4.6588 Loss_mmu: 1.2046 Loss_lm: 1.4052 Data (t): 0.0006, 16.11/s/gpu Batch (t): 1.9866 LR: 0.000001
+10/16/2024 15:47:42 - INFO - __main__ - Step: 350 Loss_t2i: 4.6599 Loss_mmu: 1.1322 Loss_lm: 1.2837 Data (t): 0.0005, 16.40/s/gpu Batch (t): 1.9516 LR: 0.000001
+10/16/2024 15:49:20 - INFO - __main__ - Step: 400 Loss_t2i: 5.3005 Loss_mmu: 1.1239 Loss_lm: 1.2822 Data (t): 0.0013, 16.35/s/gpu Batch (t): 1.9576 LR: 0.000002
+10/16/2024 15:50:58 - INFO - __main__ - Step: 450 Loss_t2i: 6.0936 Loss_mmu: 1.0586 Loss_lm: 1.1853 Data (t): 0.0006, 16.27/s/gpu Batch (t): 1.9668 LR: 0.000002
+10/16/2024 15:52:36 - INFO - __main__ - Step: 500 Loss_t2i: 4.9167 Loss_mmu: 0.9279 Loss_lm: 1.0998 Data (t): 0.0010, 16.27/s/gpu Batch (t): 1.9672 LR: 0.000002
+10/16/2024 15:54:14 - INFO - __main__ - Step: 550 Loss_t2i: 2.8326 Loss_mmu: 0.8117 Loss_lm: 1.1401 Data (t): 0.0005, 16.32/s/gpu Batch (t): 1.9610 LR: 0.000002
+10/16/2024 15:55:52 - INFO - __main__ - Step: 600 Loss_t2i: 5.1101 Loss_mmu: 0.8896 Loss_lm: 1.1146 Data (t): 0.0010, 16.32/s/gpu Batch (t): 1.9605 LR: 0.000002
+10/16/2024 15:57:29 - INFO - __main__ - Step: 650 Loss_t2i: 2.9164 Loss_mmu: 0.8307 Loss_lm: 0.9846 Data (t): 0.0005, 16.42/s/gpu Batch (t): 1.9484 LR: 0.000003
+10/16/2024 15:59:07 - INFO - __main__ - Step: 700 Loss_t2i: 4.6384 Loss_mmu: 0.7047 Loss_lm: 0.8459 Data (t): 0.0005, 16.43/s/gpu Batch (t): 1.9480 LR: 0.000003
+10/16/2024 16:00:46 - INFO - __main__ - Step: 750 Loss_t2i: 2.5263 Loss_mmu: 0.8751 Loss_lm: 0.9532 Data (t): 0.0006, 16.46/s/gpu Batch (t): 1.9437 LR: 0.000003
+10/16/2024 16:02:23 - INFO - __main__ - Step: 800 Loss_t2i: 4.3414 Loss_mmu: 0.8929 Loss_lm: 0.8873 Data (t): 0.0005, 16.29/s/gpu Batch (t): 1.9638 LR: 0.000003
+10/16/2024 16:04:01 - INFO - __main__ - Step: 850 Loss_t2i: 3.9257 Loss_mmu: 0.6508 Loss_lm: 0.9592 Data (t): 0.0012, 16.40/s/gpu Batch (t): 1.9514 LR: 0.000003
+10/16/2024 16:05:39 - INFO - __main__ - Step: 900 Loss_t2i: 3.3970 Loss_mmu: 0.7056 Loss_lm: 0.8764 Data (t): 0.0012, 16.42/s/gpu Batch (t): 1.9485 LR: 0.000004
+10/16/2024 16:07:17 - INFO - __main__ - Step: 950 Loss_t2i: 3.2318 Loss_mmu: 0.6305 Loss_lm: 0.8875 Data (t): 0.0006, 16.33/s/gpu Batch (t): 1.9597 LR: 0.000004
+10/16/2024 16:08:56 - INFO - __main__ - Step: 1000 Loss_t2i: 4.7927 Loss_mmu: 0.7784 Loss_lm: 0.7161 Data (t): 0.0013, 16.28/s/gpu Batch (t): 1.9658 LR: 0.000004
+Model weights saved in outputs/show-o-finetuning/checkpoint-1000/unwrapped_model/pytorch_model.bin
+10/16/2024 16:09:01 - INFO - __main__ - Saved state to outputs/show-o-finetuning/checkpoint-1000
+10/16/2024 16:09:01 - INFO - __main__ - Generating images...
+10/16/2024 16:09:13 - INFO - __main__ - Visualizing predictions...
+10/16/2024 16:10:51 - INFO - __main__ - Step: 1050 Loss_t2i: 3.2761 Loss_mmu: 0.6615 Loss_lm: 0.8132 Data (t): 0.0014, 16.30/s/gpu Batch (t): 1.9633 LR: 0.000004
+10/16/2024 16:12:29 - INFO - __main__ - Step: 1100 Loss_t2i: 4.7760 Loss_mmu: 0.7876 Loss_lm: 0.7160 Data (t): 0.0006, 16.33/s/gpu Batch (t): 1.9597 LR: 0.000004
+10/16/2024 16:14:07 - INFO - __main__ - Step: 1150 Loss_t2i: 4.3532 Loss_mmu: 0.7530 Loss_lm: 0.8918 Data (t): 0.0005, 16.38/s/gpu Batch (t): 1.9542 LR: 0.000005
+10/16/2024 16:15:45 - INFO - __main__ - Step: 1200 Loss_t2i: 3.3227 Loss_mmu: 0.7230 Loss_lm: 0.6960 Data (t): 0.0005, 16.47/s/gpu Batch (t): 1.9429 LR: 0.000005
+10/16/2024 16:17:23 - INFO - __main__ - Step: 1250 Loss_t2i: 3.9967 Loss_mmu: 0.6465 Loss_lm: 0.8125 Data (t): 0.0007, 16.12/s/gpu Batch (t): 1.9855 LR: 0.000005
+10/16/2024 16:19:01 - INFO - __main__ - Step: 1300 Loss_t2i: 3.7651 Loss_mmu: 0.6319 Loss_lm: 0.6634 Data (t): 0.0006, 16.47/s/gpu Batch (t): 1.9427 LR: 0.000005
+10/16/2024 16:20:39 - INFO - __main__ - Step: 1350 Loss_t2i: 4.2620 Loss_mmu: 0.7424 Loss_lm: 0.8347 Data (t): 0.0006, 16.34/s/gpu Batch (t): 1.9581 LR: 0.000005
+10/16/2024 16:22:17 - INFO - __main__ - Step: 1400 Loss_t2i: 2.7526 Loss_mmu: 0.7163 Loss_lm: 0.7321 Data (t): 0.0005, 16.22/s/gpu Batch (t): 1.9734 LR: 0.000006
+10/16/2024 16:23:54 - INFO - __main__ - Step: 1450 Loss_t2i: 4.2816 Loss_mmu: 0.5981 Loss_lm: 0.7539 Data (t): 0.0005, 16.50/s/gpu Batch (t): 1.9393 LR: 0.000006
+10/16/2024 16:25:32 - INFO - __main__ - Step: 1500 Loss_t2i: 5.2459 Loss_mmu: 0.6281 Loss_lm: 0.7522 Data (t): 0.0006, 16.42/s/gpu Batch (t): 1.9483 LR: 0.000006
+10/16/2024 16:27:10 - INFO - __main__ - Step: 1550 Loss_t2i: 5.9488 Loss_mmu: 0.7094 Loss_lm: 0.7263 Data (t): 0.0012, 16.33/s/gpu Batch (t): 1.9590 LR: 0.000006
+10/16/2024 16:28:48 - INFO - __main__ - Step: 1600 Loss_t2i: 3.2013 Loss_mmu: 0.5396 Loss_lm: 0.7986 Data (t): 0.0005, 16.30/s/gpu Batch (t): 1.9628 LR: 0.000006
+10/16/2024 16:30:26 - INFO - __main__ - Step: 1650 Loss_t2i: 3.8481 Loss_mmu: 0.5558 Loss_lm: 0.7718 Data (t): 0.0006, 16.43/s/gpu Batch (t): 1.9476 LR: 0.000007
+10/16/2024 16:32:04 - INFO - __main__ - Step: 1700 Loss_t2i: 4.5997 Loss_mmu: 0.6269 Loss_lm: 0.7250 Data (t): 0.0008, 16.28/s/gpu Batch (t): 1.9653 LR: 0.000007
+10/16/2024 16:33:42 - INFO - __main__ - Step: 1750 Loss_t2i: 4.7451 Loss_mmu: 0.6162 Loss_lm: 0.6687 Data (t): 0.0015, 16.35/s/gpu Batch (t): 1.9572 LR: 0.000007
+10/16/2024 16:35:20 - INFO - __main__ - Step: 1800 Loss_t2i: 4.2198 Loss_mmu: 0.6335 Loss_lm: 0.6949 Data (t): 0.0005, 16.36/s/gpu Batch (t): 1.9555 LR: 0.000007
+10/16/2024 16:36:58 - INFO - __main__ - Step: 1850 Loss_t2i: 3.6643 Loss_mmu: 0.5662 Loss_lm: 0.6933 Data (t): 0.0005, 16.29/s/gpu Batch (t): 1.9649 LR: 0.000007
+10/16/2024 16:38:37 - INFO - __main__ - Step: 1900 Loss_t2i: 3.8446 Loss_mmu: 0.7826 Loss_lm: 0.6611 Data (t): 0.0005, 16.38/s/gpu Batch (t): 1.9533 LR: 0.000008
+10/16/2024 16:40:17 - INFO - __main__ - Step: 1950 Loss_t2i: 3.6374 Loss_mmu: 0.6788 Loss_lm: 0.5855 Data (t): 0.0006, 16.36/s/gpu Batch (t): 1.9560 LR: 0.000008
+10/16/2024 16:41:55 - INFO - __main__ - Step: 2000 Loss_t2i: 4.6765 Loss_mmu: 0.7101 Loss_lm: 0.5926 Data (t): 0.0007, 16.31/s/gpu Batch (t): 1.9617 LR: 0.000008
+10/16/2024 16:41:55 - INFO - __main__ - 1 checkpoints already exist, removing 1 checkpoints
+10/16/2024 16:41:55 - INFO - __main__ - removing checkpoints: checkpoint-1000
+Model weights saved in outputs/show-o-finetuning/checkpoint-2000/unwrapped_model/pytorch_model.bin
+10/16/2024 16:42:00 - INFO - __main__ - Saved state to outputs/show-o-finetuning/checkpoint-2000
+10/16/2024 16:42:00 - INFO - __main__ - Generating images...
+10/16/2024 16:42:02 - INFO - __main__ - Visualizing predictions...
+10/16/2024 16:43:41 - INFO - __main__ - Step: 2050 Loss_t2i: 4.7228 Loss_mmu: 0.6698 Loss_lm: 0.6452 Data (t): 0.0005, 16.33/s/gpu Batch (t): 1.9594 LR: 0.000008
+10/16/2024 16:45:19 - INFO - __main__ - Step: 2100 Loss_t2i: 5.5136 Loss_mmu: 0.5787 Loss_lm: 0.5787 Data (t): 0.0010, 16.31/s/gpu Batch (t): 1.9614 LR: 0.000008
+10/16/2024 16:46:56 - INFO - __main__ - Step: 2150 Loss_t2i: 4.1983 Loss_mmu: 0.5318 Loss_lm: 0.6018 Data (t): 0.0005, 16.45/s/gpu Batch (t): 1.9455 LR: 0.000009
+10/16/2024 16:48:34 - INFO - __main__ - Step: 2200 Loss_t2i: 3.5919 Loss_mmu: 0.5359 Loss_lm: 0.5504 Data (t): 0.0008, 16.39/s/gpu Batch (t): 1.9518 LR: 0.000009
+10/16/2024 16:50:12 - INFO - __main__ - Step: 2250 Loss_t2i: 3.1834 Loss_mmu: 0.5732 Loss_lm: 0.6846 Data (t): 0.0007, 16.25/s/gpu Batch (t): 1.9691 LR: 0.000009
+10/16/2024 16:51:50 - INFO - __main__ - Step: 2300 Loss_t2i: 3.7525 Loss_mmu: 0.4506 Loss_lm: 0.5183 Data (t): 0.0012, 16.51/s/gpu Batch (t): 1.9382 LR: 0.000009
+10/16/2024 16:53:28 - INFO - __main__ - Step: 2350 Loss_t2i: 4.2698 Loss_mmu: 0.5300 Loss_lm: 0.5866 Data (t): 0.0007, 16.23/s/gpu Batch (t): 1.9717 LR: 0.000009
+10/16/2024 16:55:06 - INFO - __main__ - Step: 2400 Loss_t2i: 5.5831 Loss_mmu: 0.7052 Loss_lm: 0.6525 Data (t): 0.0013, 16.20/s/gpu Batch (t): 1.9750 LR: 0.000010
+10/16/2024 16:56:44 - INFO - __main__ - Step: 2450 Loss_t2i: 4.9921 Loss_mmu: 0.5210 Loss_lm: 0.6123 Data (t): 0.0006, 16.42/s/gpu Batch (t): 1.9493 LR: 0.000010
+10/16/2024 16:58:22 - INFO - __main__ - Step: 2500 Loss_t2i: 3.2838 Loss_mmu: 0.5340 Loss_lm: 0.5729 Data (t): 0.0005, 16.37/s/gpu Batch (t): 1.9553 LR: 0.000010
+10/16/2024 17:00:00 - INFO - __main__ - Step: 2550 Loss_t2i: 4.6903 Loss_mmu: 0.5748 Loss_lm: 0.6060 Data (t): 0.0005, 16.31/s/gpu Batch (t): 1.9619 LR: 0.000010
+10/16/2024 17:01:38 - INFO - __main__ - Step: 2600 Loss_t2i: 5.3783 Loss_mmu: 0.5727 Loss_lm: 0.7340 Data (t): 0.0011, 16.24/s/gpu Batch (t): 1.9703 LR: 0.000010
+10/16/2024 17:03:16 - INFO - __main__ - Step: 2650 Loss_t2i: 4.3905 Loss_mmu: 0.4721 Loss_lm: 0.6690 Data (t): 0.0005, 16.30/s/gpu Batch (t): 1.9630 LR: 0.000011
+10/16/2024 17:04:54 - INFO - __main__ - Step: 2700 Loss_t2i: 5.4985 Loss_mmu: 0.5201 Loss_lm: 0.5967 Data (t): 0.0010, 16.40/s/gpu Batch (t): 1.9518 LR: 0.000011
+10/16/2024 17:06:32 - INFO - __main__ - Step: 2750 Loss_t2i: 3.8536 Loss_mmu: 0.5381 Loss_lm: 0.6195 Data (t): 0.0005, 16.47/s/gpu Batch (t): 1.9425 LR: 0.000011
+10/16/2024 17:08:10 - INFO - __main__ - Step: 2800 Loss_t2i: 3.6696 Loss_mmu: 0.6057 Loss_lm: 0.6216 Data (t): 0.0006, 16.25/s/gpu Batch (t): 1.9687 LR: 0.000011
+10/16/2024 17:09:48 - INFO - __main__ - Step: 2850 Loss_t2i: 3.0298 Loss_mmu: 0.5538 Loss_lm: 0.6054 Data (t): 0.0005, 16.32/s/gpu Batch (t): 1.9607 LR: 0.000011
+10/16/2024 17:11:26 - INFO - __main__ - Step: 2900 Loss_t2i: 4.5944 Loss_mmu: 0.4626 Loss_lm: 0.5581 Data (t): 0.0012, 16.45/s/gpu Batch (t): 1.9452 LR: 0.000012
+10/16/2024 17:13:04 - INFO - __main__ - Step: 2950 Loss_t2i: 4.5224 Loss_mmu: 0.6450 Loss_lm: 0.5333 Data (t): 0.0005, 16.38/s/gpu Batch (t): 1.9536 LR: 0.000012
+10/16/2024 17:14:42 - INFO - __main__ - Step: 3000 Loss_t2i: 3.8902 Loss_mmu: 0.5330 Loss_lm: 0.5060 Data (t): 0.0009, 16.34/s/gpu Batch (t): 1.9579 LR: 0.000012
+10/16/2024 17:14:42 - INFO - __main__ - 1 checkpoints already exist, removing 1 checkpoints
+10/16/2024 17:14:42 - INFO - __main__ - removing checkpoints: checkpoint-2000
+Model weights saved in outputs/show-o-finetuning/checkpoint-3000/unwrapped_model/pytorch_model.bin
+10/16/2024 17:14:47 - INFO - __main__ - Saved state to outputs/show-o-finetuning/checkpoint-3000
+10/16/2024 17:14:47 - INFO - __main__ - Generating images...
+10/16/2024 17:14:49 - INFO - __main__ - Visualizing predictions...
+10/16/2024 17:16:27 - INFO - __main__ - Step: 3050 Loss_t2i: 4.4235 Loss_mmu: 0.5268 Loss_lm: 0.6110 Data (t): 0.0015, 16.42/s/gpu Batch (t): 1.9484 LR: 0.000012
+10/16/2024 17:18:05 - INFO - __main__ - Step: 3100 Loss_t2i: 3.9031 Loss_mmu: 0.4516 Loss_lm: 0.6010 Data (t): 0.0006, 16.23/s/gpu Batch (t): 1.9719 LR: 0.000012
+10/16/2024 17:19:43 - INFO - __main__ - Step: 3150 Loss_t2i: 2.3633 Loss_mmu: 0.4817 Loss_lm: 0.5467 Data (t): 0.0005, 16.40/s/gpu Batch (t): 1.9513 LR: 0.000013
+10/16/2024 17:21:21 - INFO - __main__ - Step: 3200 Loss_t2i: 4.0607 Loss_mmu: 0.5458 Loss_lm: 0.5823 Data (t): 0.0006, 16.22/s/gpu Batch (t): 1.9731 LR: 0.000013
+10/16/2024 17:22:59 - INFO - __main__ - Step: 3250 Loss_t2i: 4.7733 Loss_mmu: 0.5429 Loss_lm: 0.5667 Data (t): 0.0005, 16.37/s/gpu Batch (t): 1.9546 LR: 0.000013
+10/16/2024 17:24:37 - INFO - __main__ - Step: 3300 Loss_t2i: 2.5490 Loss_mmu: 0.4944 Loss_lm: 0.5937 Data (t): 0.0015, 16.41/s/gpu Batch (t): 1.9503 LR: 0.000013
+10/16/2024 17:26:15 - INFO - __main__ - Step: 3350 Loss_t2i: 5.1775 Loss_mmu: 0.5525 Loss_lm: 0.5620 Data (t): 0.0006, 16.32/s/gpu Batch (t): 1.9602 LR: 0.000013
+10/16/2024 17:27:53 - INFO - __main__ - Step: 3400 Loss_t2i: 3.4055 Loss_mmu: 0.5930 Loss_lm: 0.7040 Data (t): 0.0005, 16.38/s/gpu Batch (t): 1.9532 LR: 0.000014
+10/16/2024 17:29:31 - INFO - __main__ - Step: 3450 Loss_t2i: 2.7734 Loss_mmu: 0.4876 Loss_lm: 0.5266 Data (t): 0.0006, 16.31/s/gpu Batch (t): 1.9615 LR: 0.000014
+10/16/2024 17:31:09 - INFO - __main__ - Step: 3500 Loss_t2i: 3.3090 Loss_mmu: 0.4912 Loss_lm: 0.5648 Data (t): 0.0005, 16.50/s/gpu Batch (t): 1.9398 LR: 0.000014
+10/16/2024 17:32:47 - INFO - __main__ - Step: 3550 Loss_t2i: 3.5933 Loss_mmu: 0.4717 Loss_lm: 0.6138 Data (t): 0.0007, 16.41/s/gpu Batch (t): 1.9495 LR: 0.000014
+10/16/2024 17:34:24 - INFO - __main__ - Step: 3600 Loss_t2i: 3.3076 Loss_mmu: 0.6100 Loss_lm: 0.5449 Data (t): 0.0006, 16.30/s/gpu Batch (t): 1.9636 LR: 0.000014
+10/16/2024 17:36:02 - INFO - __main__ - Step: 3650 Loss_t2i: 4.2805 Loss_mmu: 0.4975 Loss_lm: 0.6329 Data (t): 0.0007, 16.43/s/gpu Batch (t): 1.9481 LR: 0.000015
+10/16/2024 17:37:40 - INFO - __main__ - Step: 3700 Loss_t2i: 4.4857 Loss_mmu: 0.6237 Loss_lm: 0.5354 Data (t): 0.0004, 16.33/s/gpu Batch (t): 1.9592 LR: 0.000015
+10/16/2024 17:39:27 - INFO - __main__ - Step: 3750 Loss_t2i: 4.2611 Loss_mmu: 0.4745 Loss_lm: 0.5814 Data (t): 0.0006, 16.26/s/gpu Batch (t): 1.9681 LR: 0.000015
+10/16/2024 17:41:05 - INFO - __main__ - Step: 3800 Loss_t2i: 5.0271 Loss_mmu: 0.5385 Loss_lm: 0.5522 Data (t): 0.0004, 16.44/s/gpu Batch (t): 1.9462 LR: 0.000015
+10/16/2024 17:42:43 - INFO - __main__ - Step: 3850 Loss_t2i: 4.2251 Loss_mmu: 0.4973 Loss_lm: 0.4913 Data (t): 0.0008, 16.40/s/gpu Batch (t): 1.9509 LR: 0.000015
+10/16/2024 17:44:21 - INFO - __main__ - Step: 3900 Loss_t2i: 3.8095 Loss_mmu: 0.5112 Loss_lm: 0.5436 Data (t): 0.0005, 16.32/s/gpu Batch (t): 1.9606 LR: 0.000016
+10/16/2024 17:45:59 - INFO - __main__ - Step: 3950 Loss_t2i: 2.7662 Loss_mmu: 0.4621 Loss_lm: 0.6017 Data (t): 0.0005, 16.36/s/gpu Batch (t): 1.9557 LR: 0.000016
+10/16/2024 17:47:37 - INFO - __main__ - Step: 4000 Loss_t2i: 4.4422 Loss_mmu: 0.4712 Loss_lm: 0.6041 Data (t): 0.0006, 16.33/s/gpu Batch (t): 1.9595 LR: 0.000016
+10/16/2024 17:47:37 - INFO - __main__ - 1 checkpoints already exist, removing 1 checkpoints
+10/16/2024 17:47:37 - INFO - __main__ - removing checkpoints: checkpoint-3000
+Model weights saved in outputs/show-o-finetuning/checkpoint-4000/unwrapped_model/pytorch_model.bin
+10/16/2024 17:47:42 - INFO - __main__ - Saved state to outputs/show-o-finetuning/checkpoint-4000
+10/16/2024 17:47:42 - INFO - __main__ - Generating images...
+10/16/2024 17:47:44 - INFO - __main__ - Visualizing predictions...
+10/16/2024 17:49:22 - INFO - __main__ - Step: 4050 Loss_t2i: 3.2641 Loss_mmu: 0.4387 Loss_lm: 0.5791 Data (t): 0.0013, 16.39/s/gpu Batch (t): 1.9528 LR: 0.000016
+10/16/2024 17:51:00 - INFO - __main__ - Step: 4100 Loss_t2i: 4.6112 Loss_mmu: 0.5146 Loss_lm: 0.4786 Data (t): 0.0005, 16.30/s/gpu Batch (t): 1.9629 LR: 0.000016
+10/16/2024 17:52:38 - INFO - __main__ - Step: 4150 Loss_t2i: 3.2815 Loss_mmu: 0.4536 Loss_lm: 0.4912 Data (t): 0.0011, 16.43/s/gpu Batch (t): 1.9475 LR: 0.000017
+10/16/2024 17:54:16 - INFO - __main__ - Step: 4200 Loss_t2i: 4.9196 Loss_mmu: 0.4652 Loss_lm: 0.4563 Data (t): 0.0006, 16.46/s/gpu Batch (t): 1.9442 LR: 0.000017
+10/16/2024 17:55:54 - INFO - __main__ - Step: 4250 Loss_t2i: 2.7867 Loss_mmu: 0.4055 Loss_lm: 0.5715 Data (t): 0.0012, 16.34/s/gpu Batch (t): 1.9581 LR: 0.000017
+10/16/2024 17:57:32 - INFO - __main__ - Step: 4300 Loss_t2i: 4.4128 Loss_mmu: 0.5155 Loss_lm: 0.4844 Data (t): 0.0005, 16.43/s/gpu Batch (t): 1.9476 LR: 0.000017
+10/16/2024 17:59:10 - INFO - __main__ - Step: 4350 Loss_t2i: 3.7601 Loss_mmu: 0.4840 Loss_lm: 0.5476 Data (t): 0.0005, 16.41/s/gpu Batch (t): 1.9499 LR: 0.000017
+10/16/2024 18:00:48 - INFO - __main__ - Step: 4400 Loss_t2i: 4.5826 Loss_mmu: 0.3869 Loss_lm: 0.6079 Data (t): 0.0013, 16.35/s/gpu Batch (t): 1.9578 LR: 0.000018
+10/16/2024 18:02:25 - INFO - __main__ - Step: 4450 Loss_t2i: 5.5381 Loss_mmu: 0.4116 Loss_lm: 0.4600 Data (t): 0.0007, 16.37/s/gpu Batch (t): 1.9553 LR: 0.000018
+10/16/2024 18:04:03 - INFO - __main__ - Step: 4500 Loss_t2i: 3.8108 Loss_mmu: 0.4873 Loss_lm: 0.5121 Data (t): 0.0011, 16.30/s/gpu Batch (t): 1.9630 LR: 0.000018
+10/16/2024 18:05:41 - INFO - __main__ - Step: 4550 Loss_t2i: 2.6673 Loss_mmu: 0.4744 Loss_lm: 0.5548 Data (t): 0.0006, 16.35/s/gpu Batch (t): 1.9576 LR: 0.000018
+10/16/2024 18:07:19 - INFO - __main__ - Step: 4600 Loss_t2i: 3.2733 Loss_mmu: 0.4993 Loss_lm: 0.5782 Data (t): 0.0006, 16.46/s/gpu Batch (t): 1.9441 LR: 0.000018
+10/16/2024 18:08:57 - INFO - __main__ - Step: 4650 Loss_t2i: 4.4388 Loss_mmu: 0.4259 Loss_lm: 0.5415 Data (t): 0.0005, 16.42/s/gpu Batch (t): 1.9489 LR: 0.000019
+10/16/2024 18:10:35 - INFO - __main__ - Step: 4700 Loss_t2i: 3.0046 Loss_mmu: 0.4473 Loss_lm: 0.6296 Data (t): 0.0006, 16.32/s/gpu Batch (t): 1.9612 LR: 0.000019
+10/16/2024 18:12:13 - INFO - __main__ - Step: 4750 Loss_t2i: 5.4426 Loss_mmu: 0.4368 Loss_lm: 0.5511 Data (t): 0.0006, 16.29/s/gpu Batch (t): 1.9641 LR: 0.000019
+10/16/2024 18:13:51 - INFO - __main__ - Step: 4800 Loss_t2i: 5.4315 Loss_mmu: 0.4082 Loss_lm: 0.4991 Data (t): 0.0005, 16.43/s/gpu Batch (t): 1.9479 LR: 0.000019
+10/16/2024 18:15:29 - INFO - __main__ - Step: 4850 Loss_t2i: 5.0782 Loss_mmu: 0.4356 Loss_lm: 0.5712 Data (t): 0.0005, 16.34/s/gpu Batch (t): 1.9579 LR: 0.000019
+10/16/2024 18:17:07 - INFO - __main__ - Step: 4900 Loss_t2i: 5.1935 Loss_mmu: 0.4165 Loss_lm: 0.5226 Data (t): 0.0005, 16.34/s/gpu Batch (t): 1.9580 LR: 0.000020
+10/16/2024 18:18:45 - INFO - __main__ - Step: 4950 Loss_t2i: 4.1969 Loss_mmu: 0.3933 Loss_lm: 0.4830 Data (t): 0.0010, 16.41/s/gpu Batch (t): 1.9496 LR: 0.000020
+10/16/2024 18:20:23 - INFO - __main__ - Step: 5000 Loss_t2i: 4.9773 Loss_mmu: 0.5300 Loss_lm: 0.5579 Data (t): 0.0005, 16.44/s/gpu Batch (t): 1.9466 LR: 0.000020
+10/16/2024 18:20:23 - INFO - __main__ - 1 checkpoints already exist, removing 1 checkpoints
+10/16/2024 18:20:23 - INFO - __main__ - removing checkpoints: checkpoint-4000
+Model weights saved in outputs/show-o-finetuning/checkpoint-5000/unwrapped_model/pytorch_model.bin
+10/16/2024 18:20:28 - INFO - __main__ - Saved state to outputs/show-o-finetuning/checkpoint-5000
+10/16/2024 18:20:28 - INFO - __main__ - Generating images...
+10/16/2024 18:20:30 - INFO - __main__ - Visualizing predictions...
+10/16/2024 18:22:08 - INFO - __main__ - Step: 5050 Loss_t2i: 5.2886 Loss_mmu: 0.3749 Loss_lm: 0.5727 Data (t): 0.0005, 16.30/s/gpu Batch (t): 1.9635 LR: 0.000020
+10/16/2024 18:23:46 - INFO - __main__ - Step: 5100 Loss_t2i: 4.2785 Loss_mmu: 0.4123 Loss_lm: 0.5143 Data (t): 0.0005, 16.35/s/gpu Batch (t): 1.9575 LR: 0.000020
+10/16/2024 18:25:24 - INFO - __main__ - Step: 5150 Loss_t2i: 3.6344 Loss_mmu: 0.3848 Loss_lm: 0.5027 Data (t): 0.0012, 16.50/s/gpu Batch (t): 1.9394 LR: 0.000020
+10/16/2024 18:27:02 - INFO - __main__ - Step: 5200 Loss_t2i: 3.8002 Loss_mmu: 0.5546 Loss_lm: 0.5463 Data (t): 0.0007, 16.20/s/gpu Batch (t): 1.9748 LR: 0.000020
+10/16/2024 18:28:40 - INFO - __main__ - Step: 5250 Loss_t2i: 3.9932 Loss_mmu: 0.4518 Loss_lm: 0.4898 Data (t): 0.0005, 16.47/s/gpu Batch (t): 1.9432 LR: 0.000020
+10/16/2024 18:30:18 - INFO - __main__ - Step: 5300 Loss_t2i: 3.2631 Loss_mmu: 0.4775 Loss_lm: 0.4646 Data (t): 0.0005, 16.42/s/gpu Batch (t): 1.9487 LR: 0.000020
+10/16/2024 18:31:56 - INFO - __main__ - Step: 5350 Loss_t2i: 4.4302 Loss_mmu: 0.4208 Loss_lm: 0.5477 Data (t): 0.0005, 16.26/s/gpu Batch (t): 1.9683 LR: 0.000020
+10/16/2024 18:33:33 - INFO - __main__ - Step: 5400 Loss_t2i: 3.0006 Loss_mmu: 0.3538 Loss_lm: 0.5064 Data (t): 0.0005, 16.41/s/gpu Batch (t): 1.9497 LR: 0.000020
+10/16/2024 18:35:11 - INFO - __main__ - Step: 5450 Loss_t2i: 3.1758 Loss_mmu: 0.4105 Loss_lm: 0.6153 Data (t): 0.0005, 16.37/s/gpu Batch (t): 1.9550 LR: 0.000020
+10/16/2024 18:36:49 - INFO - __main__ - Step: 5500 Loss_t2i: 4.1984 Loss_mmu: 0.5029 Loss_lm: 0.4681 Data (t): 0.0005, 16.15/s/gpu Batch (t): 1.9808 LR: 0.000020
+10/16/2024 18:38:27 - INFO - __main__ - Step: 5550 Loss_t2i: 4.8577 Loss_mmu: 0.4571 Loss_lm: 0.5370 Data (t): 0.0006, 16.35/s/gpu Batch (t): 1.9575 LR: 0.000020
+10/16/2024 18:40:06 - INFO - __main__ - Step: 5600 Loss_t2i: 4.0117 Loss_mmu: 0.4626 Loss_lm: 0.5404 Data (t): 0.0005, 16.38/s/gpu Batch (t): 1.9537 LR: 0.000020
+10/16/2024 18:41:44 - INFO - __main__ - Step: 5650 Loss_t2i: 3.6936 Loss_mmu: 0.3974 Loss_lm: 0.5037 Data (t): 0.0005, 16.28/s/gpu Batch (t): 1.9658 LR: 0.000020
+10/16/2024 18:43:22 - INFO - __main__ - Step: 5700 Loss_t2i: 3.6952 Loss_mmu: 0.4378 Loss_lm: 0.5379 Data (t): 0.0007, 14.91/s/gpu Batch (t): 2.1460 LR: 0.000020
+10/16/2024 18:45:00 - INFO - __main__ - Step: 5750 Loss_t2i: 4.2528 Loss_mmu: 0.4066 Loss_lm: 0.5161 Data (t): 0.0005, 16.36/s/gpu Batch (t): 1.9554 LR: 0.000020
+10/16/2024 18:46:38 - INFO - __main__ - Step: 5800 Loss_t2i: 5.1618 Loss_mmu: 0.3545 Loss_lm: 0.5022 Data (t): 0.0005, 16.27/s/gpu Batch (t): 1.9669 LR: 0.000020
+10/16/2024 18:48:16 - INFO - __main__ - Step: 5850 Loss_t2i: 4.7688 Loss_mmu: 0.3979 Loss_lm: 0.5167 Data (t): 0.0008, 16.20/s/gpu Batch (t): 1.9750 LR: 0.000020
+10/16/2024 18:49:54 - INFO - __main__ - Step: 5900 Loss_t2i: 5.1400 Loss_mmu: 0.4487 Loss_lm: 0.4730 Data (t): 0.0005, 16.44/s/gpu Batch (t): 1.9468 LR: 0.000020
+10/16/2024 18:51:32 - INFO - __main__ - Step: 5950 Loss_t2i: 2.9737 Loss_mmu: 0.4002 Loss_lm: 0.5560 Data (t): 0.0005, 16.34/s/gpu Batch (t): 1.9580 LR: 0.000020
+10/16/2024 18:53:10 - INFO - __main__ - Step: 6000 Loss_t2i: 3.8410 Loss_mmu: 0.3246 Loss_lm: 0.5032 Data (t): 0.0012, 16.34/s/gpu Batch (t): 1.9589 LR: 0.000020
+10/16/2024 18:53:10 - INFO - __main__ - 1 checkpoints already exist, removing 1 checkpoints
+10/16/2024 18:53:10 - INFO - __main__ - removing checkpoints: checkpoint-5000
+Model weights saved in outputs/show-o-finetuning/checkpoint-6000/unwrapped_model/pytorch_model.bin
+10/16/2024 18:53:15 - INFO - __main__ - Saved state to outputs/show-o-finetuning/checkpoint-6000
+10/16/2024 18:53:15 - INFO - __main__ - Generating images...
+10/16/2024 18:53:17 - INFO - __main__ - Visualizing predictions...
+10/16/2024 18:54:55 - INFO - __main__ - Step: 6050 Loss_t2i: 4.1954 Loss_mmu: 0.3942 Loss_lm: 0.5201 Data (t): 0.0005, 16.36/s/gpu Batch (t): 1.9557 LR: 0.000020
+10/16/2024 18:56:33 - INFO - __main__ - Step: 6100 Loss_t2i: 3.4193 Loss_mmu: 0.3642 Loss_lm: 0.4666 Data (t): 0.0006, 16.29/s/gpu Batch (t): 1.9642 LR: 0.000020
+10/16/2024 18:58:11 - INFO - __main__ - Step: 6150 Loss_t2i: 3.2784 Loss_mmu: 0.5371 Loss_lm: 0.4581 Data (t): 0.0005, 16.42/s/gpu Batch (t): 1.9489 LR: 0.000020
+10/16/2024 18:59:49 - INFO - __main__ - Step: 6200 Loss_t2i: 4.8256 Loss_mmu: 0.3511 Loss_lm: 0.5262 Data (t): 0.0006, 16.39/s/gpu Batch (t): 1.9526 LR: 0.000020
+10/16/2024 19:01:27 - INFO - __main__ - Step: 6250 Loss_t2i: 2.5620 Loss_mmu: 0.3500 Loss_lm: 0.4735 Data (t): 0.0007, 16.41/s/gpu Batch (t): 1.9505 LR: 0.000020
+10/16/2024 19:03:05 - INFO - __main__ - Step: 6300 Loss_t2i: 3.9769 Loss_mmu: 0.3837 Loss_lm: 0.5479 Data (t): 0.0006, 16.40/s/gpu Batch (t): 1.9507 LR: 0.000020
+10/16/2024 19:04:43 - INFO - __main__ - Step: 6350 Loss_t2i: 3.9890 Loss_mmu: 0.3281 Loss_lm: 0.5301 Data (t): 0.0009, 16.32/s/gpu Batch (t): 1.9612 LR: 0.000020
+10/16/2024 19:06:21 - INFO - __main__ - Step: 6400 Loss_t2i: 4.4215 Loss_mmu: 0.3902 Loss_lm: 0.5077 Data (t): 0.0005, 16.38/s/gpu Batch (t): 1.9541 LR: 0.000020
+10/16/2024 19:07:59 - INFO - __main__ - Step: 6450 Loss_t2i: 3.0258 Loss_mmu: 0.4102 Loss_lm: 0.4376 Data (t): 0.0006, 16.43/s/gpu Batch (t): 1.9475 LR: 0.000020
+10/16/2024 19:09:37 - INFO - __main__ - Step: 6500 Loss_t2i: 4.3210 Loss_mmu: 0.3304 Loss_lm: 0.4255 Data (t): 0.0005, 16.41/s/gpu Batch (t): 1.9505 LR: 0.000020
+10/16/2024 19:11:15 - INFO - __main__ - Step: 6550 Loss_t2i: 4.3743 Loss_mmu: 0.3292 Loss_lm: 0.4618 Data (t): 0.0007, 16.40/s/gpu Batch (t): 1.9507 LR: 0.000020
+10/16/2024 19:12:53 - INFO - __main__ - Step: 6600 Loss_t2i: 4.8079 Loss_mmu: 0.3647 Loss_lm: 0.4725 Data (t): 0.0005, 16.24/s/gpu Batch (t): 1.9701 LR: 0.000020
+10/16/2024 19:14:32 - INFO - __main__ - Step: 6650 Loss_t2i: 4.5946 Loss_mmu: 0.3081 Loss_lm: 0.5003 Data (t): 0.0004, 16.36/s/gpu Batch (t): 1.9565 LR: 0.000020
+10/16/2024 19:16:09 - INFO - __main__ - Step: 6700 Loss_t2i: 4.3191 Loss_mmu: 0.3207 Loss_lm: 0.4992 Data (t): 0.0005, 16.43/s/gpu Batch (t): 1.9479 LR: 0.000020
+10/16/2024 19:17:47 - INFO - __main__ - Step: 6750 Loss_t2i: 3.6905 Loss_mmu: 0.3342 Loss_lm: 0.5135 Data (t): 0.0006, 16.37/s/gpu Batch (t): 1.9552 LR: 0.000020
+10/16/2024 19:19:25 - INFO - __main__ - Step: 6800 Loss_t2i: 4.0856 Loss_mmu: 0.3644 Loss_lm: 0.5259 Data (t): 0.0012, 16.32/s/gpu Batch (t): 1.9605 LR: 0.000020
+10/16/2024 19:21:03 - INFO - __main__ - Step: 6850 Loss_t2i: 5.0249 Loss_mmu: 0.3241 Loss_lm: 0.4861 Data (t): 0.0005, 16.37/s/gpu Batch (t): 1.9549 LR: 0.000020
+10/16/2024 19:22:41 - INFO - __main__ - Step: 6900 Loss_t2i: 3.4940 Loss_mmu: 0.3024 Loss_lm: 0.4421 Data (t): 0.0006, 16.43/s/gpu Batch (t): 1.9478 LR: 0.000020
+10/16/2024 19:24:19 - INFO - __main__ - Step: 6950 Loss_t2i: 5.0742 Loss_mmu: 0.3707 Loss_lm: 0.5057 Data (t): 0.0005, 13.22/s/gpu Batch (t): 2.4199 LR: 0.000020
+10/16/2024 19:25:57 - INFO - __main__ - Step: 7000 Loss_t2i: 3.5473 Loss_mmu: 0.4174 Loss_lm: 0.5105 Data (t): 0.0005, 16.34/s/gpu Batch (t): 1.9589 LR: 0.000020
+10/16/2024 19:25:57 - INFO - __main__ - 1 checkpoints already exist, removing 1 checkpoints
+10/16/2024 19:25:57 - INFO - __main__ - removing checkpoints: checkpoint-6000
+Model weights saved in outputs/show-o-finetuning/checkpoint-7000/unwrapped_model/pytorch_model.bin
+10/16/2024 19:26:02 - INFO - __main__ - Saved state to outputs/show-o-finetuning/checkpoint-7000
+10/16/2024 19:26:02 - INFO - __main__ - Generating images...
+10/16/2024 19:26:04 - INFO - __main__ - Visualizing predictions...
+10/16/2024 19:27:43 - INFO - __main__ - Step: 7050 Loss_t2i: 2.6873 Loss_mmu: 0.2944 Loss_lm: 0.4669 Data (t): 0.0005, 16.39/s/gpu Batch (t): 1.9527 LR: 0.000020
+10/16/2024 19:29:21 - INFO - __main__ - Step: 7100 Loss_t2i: 3.6324 Loss_mmu: 0.3630 Loss_lm: 0.5553 Data (t): 0.0005, 16.44/s/gpu Batch (t): 1.9463 LR: 0.000020
+10/16/2024 19:30:59 - INFO - __main__ - Step: 7150 Loss_t2i: 3.2690 Loss_mmu: 0.4254 Loss_lm: 0.4594 Data (t): 0.0005, 16.24/s/gpu Batch (t): 1.9701 LR: 0.000020
+10/16/2024 19:32:36 - INFO - __main__ - Step: 7200 Loss_t2i: 4.1404 Loss_mmu: 0.4434 Loss_lm: 0.4537 Data (t): 0.0006, 16.40/s/gpu Batch (t): 1.9507 LR: 0.000020
+10/16/2024 19:34:14 - INFO - __main__ - Step: 7250 Loss_t2i: 4.1237 Loss_mmu: 0.3741 Loss_lm: 0.4070 Data (t): 0.0005, 16.36/s/gpu Batch (t): 1.9563 LR: 0.000020
+10/16/2024 19:35:52 - INFO - __main__ - Step: 7300 Loss_t2i: 5.7874 Loss_mmu: 0.3250 Loss_lm: 0.4396 Data (t): 0.0005, 16.36/s/gpu Batch (t): 1.9556 LR: 0.000020
+10/16/2024 19:37:30 - INFO - __main__ - Step: 7350 Loss_t2i: 4.0138 Loss_mmu: 0.3184 Loss_lm: 0.4770 Data (t): 0.0005, 16.45/s/gpu Batch (t): 1.9458 LR: 0.000020
+10/16/2024 19:39:08 - INFO - __main__ - Step: 7400 Loss_t2i: 4.7547 Loss_mmu: 0.2863 Loss_lm: 0.4892 Data (t): 0.0006, 16.35/s/gpu Batch (t): 1.9573 LR: 0.000020
+10/16/2024 19:40:53 - INFO - __main__ - Step: 7450 Loss_t2i: 3.4151 Loss_mmu: 0.3968 Loss_lm: 0.4239 Data (t): 0.0005, 16.21/s/gpu Batch (t): 1.9741 LR: 0.000020
+10/16/2024 19:42:30 - INFO - __main__ - Step: 7500 Loss_t2i: 2.9405 Loss_mmu: 0.3245 Loss_lm: 0.5111 Data (t): 0.0005, 16.47/s/gpu Batch (t): 1.9429 LR: 0.000020
+10/16/2024 19:44:08 - INFO - __main__ - Step: 7550 Loss_t2i: 3.4178 Loss_mmu: 0.2964 Loss_lm: 0.4822 Data (t): 0.0005, 16.34/s/gpu Batch (t): 1.9585 LR: 0.000020
+10/16/2024 19:45:46 - INFO - __main__ - Step: 7600 Loss_t2i: 4.4301 Loss_mmu: 0.3067 Loss_lm: 0.4944 Data (t): 0.0004, 16.37/s/gpu Batch (t): 1.9554 LR: 0.000020
+10/16/2024 19:47:24 - INFO - __main__ - Step: 7650 Loss_t2i: 2.8622 Loss_mmu: 0.2841 Loss_lm: 0.4765 Data (t): 0.0005, 16.44/s/gpu Batch (t): 1.9461 LR: 0.000020
+10/16/2024 19:49:02 - INFO - __main__ - Step: 7700 Loss_t2i: 4.2059 Loss_mmu: 0.3000 Loss_lm: 0.4085 Data (t): 0.0005, 16.43/s/gpu Batch (t): 1.9478 LR: 0.000020
+10/16/2024 19:50:40 - INFO - __main__ - Step: 7750 Loss_t2i: 5.8346 Loss_mmu: 0.3039 Loss_lm: 0.5274 Data (t): 0.0012, 16.29/s/gpu Batch (t): 1.9642 LR: 0.000020
+10/16/2024 19:52:17 - INFO - __main__ - Step: 7800 Loss_t2i: 4.6581 Loss_mmu: 0.3783 Loss_lm: 0.4879 Data (t): 0.0005, 16.20/s/gpu Batch (t): 1.9756 LR: 0.000020
+10/16/2024 19:53:56 - INFO - __main__ - Step: 7850 Loss_t2i: 3.3345 Loss_mmu: 0.3345 Loss_lm: 0.5027 Data (t): 0.0005, 16.34/s/gpu Batch (t): 1.9578 LR: 0.000020
+10/16/2024 19:55:34 - INFO - __main__ - Step: 7900 Loss_t2i: 4.2815 Loss_mmu: 0.3999 Loss_lm: 0.5162 Data (t): 0.0005, 16.18/s/gpu Batch (t): 1.9782 LR: 0.000020
+10/16/2024 19:57:12 - INFO - __main__ - Step: 7950 Loss_t2i: 5.2579 Loss_mmu: 0.3623 Loss_lm: 0.3635 Data (t): 0.0008, 16.34/s/gpu Batch (t): 1.9578 LR: 0.000020
+10/16/2024 19:58:50 - INFO - __main__ - Step: 8000 Loss_t2i: 2.7777 Loss_mmu: 0.2821 Loss_lm: 0.4701 Data (t): 0.0005, 16.40/s/gpu Batch (t): 1.9509 LR: 0.000020
+10/16/2024 19:58:50 - INFO - __main__ - 1 checkpoints already exist, removing 1 checkpoints
+10/16/2024 19:58:50 - INFO - __main__ - removing checkpoints: checkpoint-7000
+Model weights saved in outputs/show-o-finetuning/checkpoint-8000/unwrapped_model/pytorch_model.bin
+10/16/2024 19:58:55 - INFO - __main__ - Saved state to outputs/show-o-finetuning/checkpoint-8000
+10/16/2024 19:58:55 - INFO - __main__ - Generating images...
+10/16/2024 19:58:57 - INFO - __main__ - Visualizing predictions...
+10/16/2024 20:00:35 - INFO - __main__ - Step: 8050 Loss_t2i: 4.0530 Loss_mmu: 0.2888 Loss_lm: 0.4646 Data (t): 0.0005, 16.46/s/gpu Batch (t): 1.9444 LR: 0.000020
+10/16/2024 20:02:13 - INFO - __main__ - Step: 8100 Loss_t2i: 2.7235 Loss_mmu: 0.2703 Loss_lm: 0.4736 Data (t): 0.0006, 16.28/s/gpu Batch (t): 1.9650 LR: 0.000020
+10/16/2024 20:03:51 - INFO - __main__ - Step: 8150 Loss_t2i: 4.2184 Loss_mmu: 0.3229 Loss_lm: 0.4827 Data (t): 0.0005, 16.45/s/gpu Batch (t): 1.9453 LR: 0.000020
+10/16/2024 20:05:29 - INFO - __main__ - Step: 8200 Loss_t2i: 5.2395 Loss_mmu: 0.2885 Loss_lm: 0.4361 Data (t): 0.0005, 16.47/s/gpu Batch (t): 1.9427 LR: 0.000020
+10/16/2024 20:07:06 - INFO - __main__ - Step: 8250 Loss_t2i: 4.6328 Loss_mmu: 0.2830 Loss_lm: 0.4660 Data (t): 0.0005, 16.29/s/gpu Batch (t): 1.9640 LR: 0.000020
+10/16/2024 20:08:44 - INFO - __main__ - Step: 8300 Loss_t2i: 3.1618 Loss_mmu: 0.2801 Loss_lm: 0.4289 Data (t): 0.0005, 16.36/s/gpu Batch (t): 1.9558 LR: 0.000020
+10/16/2024 20:10:22 - INFO - __main__ - Step: 8350 Loss_t2i: 4.0147 Loss_mmu: 0.3331 Loss_lm: 0.4490 Data (t): 0.0004, 16.42/s/gpu Batch (t): 1.9494 LR: 0.000020
+10/16/2024 20:12:00 - INFO - __main__ - Step: 8400 Loss_t2i: 3.5003 Loss_mmu: 0.2858 Loss_lm: 0.4249 Data (t): 0.0005, 16.28/s/gpu Batch (t): 1.9656 LR: 0.000020
+10/16/2024 20:13:38 - INFO - __main__ - Step: 8450 Loss_t2i: 5.2779 Loss_mmu: 0.2743 Loss_lm: 0.4462 Data (t): 0.0012, 16.34/s/gpu Batch (t): 1.9579 LR: 0.000020
+10/16/2024 20:15:16 - INFO - __main__ - Step: 8500 Loss_t2i: 3.5825 Loss_mmu: 0.3326 Loss_lm: 0.4773 Data (t): 0.0007, 16.37/s/gpu Batch (t): 1.9550 LR: 0.000020
+10/16/2024 20:16:54 - INFO - __main__ - Step: 8550 Loss_t2i: 3.0334 Loss_mmu: 0.3024 Loss_lm: 0.4670 Data (t): 0.0005, 16.22/s/gpu Batch (t): 1.9734 LR: 0.000020
+10/16/2024 20:18:31 - INFO - __main__ - Step: 8600 Loss_t2i: 4.0478 Loss_mmu: 0.3373 Loss_lm: 0.3849 Data (t): 0.0004, 16.39/s/gpu Batch (t): 1.9525 LR: 0.000020
+10/16/2024 20:20:09 - INFO - __main__ - Step: 8650 Loss_t2i: 4.6641 Loss_mmu: 0.2767 Loss_lm: 0.4261 Data (t): 0.0005, 16.39/s/gpu Batch (t): 1.9526 LR: 0.000020
+10/16/2024 20:21:47 - INFO - __main__ - Step: 8700 Loss_t2i: 2.7243 Loss_mmu: 0.2762 Loss_lm: 0.5436 Data (t): 0.0004, 16.23/s/gpu Batch (t): 1.9712 LR: 0.000020
+10/16/2024 20:23:25 - INFO - __main__ - Step: 8750 Loss_t2i: 3.4881 Loss_mmu: 0.2746 Loss_lm: 0.4617 Data (t): 0.0005, 16.39/s/gpu Batch (t): 1.9519 LR: 0.000020
+10/16/2024 20:25:03 - INFO - __main__ - Step: 8800 Loss_t2i: 3.0014 Loss_mmu: 0.2586 Loss_lm: 0.4418 Data (t): 0.0004, 16.40/s/gpu Batch (t): 1.9517 LR: 0.000020
+10/16/2024 20:26:41 - INFO - __main__ - Step: 8850 Loss_t2i: 5.2948 Loss_mmu: 0.2854 Loss_lm: 0.4683 Data (t): 0.0006, 16.34/s/gpu Batch (t): 1.9585 LR: 0.000020
+10/16/2024 20:28:18 - INFO - __main__ - Step: 8900 Loss_t2i: 5.2903 Loss_mmu: 0.2966 Loss_lm: 0.4154 Data (t): 0.0006, 16.27/s/gpu Batch (t): 1.9667 LR: 0.000020
+10/16/2024 20:29:57 - INFO - __main__ - Step: 8950 Loss_t2i: 2.8147 Loss_mmu: 0.3024 Loss_lm: 0.4358 Data (t): 0.0005, 16.43/s/gpu Batch (t): 1.9476 LR: 0.000020
+10/16/2024 20:31:35 - INFO - __main__ - Step: 9000 Loss_t2i: 4.1733 Loss_mmu: 0.2589 Loss_lm: 0.4823 Data (t): 0.0005, 16.36/s/gpu Batch (t): 1.9564 LR: 0.000020
+10/16/2024 20:31:35 - INFO - __main__ - 1 checkpoints already exist, removing 1 checkpoints
+10/16/2024 20:31:35 - INFO - __main__ - removing checkpoints: checkpoint-8000
+Model weights saved in outputs/show-o-finetuning/checkpoint-9000/unwrapped_model/pytorch_model.bin
+10/16/2024 20:31:39 - INFO - __main__ - Saved state to outputs/show-o-finetuning/checkpoint-9000
+10/16/2024 20:31:39 - INFO - __main__ - Generating images...
+10/16/2024 20:31:42 - INFO - __main__ - Visualizing predictions...
+10/16/2024 20:33:20 - INFO - __main__ - Step: 9050 Loss_t2i: 4.5797 Loss_mmu: 0.3395 Loss_lm: 0.4549 Data (t): 0.0005, 16.22/s/gpu Batch (t): 1.9724 LR: 0.000020
+10/16/2024 20:34:58 - INFO - __main__ - Step: 9100 Loss_t2i: 4.2695 Loss_mmu: 0.3568 Loss_lm: 0.4337 Data (t): 0.0005, 16.45/s/gpu Batch (t): 1.9450 LR: 0.000020
+10/16/2024 20:36:36 - INFO - __main__ - Step: 9150 Loss_t2i: 3.4444 Loss_mmu: 0.2480 Loss_lm: 0.3733 Data (t): 0.0007, 16.33/s/gpu Batch (t): 1.9591 LR: 0.000020
+10/16/2024 20:38:14 - INFO - __main__ - Step: 9200 Loss_t2i: 4.6313 Loss_mmu: 0.3347 Loss_lm: 0.4530 Data (t): 0.0004, 16.23/s/gpu Batch (t): 1.9717 LR: 0.000020
+10/16/2024 20:39:51 - INFO - __main__ - Step: 9250 Loss_t2i: 3.2030 Loss_mmu: 0.3091 Loss_lm: 0.4168 Data (t): 0.0004, 16.44/s/gpu Batch (t): 1.9462 LR: 0.000020
+10/16/2024 20:41:30 - INFO - __main__ - Step: 9300 Loss_t2i: 4.3161 Loss_mmu: 0.2691 Loss_lm: 0.4471 Data (t): 0.0005, 16.24/s/gpu Batch (t): 1.9700 LR: 0.000020
+10/16/2024 20:43:08 - INFO - __main__ - Step: 9350 Loss_t2i: 3.3029 Loss_mmu: 0.2673 Loss_lm: 0.4627 Data (t): 0.0005, 16.30/s/gpu Batch (t): 1.9627 LR: 0.000020
+10/16/2024 20:44:46 - INFO - __main__ - Step: 9400 Loss_t2i: 5.3746 Loss_mmu: 0.3209 Loss_lm: 0.4666 Data (t): 0.0005, 16.44/s/gpu Batch (t): 1.9464 LR: 0.000020
+10/16/2024 20:46:24 - INFO - __main__ - Step: 9450 Loss_t2i: 4.1952 Loss_mmu: 0.2472 Loss_lm: 0.3810 Data (t): 0.0005, 16.41/s/gpu Batch (t): 1.9505 LR: 0.000020
+10/16/2024 20:48:02 - INFO - __main__ - Step: 9500 Loss_t2i: 4.5934 Loss_mmu: 0.2906 Loss_lm: 0.4207 Data (t): 0.0007, 16.37/s/gpu Batch (t): 1.9546 LR: 0.000020
+10/16/2024 20:49:40 - INFO - __main__ - Step: 9550 Loss_t2i: 3.5427 Loss_mmu: 0.3013 Loss_lm: 0.4091 Data (t): 0.0005, 16.37/s/gpu Batch (t): 1.9547 LR: 0.000019
+10/16/2024 20:51:18 - INFO - __main__ - Step: 9600 Loss_t2i: 5.2814 Loss_mmu: 0.2675 Loss_lm: 0.3910 Data (t): 0.0011, 16.29/s/gpu Batch (t): 1.9643 LR: 0.000019
+10/16/2024 20:52:56 - INFO - __main__ - Step: 9650 Loss_t2i: 3.0444 Loss_mmu: 0.3350 Loss_lm: 0.4604 Data (t): 0.0005, 16.38/s/gpu Batch (t): 1.9532 LR: 0.000019
+10/16/2024 20:54:33 - INFO - __main__ - Step: 9700 Loss_t2i: 2.4845 Loss_mmu: 0.2362 Loss_lm: 0.4503 Data (t): 0.0005, 16.29/s/gpu Batch (t): 1.9647 LR: 0.000019
+10/16/2024 20:56:11 - INFO - __main__ - Step: 9750 Loss_t2i: 4.2415 Loss_mmu: 0.2799 Loss_lm: 0.3869 Data (t): 0.0012, 16.46/s/gpu Batch (t): 1.9439 LR: 0.000019
+10/16/2024 20:57:49 - INFO - __main__ - Step: 9800 Loss_t2i: 4.1558 Loss_mmu: 0.2660 Loss_lm: 0.4665 Data (t): 0.0012, 16.43/s/gpu Batch (t): 1.9481 LR: 0.000019
+10/16/2024 20:59:27 - INFO - __main__ - Step: 9850 Loss_t2i: 3.8862 Loss_mmu: 0.3150 Loss_lm: 0.4406 Data (t): 0.0011, 16.31/s/gpu Batch (t): 1.9620 LR: 0.000019
+10/16/2024 21:01:05 - INFO - __main__ - Step: 9900 Loss_t2i: 4.1170 Loss_mmu: 0.2830 Loss_lm: 0.4232 Data (t): 0.0012, 16.38/s/gpu Batch (t): 1.9541 LR: 0.000019
+10/16/2024 21:02:43 - INFO - __main__ - Step: 9950 Loss_t2i: 4.3829 Loss_mmu: 0.3145 Loss_lm: 0.4115 Data (t): 0.0006, 16.36/s/gpu Batch (t): 1.9560 LR: 0.000019
+10/16/2024 21:04:21 - INFO - __main__ - Step: 10000 Loss_t2i: 5.1247 Loss_mmu: 0.2919 Loss_lm: 0.4916 Data (t): 0.0006, 16.27/s/gpu Batch (t): 1.9662 LR: 0.000019
+10/16/2024 21:04:21 - INFO - __main__ - 1 checkpoints already exist, removing 1 checkpoints
+10/16/2024 21:04:21 - INFO - __main__ - removing checkpoints: checkpoint-9000
+Model weights saved in outputs/show-o-finetuning/checkpoint-10000/unwrapped_model/pytorch_model.bin
+10/16/2024 21:04:26 - INFO - __main__ - Saved state to outputs/show-o-finetuning/checkpoint-10000
+10/16/2024 21:04:26 - INFO - __main__ - Generating images...
+10/16/2024 21:04:28 - INFO - __main__ - Visualizing predictions...
+10/16/2024 21:06:06 - INFO - __main__ - Step: 10050 Loss_t2i: 2.3134 Loss_mmu: 0.3051 Loss_lm: 0.4140 Data (t): 0.0005, 16.53/s/gpu Batch (t): 1.9361 LR: 0.000019
+10/16/2024 21:07:44 - INFO - __main__ - Step: 10100 Loss_t2i: 5.4981 Loss_mmu: 0.2935 Loss_lm: 0.4025 Data (t): 0.0006, 16.29/s/gpu Batch (t): 1.9646 LR: 0.000019
+10/16/2024 21:09:22 - INFO - __main__ - Step: 10150 Loss_t2i: 2.9977 Loss_mmu: 0.2831 Loss_lm: 0.3889 Data (t): 0.0005, 16.34/s/gpu Batch (t): 1.9588 LR: 0.000019
+10/16/2024 21:11:00 - INFO - __main__ - Step: 10200 Loss_t2i: 5.0006 Loss_mmu: 0.3128 Loss_lm: 0.4191 Data (t): 0.0005, 16.48/s/gpu Batch (t): 1.9423 LR: 0.000019
+10/16/2024 21:12:38 - INFO - __main__ - Step: 10250 Loss_t2i: 3.0295 Loss_mmu: 0.2984 Loss_lm: 0.4381 Data (t): 0.0005, 16.25/s/gpu Batch (t): 1.9693 LR: 0.000019
+10/16/2024 21:14:16 - INFO - __main__ - Step: 10300 Loss_t2i: 2.6131 Loss_mmu: 0.3118 Loss_lm: 0.3855 Data (t): 0.0005, 16.20/s/gpu Batch (t): 1.9756 LR: 0.000019
+10/16/2024 21:15:54 - INFO - __main__ - Step: 10350 Loss_t2i: 3.2925 Loss_mmu: 0.2886 Loss_lm: 0.4113 Data (t): 0.0005, 16.45/s/gpu Batch (t): 1.9456 LR: 0.000019
+10/16/2024 21:17:32 - INFO - __main__ - Step: 10400 Loss_t2i: 2.6078 Loss_mmu: 0.2604 Loss_lm: 0.4188 Data (t): 0.0005, 16.47/s/gpu Batch (t): 1.9428 LR: 0.000019
+10/16/2024 21:19:10 - INFO - __main__ - Step: 10450 Loss_t2i: 3.8668 Loss_mmu: 0.2700 Loss_lm: 0.4215 Data (t): 0.0005, 16.40/s/gpu Batch (t): 1.9517 LR: 0.000019
+10/16/2024 21:20:48 - INFO - __main__ - Step: 10500 Loss_t2i: 3.0409 Loss_mmu: 0.3243 Loss_lm: 0.4370 Data (t): 0.0005, 16.42/s/gpu Batch (t): 1.9487 LR: 0.000019
+10/16/2024 21:22:26 - INFO - __main__ - Step: 10550 Loss_t2i: 3.2705 Loss_mmu: 0.2870 Loss_lm: 0.4563 Data (t): 0.0005, 16.42/s/gpu Batch (t): 1.9486 LR: 0.000019
+10/16/2024 21:24:04 - INFO - __main__ - Step: 10600 Loss_t2i: 2.6109 Loss_mmu: 0.2278 Loss_lm: 0.4234 Data (t): 0.0005, 16.39/s/gpu Batch (t): 1.9524 LR: 0.000019
+10/16/2024 21:25:41 - INFO - __main__ - Step: 10650 Loss_t2i: 5.0664 Loss_mmu: 0.2161 Loss_lm: 0.3958 Data (t): 0.0005, 16.41/s/gpu Batch (t): 1.9506 LR: 0.000019
+10/16/2024 21:27:19 - INFO - __main__ - Step: 10700 Loss_t2i: 3.4411 Loss_mmu: 0.2871 Loss_lm: 0.3748 Data (t): 0.0006, 16.35/s/gpu Batch (t): 1.9573 LR: 0.000019
+10/16/2024 21:28:57 - INFO - __main__ - Step: 10750 Loss_t2i: 3.5317 Loss_mmu: 0.2412 Loss_lm: 0.3591 Data (t): 0.0005, 16.26/s/gpu Batch (t): 1.9682 LR: 0.000019
+10/16/2024 21:30:35 - INFO - __main__ - Step: 10800 Loss_t2i: 3.7868 Loss_mmu: 0.2781 Loss_lm: 0.3752 Data (t): 0.0006, 16.44/s/gpu Batch (t): 1.9461 LR: 0.000019
+10/16/2024 21:32:13 - INFO - __main__ - Step: 10850 Loss_t2i: 3.1058 Loss_mmu: 0.2630 Loss_lm: 0.4586 Data (t): 0.0005, 16.46/s/gpu Batch (t): 1.9443 LR: 0.000019
+10/16/2024 21:33:51 - INFO - __main__ - Step: 10900 Loss_t2i: 4.0480 Loss_mmu: 0.2324 Loss_lm: 0.3643 Data (t): 0.0006, 16.19/s/gpu Batch (t): 1.9764 LR: 0.000019
+10/16/2024 21:35:29 - INFO - __main__ - Step: 10950 Loss_t2i: 4.7406 Loss_mmu: 0.2445 Loss_lm: 0.3701 Data (t): 0.0006, 16.38/s/gpu Batch (t): 1.9535 LR: 0.000019
+10/16/2024 21:37:07 - INFO - __main__ - Step: 11000 Loss_t2i: 5.4439 Loss_mmu: 0.2644 Loss_lm: 0.4549 Data (t): 0.0005, 16.34/s/gpu Batch (t): 1.9579 LR: 0.000019
+10/16/2024 21:37:07 - INFO - __main__ - 1 checkpoints already exist, removing 1 checkpoints
+10/16/2024 21:37:07 - INFO - __main__ - removing checkpoints: checkpoint-10000
+Model weights saved in outputs/show-o-finetuning/checkpoint-11000/unwrapped_model/pytorch_model.bin
+10/16/2024 21:37:12 - INFO - __main__ - Saved state to outputs/show-o-finetuning/checkpoint-11000
+10/16/2024 21:37:12 - INFO - __main__ - Generating images...
+10/16/2024 21:37:14 - INFO - __main__ - Visualizing predictions...
+10/16/2024 21:38:53 - INFO - __main__ - Step: 11050 Loss_t2i: 5.1855 Loss_mmu: 0.2884 Loss_lm: 0.3704 Data (t): 0.0006, 16.41/s/gpu Batch (t): 1.9506 LR: 0.000019
+10/16/2024 21:40:30 - INFO - __main__ - Step: 11100 Loss_t2i: 4.8092 Loss_mmu: 0.2618 Loss_lm: 0.4495 Data (t): 0.0005, 16.27/s/gpu Batch (t): 1.9664 LR: 0.000019
+10/16/2024 21:42:08 - INFO - __main__ - Step: 11150 Loss_t2i: 2.0946 Loss_mmu: 0.2620 Loss_lm: 0.4380 Data (t): 0.0002, 16.39/s/gpu Batch (t): 1.9523 LR: 0.000019
+10/16/2024 21:43:54 - INFO - __main__ - Step: 11200 Loss_t2i: 4.8874 Loss_mmu: 0.2177 Loss_lm: 0.3661 Data (t): 0.0014, 16.47/s/gpu Batch (t): 1.9430 LR: 0.000019
+10/16/2024 21:45:31 - INFO - __main__ - Step: 11250 Loss_t2i: 5.0447 Loss_mmu: 0.2780 Loss_lm: 0.3983 Data (t): 0.0006, 16.25/s/gpu Batch (t): 1.9688 LR: 0.000019
+10/16/2024 21:47:09 - INFO - __main__ - Step: 11300 Loss_t2i: 5.7479 Loss_mmu: 0.2819 Loss_lm: 0.3635 Data (t): 0.0005, 16.40/s/gpu Batch (t): 1.9517 LR: 0.000019
+10/16/2024 21:48:47 - INFO - __main__ - Step: 11350 Loss_t2i: 4.5792 Loss_mmu: 0.2468 Loss_lm: 0.4252 Data (t): 0.0008, 16.52/s/gpu Batch (t): 1.9367 LR: 0.000019
+10/16/2024 21:50:25 - INFO - __main__ - Step: 11400 Loss_t2i: 3.4788 Loss_mmu: 0.2275 Loss_lm: 0.3615 Data (t): 0.0011, 16.34/s/gpu Batch (t): 1.9580 LR: 0.000019
+10/16/2024 21:52:03 - INFO - __main__ - Step: 11450 Loss_t2i: 4.0007 Loss_mmu: 0.2814 Loss_lm: 0.4092 Data (t): 0.0005, 16.40/s/gpu Batch (t): 1.9513 LR: 0.000019
+10/16/2024 21:53:41 - INFO - __main__ - Step: 11500 Loss_t2i: 3.1126 Loss_mmu: 0.2778 Loss_lm: 0.4176 Data (t): 0.0005, 16.37/s/gpu Batch (t): 1.9544 LR: 0.000019
+10/16/2024 21:55:18 - INFO - __main__ - Step: 11550 Loss_t2i: 3.6395 Loss_mmu: 0.3160 Loss_lm: 0.4261 Data (t): 0.0005, 16.34/s/gpu Batch (t): 1.9589 LR: 0.000019
+10/16/2024 21:56:56 - INFO - __main__ - Step: 11600 Loss_t2i: 3.9683 Loss_mmu: 0.2872 Loss_lm: 0.3979 Data (t): 0.0005, 16.36/s/gpu Batch (t): 1.9556 LR: 0.000019
+10/16/2024 21:58:34 - INFO - __main__ - Step: 11650 Loss_t2i: 3.4006 Loss_mmu: 0.1906 Loss_lm: 0.3708 Data (t): 0.0011, 16.51/s/gpu Batch (t): 1.9377 LR: 0.000019
+10/16/2024 22:00:11 - INFO - __main__ - Step: 11700 Loss_t2i: 4.9175 Loss_mmu: 0.2259 Loss_lm: 0.4226 Data (t): 0.0008, 16.24/s/gpu Batch (t): 1.9703 LR: 0.000019
+10/16/2024 22:01:49 - INFO - __main__ - Step: 11750 Loss_t2i: 3.9989 Loss_mmu: 0.2144 Loss_lm: 0.3815 Data (t): 0.0005, 16.50/s/gpu Batch (t): 1.9395 LR: 0.000019
+10/16/2024 22:03:27 - INFO - __main__ - Step: 11800 Loss_t2i: 5.1854 Loss_mmu: 0.2459 Loss_lm: 0.3547 Data (t): 0.0005, 16.39/s/gpu Batch (t): 1.9523 LR: 0.000019
+10/16/2024 22:05:05 - INFO - __main__ - Step: 11850 Loss_t2i: 4.3958 Loss_mmu: 0.2861 Loss_lm: 0.4042 Data (t): 0.0006, 16.28/s/gpu Batch (t): 1.9652 LR: 0.000019
+10/16/2024 22:06:43 - INFO - __main__ - Step: 11900 Loss_t2i: 4.2107 Loss_mmu: 0.2396 Loss_lm: 0.3943 Data (t): 0.0005, 16.28/s/gpu Batch (t): 1.9654 LR: 0.000019
+10/16/2024 22:08:21 - INFO - __main__ - Step: 11950 Loss_t2i: 3.3772 Loss_mmu: 0.2016 Loss_lm: 0.3976 Data (t): 0.0005, 16.55/s/gpu Batch (t): 1.9339 LR: 0.000019
+10/16/2024 22:09:59 - INFO - __main__ - Step: 12000 Loss_t2i: 3.7312 Loss_mmu: 0.2314 Loss_lm: 0.3517 Data (t): 0.0005, 16.30/s/gpu Batch (t): 1.9630 LR: 0.000019
+10/16/2024 22:09:59 - INFO - __main__ - 1 checkpoints already exist, removing 1 checkpoints
+10/16/2024 22:09:59 - INFO - __main__ - removing checkpoints: checkpoint-11000
+Model weights saved in outputs/show-o-finetuning/checkpoint-12000/unwrapped_model/pytorch_model.bin
+10/16/2024 22:10:04 - INFO - __main__ - Saved state to outputs/show-o-finetuning/checkpoint-12000
+10/16/2024 22:10:04 - INFO - __main__ - Generating images...
+10/16/2024 22:10:06 - INFO - __main__ - Visualizing predictions...
