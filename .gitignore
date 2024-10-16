@@ -3,3 +3,4 @@ wandb/*
 outputs/
 pretrained_ckpt/
 data/
+download_llama.sh
