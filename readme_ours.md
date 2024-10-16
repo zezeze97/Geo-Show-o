@@ -92,7 +92,7 @@ accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml -
 CUDA_VISIBLE_DEVICES=0 python test_vq_model.py
 ```
 
-<img src="geo_demo_img/combined_image_grid.jpg" alt="示例图片" width="2048" height="512">
+<img src="geo_demo_img/combined_image_grid.jpg" alt="示例图片" width="1200" height="300">
 
 # Todo
 
