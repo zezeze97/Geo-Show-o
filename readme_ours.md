@@ -102,3 +102,4 @@ CUDA_VISIBLE_DEVICES=0 python test_vq_model.py
 - [ ] hyper param: 原始模型的text seq len为128，改成1024进行sft
 - [ ] data: 构建混合模态推理数据集: problem + cdl -> image + cot reasoning
 - [ ] data: cdl -> image效果很差，尝试 caption + cdl -> image ?
+- [ ] eval: 几何图像生成质量评价？
