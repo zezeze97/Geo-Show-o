@@ -98,8 +98,8 @@ CUDA_VISIBLE_DEVICES=0 python test_vq_model.py
 
 - [ ] code: Mixed-modal inference: image + language -> image + language
 - [ ] code: Mixed-modal sft
-- [ ] code: MAGVITV2 Training: [https://github.com/TencentARC/Open-MAGVIT2](https://github.com/TencentARC/Open-MAGVIT2), 从show/magvitv2出发ft
-- [ ] hyper param: 原始模型的text seq len为128，改成1024进行sft
+- [ ] code: MAGVITV2 Training: [https://github.com/TencentARC/Open-MAGVIT2](https://github.com/TencentARC/Open-MAGVIT2), 从show/magvitv2出发进行ft，需要改个模型
+- [ ] hyper param: 原始模型的text seq len为128，改成512进行sft
 - [ ] data: 构建混合模态推理数据集: problem + cdl -> image + cot reasoning
 - [ ] data: cdl -> image效果很差，尝试 caption + cdl -> image ?
 - [ ] eval: 几何图像生成质量评价？
