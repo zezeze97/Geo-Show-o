@@ -191,6 +191,7 @@ def main():
 
     # Initialize Show-o model
     if config.model.showo.load_from_showo:
+        print(f'Load from pretrained show-o: {config.model.showo.pretrained_model_path}')
         model = Showo.from_pretrained(config.model.showo.pretrained_model_path).to(accelerator.device)
         if config.model.showo.vocab_size != model.vocab_size:
             print(f'vocab size of show-o is not currect!!!')
@@ -304,7 +305,7 @@ def main():
         dataset_mmu = LazySupervisedDataset(image_folder=dataset_config.mmu_image_folder,
                                     json_path=dataset_config.mmu_json_path,
                                     resolution=preproc_config.resolution,
-                                    is_t2i=False)
+                                    is_mmu=True)
         if accelerator.num_processes > 1:
             sampler = DistributedSampler(dataset_mmu,
                                          num_replicas=accelerator.num_processes,
@@ -316,25 +317,33 @@ def main():
             sampler = None
             shuffle = True
         
-        train_dataloader_mmu =  DataLoader(dataset_mmu, batch_size=config.training.batch_size_t2i,
+        train_dataloader_mmu =  DataLoader(dataset_mmu, batch_size=config.training.batch_size_mmu,
                                           sampler=sampler, shuffle=shuffle, num_workers=dataset_config.num_workers,
                                           pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
     else:
         raise NotImplementedError(f"Unsupported dataset type {config.dataset.und_type}")
 
     # LLM pure text dataset: RefinedWeb
-    if dataset_config.train_lm_shards_path_or_url is not None:
+    if dataset_config.lm_json_path is not None:
         
-        dataset_lm = RefinedWebDataset(data_path=dataset_config.train_lm_shards_path_or_url,
-                                    rank=accelerator.process_index,
-                                    world_size=accelerator.num_processes,
-                                    num_workers=dataset_config.num_workers)
+        dataset_lm = LazySupervisedDataset(json_path=dataset_config.lm_json_path, 
+                                        is_lm=True)
+        if accelerator.num_processes > 1:
+            sampler = DistributedSampler(dataset_lm,
+                                         num_replicas=accelerator.num_processes,
+                                         rank=accelerator.process_index,
+                                         shuffle=True,
+                                         )
+            shuffle = False
+        else:
+            sampler = None
+            shuffle = True
 
-        train_dataloader_lm = torch.utils.data.DataLoader(dataset_lm, batch_size=config.training.batch_size_lm,
-                                                        sampler=None, collate_fn=dataset_lm.collate_fn,
-                                                        num_workers=dataset_config.num_workers)
+        train_dataloader_lm = DataLoader(dataset_lm, batch_size=config.training.batch_size_lm,
+                                          sampler=sampler, shuffle=shuffle, num_workers=dataset_config.num_workers,
+                                          pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
     else:
-        train_dataloader_lm = train_dataloader_mmu # 临时使用mmu的dataloader
+        raise FileNotFoundError(f"lm data not find!")
 
     # Combine these dataloaders into a single iterable model
     iterables = {
@@ -350,7 +359,7 @@ def main():
     #################################
     global_step = 0
     first_epoch = 0
-
+    
     if config.experiment.resume_from_checkpoint:
         dirs = os.listdir(config.experiment.output_dir)
         dirs = [d for d in dirs if d.startswith("checkpoint")]

@@ -14,7 +14,7 @@ experiment:
     generate_every: 1000
     log_every: 50
     log_grad_norm_every: 500
-    resume_from_checkpoint: 'latest'
+    resume_from_checkpoint: null # 'latest'
     checkpoints_total_limit: 1
 
 model:
@@ -44,7 +44,7 @@ dataset:
         t2i_json_path: data/formalgeo7k_v2/custom_json/t2i/train.json
         mmu_image_folder: data/formalgeo7k_v2
         mmu_json_path: data/formalgeo7k_v2/custom_json/t2i/train.json
-        train_lm_shards_path_or_url: null
+        lm_json_path: data/formalgeo7k_v2/custom_json/t2i/train.json
         validation_prompts_file: "validation_prompts/geoprompts.txt"
         shuffle_buffer_size: 1000
         num_workers: 16
@@ -53,13 +53,13 @@ dataset:
         persistent_workers: True
 
     preprocessing:
-        max_seq_length: 1024 # for text tokens
+        max_seq_length: 512 # for text tokens
         resolution: 512
 
 optimizer:
     name: adamw
     params: # default adamw params
-        learning_rate: 2e-5
+        learning_rate: 5e-5
         scale_lr: False # scale learning rate by total batch size
         beta1: 0.9
         beta2: 0.999
@@ -74,9 +74,9 @@ lr_scheduler:
 
 training:
     gradient_accumulation_steps: 8
-    batch_size_t2i: 2
-    batch_size_lm: 1
-    batch_size_mmu: 1
+    batch_size_t2i: 4
+    batch_size_lm: 4
+    batch_size_mmu: 4
     num_train_epochs: 10
     mixed_precision: "bf16"
     enable_tf32: True

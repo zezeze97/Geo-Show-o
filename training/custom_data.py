@@ -63,12 +63,14 @@ def image_transform(image, resolution=256):
 class LazySupervisedDataset(Dataset):
     """Dataset for supervised fine-tuning."""
 
-    def __init__(self, image_folder: str,
-                 json_path: str,
+    def __init__(self, image_folder: str=None,
+                 json_path: str=None,
                  geo_customized_aug: bool=True,
                  image_aspect_ratio: str='pad',
                  resolution: int = 256,
-                 is_t2i: bool = False
+                 is_t2i: bool = False,
+                 is_lm: bool = False,
+                 is_mmu: bool = False
                  ):
         super(LazySupervisedDataset, self).__init__()
         
@@ -80,6 +82,8 @@ class LazySupervisedDataset(Dataset):
         self.resolution = resolution
         self.list_data_dict = list_data_dict
         self.is_t2i = is_t2i
+        self.is_lm = is_lm
+        self.is_mmu = is_mmu
     
 
     def __len__(self):
@@ -97,29 +101,34 @@ class LazySupervisedDataset(Dataset):
                 instruction = item['value']
             elif item['from'] == 'gpt':
                 response = item['value']
+        if self.is_t2i or self.is_mmu:
+            if 'image' in sources:
+                image_file = sources['image']
+                image = Image.open(os.path.join(self.image_folder, image_file)).convert('RGB')
+                if self.geo_customized_aug:
+                    image = enhance_image(image)
+                if self.image_aspect_ratio == 'pad':
+                    
+                    image = expand2square(image, (255, 255, 255))
+                image = image_transform(image, self.resolution)
+            else:
+                image = torch.zeros(3, self.resolution, self.resolution)
         
-        if 'image' in sources:
-            image_file = sources['image']
-            image = Image.open(os.path.join(self.image_folder, image_file)).convert('RGB')
-            if self.geo_customized_aug:
-                image = enhance_image(image)
-            if self.image_aspect_ratio == 'pad':
-                
-                image = expand2square(image, (255, 255, 255))
-            image = image_transform(image, self.resolution)
-        else:
-            image = torch.zeros(3, self.resolution, self.resolution)
-        
-        if self.is_t2i:
-            text = instruction
-        else:
-            text = 'USER: \n' + instruction.lstrip('\n<image>') + ' ASSISTANT:' + response
-        
-        data_dict = {
-            "images": image,
-            "input_ids": text
-        }
-        
+            if self.is_t2i:
+                text = instruction
+            elif self.is_mmu:
+                text = 'USER: \n' + instruction + ' ASSISTANT:' + response
+            
+            data_dict = {
+                "images": image,
+                "input_ids": text
+            }
+        elif self.is_lm:
+            text = 'USER: \n' + instruction + ' ASSISTANT:' + response
+            data_dict = {
+                "input_ids": text
+            }
+            
             
         return data_dict
 

@@ -14,7 +14,7 @@ experiment:
     generate_every: 1000
     log_every: 50
     log_grad_norm_every: 500
-    resume_from_checkpoint: 'latest'
+    resume_from_checkpoint: null # 'latest'
     checkpoints_total_limit: 1
 
 model:
@@ -44,7 +44,7 @@ dataset:
         t2i_json_path: data/formalgeo7k_v2/custom_json/t2i/train.json
         mmu_image_folder: data/formalgeo7k_v2
         mmu_json_path: data/formalgeo7k_v2/custom_json/t2i/train.json
-        train_lm_shards_path_or_url: null
+        lm_json_path: data/formalgeo7k_v2/custom_json/t2i/train.json
         validation_prompts_file: "validation_prompts/geoprompts.txt"
         shuffle_buffer_size: 1000
         num_workers: 16
@@ -73,10 +73,10 @@ lr_scheduler:
         warmup_steps: 5000
 
 training:
-    gradient_accumulation_steps: 4
+    gradient_accumulation_steps: 8
     batch_size_t2i: 4
-    batch_size_lm: 2
-    batch_size_mmu: 2
+    batch_size_lm: 4
+    batch_size_mmu: 4
     num_train_epochs: 10
     mixed_precision: "bf16"
     enable_tf32: True
