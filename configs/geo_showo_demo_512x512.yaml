@@ -14,7 +14,7 @@ model:
         vq_model_name: "showlab/magvitv2"
 
     showo:
-        pretrained_model_path: "outputs/show-o-finetuning-512x512/checkpoint-31000/unwrapped_model"
+        pretrained_model_path: "outputs/show-o-finetuning-512x512"
         w_clip_vit: False
         vocab_size: 58498
         llm_vocab_size: 50295

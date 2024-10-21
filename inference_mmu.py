@@ -151,8 +151,9 @@ if __name__ == '__main__':
                                                     eot_token=tokenizer.eos_token_id
                                                     )
             else:
-                input_ids = uni_prompting.text_tokenizer(['USER: \n' + question + ' ASSISTANT:'])[
-                    'input_ids']
+                # input_ids = uni_prompting.text_tokenizer(['USER: \n' + question + ' ASSISTANT:'])[
+                #     'input_ids']
+                input_ids = uni_prompting.text_tokenizer([' \n' + question + ' ASSISTANT:'])['input_ids']
                 input_ids = torch.tensor(input_ids).to(device)
 
                 input_ids = torch.cat([
