@@ -87,12 +87,24 @@ accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml -
 
 # 原始预训练VQ-VAE重建能力
 
-在512分辨率下重建能力还可以接受，256文字看不清
 ```
 CUDA_VISIBLE_DEVICES=0 python test_vq_model.py
 ```
 
-<img src="geo_demo_img/combined_image_grid.jpg" alt="示例图片" width="1200" height="300">
+- 在512分辨率下重建能力还可以接受，256文字看不清
+- showlab/magvitv2支持多分辨率重建(CNN)，spatial 16x 压缩 
+
+
+## 256
+<img src="geo_demo_img/combined_image_grid_256.jpg" alt="示例图片" width="1200" height="300">
+
+## 384
+
+<img src="geo_demo_img/combined_image_grid_384.jpg" alt="示例图片" width="1200" height="300">
+
+## 512
+
+<img src="geo_demo_img/combined_image_grid_512.jpg" alt="示例图片" width="1200" height="300">
 
 # Todo
 
@@ -100,6 +112,8 @@ CUDA_VISIBLE_DEVICES=0 python test_vq_model.py
 - [ ] code: Mixed-modal sft
 - [ ] code: MAGVITV2 Training: [https://github.com/TencentARC/Open-MAGVIT2](https://github.com/TencentARC/Open-MAGVIT2), 从show/magvitv2出发进行ft，需要改个模型
 - [x] hyper param: 原始模型的text seq len为128，改成512进行sft
+    - 结论: 需要增长text seq len, 注意phi1.5的长度限制为2048:  [https://huggingface.co/microsoft/phi-1_5/blob/main/config.json](https://huggingface.co/microsoft/phi-1_5/blob/main/config.json)
 - [ ] data: 构建混合模态推理数据集: problem + cdl -> image + cot reasoning
-- [ ] data: cdl -> image效果很差，尝试 caption + cdl -> image ?
+- [x] data: cdl -> image效果很差，尝试 caption + cdl -> image?
+    - 结论: 在不重新训练magvitv2情况下，效果也不好
 - [ ] eval: 几何图像生成质量评价？
