@@ -19,17 +19,20 @@ experiment:
 
 model:
     vq_model:
-        type: "magvitv2"
-        vq_model_name: "showlab/magvitv2"
-
+        #type: "magvitv2" 
+        #vq_model_name: "showlab/magvitv2" /lustre/home/2201210053/GEOMETERY/checkpoints1031/vqgan/test/epoch=149-step=44700.ckpt
+        type: "geo"
+        vq_model_config: "/lustre/home/2201210053/GEOMETERY/results1031/vqgan/test/config.yaml"
+        vq_model_checkpoint:  "/lustre/home/2201210053/GEOMETERY/checkpoints1031/vqgan/test/epoch=149-step=44700.ckpt"
+        
     showo:
         load_from_showo: True
         pretrained_model_path: "showlab/show-o-512x512"
         w_clip_vit: False
         vocab_size: 58498
-        llm_vocab_size: 50295
+        llm_vocab_size: 56439
         llm_model_path: 'microsoft/phi-1_5'
-        codebook_size: 8192
+        codebook_size: 2048
         num_vq_tokens: 1024
         num_new_special_tokens: 10  # <|soi|> <|eoi|> <|sov|> <|eov|> <|t2i|> <|mmu|> <|t2v|> <|v2v|> <|lvg|> <|pad|>
 
@@ -40,14 +43,14 @@ dataset:
     und_type: "captioning"
     combined_loader_mode: "max_size_cycle"
     params:
-        t2i_image_folder: data/formalgeo7k_v2
-        t2i_json_path: data/formalgeo7k_v2/custom_json/t2i/train.json
-        mmu_image_folder: data/formalgeo7k_v2
-        mmu_json_path: data/formalgeo7k_v2/custom_json/t2i/train.json
-        lm_json_path: data/formalgeo7k_v2/custom_json/t2i/train.json
+        t2i_image_folder: data/formalgeo7k/formalgeo7k_v2
+        t2i_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/t2i/train.json
+        mmu_image_folder: data/formalgeo7k/formalgeo7k_v2
+        mmu_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/t2i/train.json
+        lm_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/t2i/train.json
         validation_prompts_file: "validation_prompts/geoprompts.txt"
         shuffle_buffer_size: 1000
-        num_workers: 16
+        num_workers: 8
         resolution: 512
         pin_memory: True
         persistent_workers: True
@@ -76,8 +79,8 @@ training:
     gradient_accumulation_steps: 1
     noise_type: "mask"
     batch_size_t2i: 4
-    batch_size_lm: 4
-    batch_size_mmu: 4
+    batch_size_lm: 2
+    batch_size_mmu: 2
     num_train_epochs: 10
     mixed_precision: "bf16"
     enable_tf32: True

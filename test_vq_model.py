@@ -1,11 +1,25 @@
 import torch
-from models import MAGVITv2
+from models import VQModel
 import numpy as np
 from PIL import Image
 from torchvision import transforms
 import os
 import random
 from training.geo_data_aug import crop
+from omegaconf import OmegaConf
+
+def load_config(config_path, display=True):
+    config = OmegaConf.load(config_path)
+    if display:
+        print(OmegaConf.to_yaml(config))
+    return config
+
+def load_vqgan_new(config, ckpt_path=None):
+    model = MAGVIT2(**config.model.init_args)
+    if ckpt_path is not None:
+        sd = torch.load(ckpt_path, map_location="cpu")["state_dict"]
+        model.load_state_dict(sd, strict=False)
+    return model.eval()
 
 
 def expand2square(pil_img, background_color):
@@ -39,14 +53,13 @@ def image_transform(image, resolution=256):
 
 if __name__ == '__main__':
     
-    
-    # 选择设备
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    config_file = "/lustre/home/2201210053/GEOMETERY/results1031/vqgan/test/config.yaml"
+    ckpt_path = "/lustre/home/2201210053/GEOMETERY/checkpoints1031/vqgan/test/epoch=102-step=30694.ckpt"
     
     # 加载模型
-    vq_model = MAGVITv2.from_pretrained('showlab/magvitv2').to(device)
-    vq_model.requires_grad_(False)
-    vq_model.eval()
+    config_model = load_config(config_path=config_file, display=False)
+    model = load_vqgan_new(config_model, ckpt_path=ckpt_path).to(device)
     
     # 图片文件夹路径
     img_folder = '/lustre/home/2001110054/Geo-Multi-Modal/data_backup/formalgeo7k/formalgeo7k_v2/diagrams'  # 记得修改文件夹路径

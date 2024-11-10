@@ -5,8 +5,8 @@ wandb:
 
 experiment:
     project: "training"
-    name: "show-o-finetuning"
-    output_dir: "outputs/show-o-finetuning"
+    name: "show-o-finetuning-512x512"
+    output_dir: "outputs/show-o-finetuning-512x512"
     # max_train_examples_t2i: 20000000
     # max_train_examples_mmu: 40000000
     save_every: 1000
@@ -24,13 +24,13 @@ model:
 
     showo:
         load_from_showo: True
-        pretrained_model_path: "showlab/show-o"
+        pretrained_model_path: "showlab/show-o-512x512"
         w_clip_vit: False
         vocab_size: 58498
         llm_vocab_size: 50295
         llm_model_path: 'microsoft/phi-1_5'
         codebook_size: 8192
-        num_vq_tokens: 256
+        num_vq_tokens: 1024
         num_new_special_tokens: 10  # <|soi|> <|eoi|> <|sov|> <|eov|> <|t2i|> <|mmu|> <|t2v|> <|v2v|> <|lvg|> <|pad|>
 
     # gradient_checkpointing: True
@@ -40,21 +40,21 @@ dataset:
     und_type: "captioning"
     combined_loader_mode: "max_size_cycle"
     params:
-        t2i_image_folder: data/formalgeo7k_v2
-        t2i_json_path: data/formalgeo7k_v2/custom_json/t2i/train.json
-        mmu_image_folder: data/formalgeo7k_v2
-        mmu_json_path: data/formalgeo7k_v2/custom_json/t2i/train.json
-        lm_json_path: data/formalgeo7k_v2/custom_json/t2i/train.json
+        t2i_image_folder: data/formalgeo7k/formalgeo7k_v2
+        t2i_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/t2i/train.json
+        mmu_image_folder: data/formalgeo7k/formalgeo7k_v2
+        mmu_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/t2i/train.json
+        lm_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/t2i/train.json
         validation_prompts_file: "validation_prompts/geoprompts.txt"
         shuffle_buffer_size: 1000
-        num_workers: 16
-        resolution: 256
+        num_workers: 8
+        resolution: 512
         pin_memory: True
         persistent_workers: True
 
     preprocessing:
-        max_seq_length: 512 # 128 # for text tokens
-        resolution: 256
+        max_seq_length: 512 # for text tokens
+        resolution: 512
 
 optimizer:
     name: adamw
@@ -76,8 +76,8 @@ training:
     gradient_accumulation_steps: 1
     noise_type: "mask"
     batch_size_t2i: 4
-    batch_size_lm: 4
-    batch_size_mmu: 4
+    batch_size_lm: 1
+    batch_size_mmu: 1
     num_train_epochs: 10
     mixed_precision: "bf16"
     enable_tf32: True

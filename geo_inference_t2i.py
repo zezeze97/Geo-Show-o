@@ -22,7 +22,8 @@ from tqdm import tqdm
 import numpy as np
 import torch
 import wandb
-from models import Showo, MAGVITv2, get_mask_chedule
+from models import Showo, VQModel, get_mask_chedule
+from omegaconf import OmegaConf
 from training.prompting_utils import UniversalPrompting, create_attention_mask_predict_next
 from training.utils import get_config, flatten_omega_conf, image_transform
 from transformers import AutoTokenizer
@@ -31,8 +32,38 @@ import torch.nn.functional as F
 def get_vq_model_class(model_type):
     if model_type == "magvitv2":
         return MAGVITv2
+    elif model_type == "geo":
+        return VQModel
     else:
         raise ValueError(f"model_type {model_type} not supported.")
+
+def load_vqgan_new(config, ckpt_path=None):
+    model = VQModel(**config.model.init_args)
+    
+    if ckpt_path is not None:
+        # 加载检查点文件中的 state_dict
+        sd = torch.load(ckpt_path, map_location="cpu")["state_dict"]
+        
+        # 提取出普通模型权重和 EMA 权重
+        model_weights = {k: v for k, v in sd.items() if not k.startswith('model_ema.')}
+        ema_weights = {k.replace('model_ema.', ''): v for k, v in sd.items() if k.startswith('model_ema.')}
+        
+        # 加载普通模型的权重
+        model.load_state_dict(model_weights, strict=False)
+        
+        # 加载 EMA 模型的权重
+        if ema_weights:
+            model.load_state_dict(ema_weights, strict=False)
+            print("Load from EMA!")
+    
+    return model.eval()
+
+
+def load_config(config_path, display=True):
+    config = OmegaConf.load(config_path)
+    if display:
+        print(OmegaConf.to_yaml(config))
+    return config
 
 if __name__ == '__main__':
 
@@ -60,10 +91,15 @@ if __name__ == '__main__':
                                        special_tokens=("<|soi|>", "<|eoi|>", "<|sov|>", "<|eov|>", "<|t2i|>", "<|mmu|>", "<|t2v|>", "<|v2v|>", "<|lvg|>"),
                                        ignore_id=-100, cond_dropout_prob=config.training.cond_dropout_prob)
 
-    vq_model = get_vq_model_class(config.model.vq_model.type)
-    vq_model = vq_model.from_pretrained(config.model.vq_model.vq_model_name).to(device)
-    vq_model.requires_grad_(False)
-    vq_model.eval()
+    #vq_model = get_vq_model_class(config.model.vq_model.type)
+    #vq_model = vq_model.from_pretrained(config.model.vq_model.vq_model_name).to(device)
+    #vq_model.requires_grad_(False)
+    #vq_model.eval()
+    
+    if config.model.vq_model.type == "geo": 
+        config_model = load_config(config_path=config.model.vq_model.vq_model_config, display=False)
+        vq_model = load_vqgan_new(config_model, ckpt_path=config.model.vq_model.vq_model_checkpoint).to(device)
+        print('Load from pretrained vq_model')
 
     model = Showo.from_pretrained(config.model.showo.pretrained_model_path).to(device)
     model.eval()
@@ -131,7 +167,8 @@ if __name__ == '__main__':
 
             images = torch.clamp((images + 1.0) / 2.0, min=0.0, max=1.0)
             images *= 255.0
-            images = images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
+            #images = images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
+            images = images.detach().cpu().permute(0, 2, 3, 1).numpy().astype(np.uint8)
             pil_images = [Image.fromarray(image) for image in images]
 
             wandb_images = [wandb.Image(image, caption=prompts[i]) for i, image in enumerate(pil_images)]

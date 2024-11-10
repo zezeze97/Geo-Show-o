@@ -37,12 +37,12 @@ from transformers import AutoTokenizer
 from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import DistributedType, set_seed
-
+from omegaconf import OmegaConf
 
 from training.custom_data import LazySupervisedDataset
 # from parquet import RefinedWebDataset
 
-from models import Showo, MAGVITv2, get_mask_chedule
+from models import Showo, VQModel, get_mask_chedule
 from training.prompting_utils import UniversalPrompting, create_attention_mask_predict_next, \
     create_attention_mask_for_mmu
 from models.lr_schedulers import get_scheduler
@@ -50,7 +50,7 @@ from models.logging import set_verbosity_info, set_verbosity_error
 
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
-
+from torchinfo import summary
 from llava.llava_data_vq_unified import get_instruct_data_loader
 
 SYSTEM_PROMPT_LEN = 28
@@ -67,9 +67,41 @@ except ImportError:
 logger = get_logger(__name__, log_level="INFO")
 
 
+import torch
+
+def load_vqgan_new(config, ckpt_path=None):
+    model = VQModel(**config.model.init_args)
+    
+    if ckpt_path is not None:
+        # 加载检查点文件中的 state_dict
+        sd = torch.load(ckpt_path, map_location="cpu")["state_dict"]
+        
+        # 提取出普通模型权重和 EMA 权重
+        model_weights = {k: v for k, v in sd.items() if not k.startswith('model_ema.')}
+        ema_weights = {k.replace('model_ema.', ''): v for k, v in sd.items() if k.startswith('model_ema.')}
+        
+        # 加载普通模型的权重
+        model.load_state_dict(model_weights, strict=False)
+        
+        # 加载 EMA 模型的权重
+        if ema_weights:
+            model.load_state_dict(ema_weights, strict=False)
+            print("Load from EMA!")
+    
+    return model.eval()
+
+
+def load_config(config_path, display=True):
+    config = OmegaConf.load(config_path)
+    if display:
+        print(OmegaConf.to_yaml(config))
+    return config
+
 def get_vq_model_class(model_type):
     if model_type == "magvitv2":
         return MAGVITv2
+    elif model_type == "geo":
+        return VQModel
     elif model_type == "vq16":
         return VQ_16
     else:
@@ -179,15 +211,12 @@ def main():
     print('special tokens : \n', uni_prompting.sptids_dict)
 
     # VQ model for processing image into discrete tokens
-    vq_model = get_vq_model_class(config.model.vq_model.type)
-    if config.model.vq_model.get("pretrained_model_path", None):
-        vq_model = vq_model().to(accelerator.device)
-        state_dict = torch.load(config.model.vq_model.pretrained_model_path)['model']
-        vq_model.load_state_dict(state_dict)
-    else:
-        vq_model = vq_model.from_pretrained(config.model.vq_model.vq_model_name).to(accelerator.device)
-    vq_model.eval()
-    vq_model.requires_grad_(False)
+
+    if config.model.vq_model.type == "geo":
+        config_model = load_config(config_path=config.model.vq_model.vq_model_config, display=False)
+        vq_model = load_vqgan_new(config_model, ckpt_path=config.model.vq_model.vq_model_checkpoint).to(accelerator.device)
+        print(summary(vq_model))
+        print('Load from pretrained vq_model')
 
     # Initialize Show-o model
     if config.model.showo.load_from_showo:
@@ -382,7 +411,7 @@ def main():
     logger.info("Preparing model, optimizer and dataloaders")
     model, optimizer, lr_scheduler = accelerator.prepare(model, optimizer, lr_scheduler)
 
-    vq_model.to(device=accelerator.device)
+    #vq_model.to(device=accelerator.device)
 
     if hasattr(model, 'module'):
         mask_dtype = model.module.showo.model.embed_tokens.weight.dtype
@@ -405,9 +434,10 @@ def main():
             min_masking_rate: float = 0.0,
             is_train: bool = True,
     ):
-
-        image_tokens = vq_model.get_code(pixel_values_or_image_ids)
-        image_tokens = image_tokens + len(uni_prompting.text_tokenizer)
+        quant, diff, indices, _ = vq_model.encode(pixel_values)
+        indices = indices.reshape(pixel_values.shape[0], -1)  # batch *1024
+        image_tokens = indices + len(uni_prompting.text_tokenizer)
+        #print("image_tokens: ", image_tokens.shape)
         
         # create MLM mask and labels
         input_ids, labels, loss_weight, mask_prob = mask_or_random_replace_tokens(
@@ -439,7 +469,7 @@ def main():
             pixel_values, texts = batch["t2i_flow"]["images"], batch["t2i_flow"]["input_ids"]
             pixel_values = pixel_values.to(accelerator.device, non_blocking=True)
             data_time_m.update(time.time() - end)
-
+            #print("pixel_values: ", pixel_values.shape)
             # Encode images to image tokens, mask them and create input and labels
             (
                 input_ids,
@@ -465,6 +495,7 @@ def main():
                                                                    soi_id=int(uni_prompting.sptids_dict['<|soi|>']),
                                                                    eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']))
             attention_mask_lm = attention_mask_lm.to(mask_dtype)
+            
             attention_mask = torch.cat([attention_mask, attention_mask_lm], dim=0)
             input_ids = torch.cat((input_ids, input_ids_lm.to(input_ids.device)), dim=0)
             labels = torch.cat((labels, labels_lm.to(input_ids.device)), dim=0)
@@ -474,19 +505,27 @@ def main():
             # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
             pixel_values_mmu, texts_mmu = batch["mmu_flow"]["images"], batch["mmu_flow"]["input_ids"]
             pixel_values_mmu = pixel_values_mmu.to(accelerator.device, non_blocking=True)
-            image_tokens_mmu = vq_model.get_code(pixel_values_mmu)
+            #image_tokens_mmu = vq_model.get_code(pixel_values_mmu)
+            
+            quant, diff, indices, _ = vq_model.encode(pixel_values_mmu)
+            image_tokens_mmu = indices.reshape(pixel_values_mmu.shape[0], -1)
             
             image_tokens_mmu = image_tokens_mmu + len(uni_prompting.text_tokenizer)
             input_ids_mmu, _, labels_mmu = uni_prompting((image_tokens_mmu, texts_mmu), 'mmu')
             input_ids_mmu = input_ids_mmu.to(accelerator.device, non_blocking=True)
             
+            
             attention_mask_mmu = create_attention_mask_for_mmu(input_ids_mmu.to(input_ids.device),
                                                                eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']))
             attention_mask_mmu = attention_mask_mmu.to(mask_dtype)
+            
+            #print("attention_mask: ", attention_mask.shape)
+            #print("attention_mask_mmu: ", attention_mask_mmu.shape)
+            
             attention_mask = torch.cat([attention_mask, attention_mask_mmu], dim=0)
             input_ids = torch.cat((input_ids, input_ids_mmu.to(input_ids.device)), dim=0)
             labels = torch.cat((labels, labels_mmu.to(input_ids.device)), dim=0)
-            
+
             if global_step == 0 and epoch == 0:
                 logger.info("Input ids: {}".format(input_ids))
                 logger.info("Labels: {}".format(labels))
@@ -632,6 +671,8 @@ def visualize_predictions(
 ):
     logger.info("Visualizing predictions...")
     model.eval()
+
+    #recons_images = vq_model.decode_code(image_tokens_ori - len(uni_prompting.text_tokenizer))
     
     recons_images = vq_model.decode_code(image_tokens_ori - len(uni_prompting.text_tokenizer))
     recons_images = torch.clamp((recons_images + 1.0) / 2.0, min=0.0, max=1.0)
@@ -653,6 +694,7 @@ def visualize_predictions(
         dim=-1) / config.model.showo.num_vq_tokens).cpu().numpy())
     predicted_images = torch.where(input_ids == mask_token_id, predictions, input_ids)
 
+    #predicted_images = vq_model.decode_code(predicted_images)
     predicted_images = vq_model.decode_code(predicted_images)
     predicted_images = torch.clamp((predicted_images + 1.0) / 2.0, min=0.0, max=1.0)
     predicted_images *= 255.0
@@ -734,15 +776,15 @@ def generate_images(
         )
     # In the beginning of training, the model is not fully trained and the generated token ids can be out of range
     # so we clamp them to the correct range.
+    
+    # gen_token_ides ~ batch_size * num_vq_token(1024)
+    
     gen_token_ids = torch.clamp(gen_token_ids, max=accelerator.unwrap_model(model).config.codebook_size - 1, min=0)
+    
     #images = vq_model.decode_code(gen_token_ids)
-    
-    print("input_ids:", input_ids.shape)
-    print("gen_token_ids: ", gen_token_ids.shape)
     images = vq_model.decode_code(gen_token_ids)
-    print("images: ", images.shape)
     
-    model.train()
+    model.train() 
 
     if config.training.get("pre_encode", False):
         del vq_model

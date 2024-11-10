@@ -204,7 +204,7 @@ class LFQuantizer(nn.Module):
             .sum(1, keepdim=True)
             .long()
         )
-
+    # 
     def get_codebook_entry(self, indices, shape=None):
         if shape is None:
             h, w = int(math.sqrt(indices.shape[-1])), int(math.sqrt(indices.shape[-1]))
@@ -402,7 +402,7 @@ class VQGANDecoder(ModelMixin, ConfigMixin):
 class MAGVITv2(ModelMixin, ConfigMixin):
     @register_to_config
     def __init__(
-            self,
+            self
     ):
         super().__init__()
 
@@ -427,9 +427,11 @@ class MAGVITv2(ModelMixin, ConfigMixin):
         return codebook_indices
 
     def decode_code(self, codebook_indices, shape=None):
+        print("codebook_indices: ", codebook_indices.shape)
         z_q = self.quantize.get_codebook_entry(codebook_indices, shape=shape)
-
+        print("z_q: ", z_q.shape)
         reconstructed_pixel_values = self.decoder(z_q)["output"]
+        print("reco_pix_values: ", reconstructed_pixel_values.shape)
         return reconstructed_pixel_values
 
 

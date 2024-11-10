@@ -30,8 +30,8 @@ class Showo(ModelMixin, ConfigMixin):
             vocab_size,
             llm_vocab_size,
             llm_model_path='',
-            codebook_size=8192,
-            num_vq_tokens=256,
+            codebook_size=2048,
+            num_vq_tokens=1024,
             load_from_showo=True,
             **kwargs,
     ):

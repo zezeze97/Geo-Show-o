@@ -64,7 +64,7 @@ class LazySupervisedDataset(Dataset):
     """Dataset for supervised fine-tuning."""
 
     def __init__(self, image_folder: str=None,
-                 json_path: str=None,
+                 json_path: str=None, 
                  geo_customized_aug: bool=True,
                  image_aspect_ratio: str='pad',
                  resolution: int = 256,
@@ -137,8 +137,8 @@ class LazySupervisedDataset(Dataset):
 
 
 if __name__ == '__main__':
-    dataset = LazySupervisedDataset(image_folder='/lustre/home/2001110054/Geo-Multi-Modal/data_backup/formalgeo7k/formalgeo7k_v2/',
-                                json_path='/lustre/home/2001110054/Geo-Multi-Modal/data_backup/formalgeo7k/formalgeo7k_v2/custom_json/qa_resoning/formalgeov2_aug_train.json',
+    dataset = LazySupervisedDataset(image_folder='/lustre/home/2201210053/Geo-Show-o/data/formalgeo7k/formalgeo7k_v2',
+                                json_path='/lustre/home/2201210053/Geo-Show-o/data/formalgeo7k/formalgeo7k_v2/custom_json/qa_resoning/formalgeov2_aug_train.json',
                                 )
     for item in dataset:
         print(item)
