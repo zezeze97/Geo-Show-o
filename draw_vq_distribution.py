@@ -86,7 +86,7 @@ if __name__ == '__main__':
     
     # 绘制 token 分布的直方图
     plt.figure(figsize=(10, 6))
-    plt.hist(tokens, bins=100, range=(0, 8095), color='skyblue', edgecolor='black')
+    plt.hist(tokens, bins=100, range=(0, 8192), color='skyblue', edgecolor='black')
     plt.title('Token Distribution')
     plt.xlabel('Token Value')
     plt.ylabel('Frequency')
