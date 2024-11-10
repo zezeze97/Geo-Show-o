@@ -1,7 +1,9 @@
 from dataclasses import dataclass, field
 import numpy as np
 import torch
-import torch.nn as nn, einsum
+import torch.nn as nn
+from torch import einsum
+import torch.nn.functional as F
 import math
 from einops import rearrange, reduce, pack, unpack
 from collections import namedtuple
@@ -382,7 +384,7 @@ class VQModel(nn.Module):
 
         self.encoder = Encoder(**ddconfig)
         self.decoder = Decoder(**ddconfig)
-        self.quantize = LFQ(dim=11, codebook_size=2**11)
+        self.quantize = LFQ(dim=13, codebook_size=2**13)
 
     def encode(self, x):
         h = self.encoder(x)

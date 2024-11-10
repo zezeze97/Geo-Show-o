@@ -27,13 +27,16 @@ def load_vqgan_new(config, ckpt_path=None):
         model_weights = {k: v for k, v in sd.items() if not k.startswith('model_ema.')}
         ema_weights = {k.replace('model_ema.', ''): v for k, v in sd.items() if k.startswith('model_ema.')}
         
-        # 加载普通模型的权重
-        model.load_state_dict(model_weights, strict=False)
+        
         
         # 加载 EMA 模型的权重
         if ema_weights:
             model.load_state_dict(ema_weights, strict=False)
             print("Load from EMA!")
+        else:
+            # 加载普通模型的权重
+            model.load_state_dict(model_weights, strict=False)
+            
     
     return model.eval()
 
@@ -92,7 +95,7 @@ def compare_vq_models(model1, model2, img_folder, num_of_sample=100, resolution=
         # 模型1推理
         with torch.no_grad():
             img_token_model1 = model1.get_code(img_tensor)
-            print("img_token_model1: ", img_token_model1.shape)
+            # print("img_token_model1: ", img_token_model1.shape)
             
         img_tokens_model1.append(img_token_model1.detach().cpu())
         
@@ -100,7 +103,7 @@ def compare_vq_models(model1, model2, img_folder, num_of_sample=100, resolution=
         # 模型2推理
         with torch.no_grad():
             img_token_model2 = model2.get_code(img_tensor)
-            print("img_token_model2: ", img_token_model2.shape)
+            # print("img_token_model2: ", img_token_model2.shape)
 
         img_tokens_model2.append(img_token_model2.detach().cpu())
         
@@ -123,14 +126,15 @@ def compare_vq_models(model1, model2, img_folder, num_of_sample=100, resolution=
 
 if __name__ == '__main__':
     
-    model1 = MAGVITv2.from_pretrained('/lustre/home/2201210053/GEOMETERY/others/show_base/')
+    # model1 = MAGVITv2.from_pretrained('/lustre/home/2201210053/GEOMETERY/others/show_base/')
+    model1 = MAGVITv2.from_pretrained('showlab/magvitv2')
     
     # 加载模型二
-    config_file_2 = "/lustre/home/2201210053/GEOMETERY/results1031/vqgan/test/config.yaml"
-    ckpt_path_2 = "/lustre/home/2201210053/GEOMETERY/checkpoints1031/vqgan/test/epoch=149-step=44700.ckpt"
+    config_file_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1109_mask/show/config.yaml"
+    ckpt_path_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1109_mask/ckpt/epoch=131-step=49104.ckpt"
     
     config_model_2 = load_config(config_path=config_file_2, display=False)
     model2 = load_vqgan_new(config_model_2, ckpt_path=ckpt_path_2)
 
-    img_folder = '/lustre/home/2201210053/Geo-Show-o/data/formalgeo7k/formalgeo7k_v2/diagrams'  # 图片文件夹路径
+    img_folder = '/lustre/home/2001110054/Show-o/data/formalgeo7k_v2/diagrams'  # 图片文件夹路径
     compare_vq_models(model1, model2, img_folder)
