@@ -16,28 +16,24 @@ def load_config(config_path, display=True):
         print(OmegaConf.to_yaml(config))
     return config
 
-def load_vqgan_new(config, ckpt_path=None):
-    model = VQModel(**config.model.init_args)
-    
+def load_vqgan_new(config, ckpt_path=None, use_ema=False):
+    model = VQModel(**config.model.init_args.ddconfig)
     if ckpt_path is not None:
         # 加载检查点文件中的 state_dict
         sd = torch.load(ckpt_path, map_location="cpu")["state_dict"]
         
+        weights = {k: v for k, v in sd.items() if 'loss' not in k}
+        
         # 提取出普通模型权重和 EMA 权重
-        model_weights = {k: v for k, v in sd.items() if not k.startswith('model_ema.')}
-        ema_weights = {k.replace('model_ema.', ''): v for k, v in sd.items() if k.startswith('model_ema.')}
-        
-        
-        
-        # 加载 EMA 模型的权重
-        if ema_weights:
-            model.load_state_dict(ema_weights, strict=False)
+        if use_ema:
+            weights = {k.replace('model_ema.', ''): v for k, v in sd.items() if k.startswith('model_ema.') and 'loss' not in k}
             print("Load from EMA!")
+            # ! Todo: fix keys error in ema!!!!       
         else:
-            # 加载普通模型的权重
-            model.load_state_dict(model_weights, strict=False)
+            weights = {k: v for k, v in sd.items() if not k.startswith('model_ema.') and 'loss' not in k}
             
-    
+        model.load_state_dict(weights, strict=True)
+            
     return model.eval()
 
 def expand2square(pil_img, background_color):
@@ -130,8 +126,8 @@ if __name__ == '__main__':
     model1 = MAGVITv2.from_pretrained('showlab/magvitv2')
     
     # 加载模型二
-    config_file_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1109_mask/show/config.yaml"
-    ckpt_path_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1109_mask/ckpt/epoch=131-step=49104.ckpt"
+    config_file_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1105_mask/show_base/show/config.yaml"
+    ckpt_path_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1105_mask/show_base/ckpt/epoch=98-step=36828.ckpt"
     
     config_model_2 = load_config(config_path=config_file_2, display=False)
     model2 = load_vqgan_new(config_model_2, ckpt_path=ckpt_path_2)

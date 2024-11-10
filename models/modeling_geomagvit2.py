@@ -9,10 +9,10 @@ from einops import rearrange, reduce, pack, unpack
 from collections import namedtuple
 from math import log2, ceil
 
-LossBreakdown = namedtuple('LossBreakdown', ['per_sample_entropy', 'codebook_entropy', 'commitment', 'avg_probs'])
+            
 class Encoder(nn.Module):
-    def __init__(self, *, ch, out_ch, in_channels, num_res_blocks, z_channels, ch_mult=(1, 2, 2, 4), 
-                resolution, double_z=False,
+    def __init__(self, ch, out_ch, in_channels, num_res_blocks, z_channels, ch_mult=(1, 2, 2, 4), 
+                resolution=256, double_z=False,
                 ):
         super().__init__()
 
@@ -84,11 +84,7 @@ class LFQ(nn.Module):
     def __init__(self,
                  dim = 11,
                  codebook_size = 2**11,
-                 num_codebooks = 1,
-                 sample_minimization_weight=1.0,
-                 batch_maximization_weight=1.0,
-                 token_factorization = False,
-                 factorized_bits = [9, 9]):
+                 num_codebooks = 1,):
         super().__init__()
         
         self.codebook_size = codebook_size
@@ -100,20 +96,7 @@ class LFQ(nn.Module):
         
         has_projections = dim != codebook_dims
         self.has_projections = has_projections
-        
-        # for entropy loss
-        self.sample_minimization_weight = sample_minimization_weight
-        self.batch_maximization_weight = batch_maximization_weight
-        
-        # for no auxiliary loss, during inference
-        self.token_factorization = token_factorization
-        if not self.token_factorization: #for first stage model
-            self.register_buffer('mask', 2 ** torch.arange(self.codebook_dim), persistent=False)
-        else:
-            self.factorized_bits = factorized_bits
-            self.register_buffer("pre_mask", 2** torch.arange(factorized_bits[0]), persistent=False)
-            self.register_buffer("post_mask", 2**torch.arange(factorized_bits[1]), persistent=False)
-
+        self.register_buffer('mask', 2 ** torch.arange(self.codebook_dim), persistent=False)
         self.register_buffer('zero', torch.tensor(0.), persistent = False)
         
         # codes
@@ -185,10 +168,6 @@ class LFQ(nn.Module):
     def forward(
         self, 
         x,
-        inv_temperature = 100.,
-        return_loss_breakdown = False,
-        mask = None,
-        return_loss = True,
     ):
         """
         einstein notation
@@ -209,43 +188,9 @@ class LFQ(nn.Module):
         quantized = torch.where(x > 0, codebook_value, -codebook_value) # higher than 0 filled 
 
         # calculate indices
-        if self.token_factorization:
-            indices_pre = reduce((quantized[..., :self.factorized_bits[0]] > 0).int() * self.pre_mask.int(), "b n c d -> b n c", "sum")
-            indices_post = reduce((quantized[..., self.factorized_bits[0]:] > 0).int() * self.post_mask.int(), "b n c d -> b n c", "sum")
-        else:
-            indices = reduce((quantized > 0).int() * self.mask.int(), 'b n c d -> b n c', 'sum')
+        indices = reduce((quantized > 0).int() * self.mask.int(), 'b n c d -> b n c', 'sum')
 
-        # entropy aux loss
-
-        if self.training and return_loss:
-            logits = 2 * einsum('... i d, j d -> ... i j', x, self.codebook)
-            # the same as euclidean distance up to a constant
-            per_sample_entropy, codebook_entropy, entropy_aux_loss = entropy_loss(
-                logits = logits,
-                sample_minimization_weight = self.sample_minimization_weight,
-                batch_maximization_weight = self.batch_maximization_weight
-            )
-
-            avg_probs = self.zero
-        else:
-            # logits = 2 * einsum('... i d, j d -> ... i j', x, self.codebook)
-            # probs = F.softmax(logits / 0.01, -1)
-            # avg_probs = reduce(probs, "b n c d -> b d", "mean")
-            # avg_probs = torch.sum(avg_probs, 0) #batch dimension
-            # if not training, just return dummy 0
-            per_sample_entropy = codebook_entropy = self.zero
-            ## calculate the codebook_entropy needed for one batch evaluation
-            entropy_aux_loss = self.zero
-            avg_probs = self.zero
-
-        # commit loss
-
-        if self.training:
-            commit_loss = F.mse_loss(x, quantized.detach(), reduction = 'none')
-
-            commit_loss = commit_loss.mean()
-        else:
-            commit_loss = self.zero
+        
 
 
         # use straight-through gradients (optionally with custom activation fn) if training
@@ -262,27 +207,17 @@ class LFQ(nn.Module):
         quantized = rearrange(quantized, 'b ... d -> b d ...')
 
         
-        if self.token_factorization:
-            indices_pre = unpack_one(indices_pre, ps, "b * c")
-            indices_post = unpack_one(indices_post, ps, "b * c")
-            indices_pre = indices_pre.flatten()
-            indices_post = indices_post.flatten()
-            indices = (indices_pre, indices_post)
-        else:
-            indices = unpack_one(indices, ps, 'b * c')
-            indices = indices.flatten()
+        
+        indices = unpack_one(indices, ps, 'b * c')
+        indices = indices.flatten()
 
-        ret = (quantized, entropy_aux_loss, indices)
-
-        if not return_loss_breakdown:
-            return ret
-
-        return ret, LossBreakdown(per_sample_entropy, codebook_entropy, commit_loss, avg_probs)
+        ret = (quantized, indices)
+        return ret
 
 
 class Decoder(nn.Module):
-    def __init__(self, *, ch, out_ch, in_channels, num_res_blocks, z_channels, ch_mult=(1, 2, 2, 4), 
-                resolution, double_z=False,) -> None:
+    def __init__(self, ch, out_ch, in_channels, num_res_blocks, z_channels, ch_mult=(1, 2, 2, 4), 
+                resolution=256, double_z=False,) -> None:
         super().__init__()
 
         self.ch = ch
@@ -355,41 +290,39 @@ class Decoder(nn.Module):
 class VQModel(nn.Module):
     def __init__(
             self,
-            ddconfig,
-            lossconfig,
-            ## Quantize Related
-                n_embed,
-                embed_dim,
-                sample_minimization_weight,
-                batch_maximization_weight,
-                ckpt_path = None,
-                ignore_keys = [],
-                image_key = "image",
-                colorize_nlabels = None,
-                monitor = None,
-                learning_rate = None,
-                resume_lr = None,
-                ### scheduler config
-                warmup_epochs = 1.0, #warmup epochs
-                scheduler_type = "linear-warmup_cosine-decay",
-                min_learning_rate = 1e-6,
-                use_ema = False,
-                token_factorization = False,
-                stage = None,
-                lr_drop_epoch = None,
-                lr_drop_rate = 0.1,
-                factorized_bits = [9, 9]
-    ):
+            ch,
+            out_ch,
+            in_channels,
+            num_res_blocks,
+            z_channels,
+            ch_mult,
+            resolution,
+            double_z):
         super().__init__()
 
-        self.encoder = Encoder(**ddconfig)
-        self.decoder = Decoder(**ddconfig)
-        self.quantize = LFQ(dim=13, codebook_size=2**13)
-
+        self.encoder = Encoder(ch,
+                                out_ch,
+                                in_channels,
+                                num_res_blocks,
+                                z_channels,
+                                ch_mult,
+                                resolution,
+                                double_z)
+        self.decoder = Decoder(ch,
+                                out_ch,
+                                in_channels,
+                                num_res_blocks,
+                                z_channels,
+                                ch_mult,
+                                resolution,
+                                double_z)
+        self.quantize = LFQ(dim=z_channels, codebook_size=2**z_channels)
+        self.z_channels = z_channels
+                    
     def encode(self, x):
         h = self.encoder(x)
-        (quant, emb_loss, info), loss_breakdown = self.quantize(h, return_loss_breakdown=True)
-        return quant, emb_loss, info, loss_breakdown
+        quant, indices = self.quantize(h)
+        return quant, indices
 
     def decode(self, quant):
         #quant:batch * dim 11  * 32 * 32 （+-1）
@@ -399,7 +332,7 @@ class VQModel(nn.Module):
     
     def get_code(self, pixel_values):
         hidden_states = self.encoder(pixel_values)
-        (quant, diff, indices), _ = self.quantize(hidden_states, return_loss_breakdown=True)
+        quant, indices = self.quantize(hidden_states)
         indices = indices.reshape(pixel_values.shape[0], -1)
         
         return indices
@@ -409,7 +342,7 @@ class VQModel(nn.Module):
         #print("codebook_indices: ", codebook_indices.shape)
         
         z_q = self.quantize.get_codebook_entry(codebook_indices, 
-                                               (codebook_indices.shape[0],int(math.sqrt(codebook_indices.shape[-1])),int(math.sqrt(codebook_indices.shape[-1])),11)) 
+                                               (codebook_indices.shape[0],int(math.sqrt(codebook_indices.shape[-1])),int(math.sqrt(codebook_indices.shape[-1])), self.z_channels)) 
         
         #print("z_q: ", z_q.shape)
         
@@ -418,84 +351,13 @@ class VQModel(nn.Module):
         return dec
 
     def forward(self, input):
-        quant, diff, _, loss_break = self.encode(input)
+        quant, indices = self.encode(input)
         dec = self.decode(quant)
-        return dec, diff, loss_break
+        return dec
 
-    def get_input(self, batch, k):
-        x = batch[k]
-        #if len(x.shape) == 3:
-            #x = x[..., None]
-        #x = x.permute(0, 3, 1, 2).contiguous()
-        return x.float()
 
-def entropy_loss(
-    logits,
-    mask=None,
-    temperature=0.01,
-    sample_minimization_weight=1.0,
-    batch_maximization_weight=1.0,
-    eps=1e-5,
-):
-    """
-    Entropy loss of unnormalized logits
 
-    logits: Affinities are over the last dimension
 
-    https://github.com/google-research/magvit/blob/05e8cfd6559c47955793d70602d62a2f9b0bdef5/videogvt/train_lib/losses.py#L279
-    LANGUAGE MODEL BEATS DIFFUSION — TOKENIZER IS KEY TO VISUAL GENERATION (2024)
-    """
-    probs = F.softmax(logits / temperature, -1)
-    log_probs = F.log_softmax(logits / temperature + eps, -1)
-
-    if mask is not None:
-        # avg_probs = probs[mask].mean(tuple(range(probs.ndim - 1)))
-        # avg_probs = einx.mean("... D -> D", probs[mask])
-
-        avg_probs = masked_mean(probs, mask)
-        # avg_probs = einx.mean("... D -> D", avg_probs)
-    else:
-        avg_probs = reduce(probs, "... D -> D", "mean")
-
-    avg_entropy = -torch.sum(avg_probs * torch.log(avg_probs + eps))
-
-    sample_entropy = -torch.sum(probs * log_probs, -1)
-    if mask is not None:
-        # sample_entropy = sample_entropy[mask].mean()
-        sample_entropy = masked_mean(sample_entropy, mask).mean()
-    else:
-        sample_entropy = torch.mean(sample_entropy)
-
-    loss = (sample_minimization_weight * sample_entropy) - (
-        batch_maximization_weight * avg_entropy
-    )
-
-    return sample_entropy, avg_entropy, loss
-
-def masked_mean(x, m):
-    """
-    takes the mean of the elements of x that are not masked
-    the mean is taken along the shared leading dims of m
-    equivalent to: x[m].mean(tuple(range(m.ndim)))
-
-    The benefit of using masked_mean rather than using
-    tensor indexing is that masked_mean is much faster
-    for torch-compile on batches.
-
-    The drawback is larger floating point errors
-    """
-    x = mult_along_first_dims(x, m)
-    x = x / m.sum()
-    return x.sum(tuple(range(m.ndim)))
-
-def mult_along_first_dims(x, y):
-    """
-    returns x * y elementwise along the leading dimensions of y
-    """
-    ndim_to_expand = x.ndim - y.ndim
-    for _ in range(ndim_to_expand):
-        y = y.unsqueeze(-1)
-    return x * y
 
 # swish:x*sigmoid(x)
 def swish(x):

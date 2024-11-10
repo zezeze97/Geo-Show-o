@@ -23,11 +23,23 @@ def load_config(config_path, display=True):
         print(OmegaConf.to_yaml(config))
     return config
 
-def load_vqgan_new(config, ckpt_path=None):
-    model = VQModel(**config.model.init_args)
+def load_vqgan_new(config, ckpt_path=None, use_ema=False):
+    model = VQModel(**config.model.init_args.ddconfig)
     if ckpt_path is not None:
+        # 加载检查点文件中的 state_dict
         sd = torch.load(ckpt_path, map_location="cpu")["state_dict"]
-        model.load_state_dict(sd, strict=False)
+        
+        weights = {k: v for k, v in sd.items() if 'loss' not in k}
+        
+        # 提取出普通模型权重和 EMA 权重
+        if use_ema:
+            weights = {k.replace('model_ema.', ''): v for k, v in sd.items() if k.startswith('model_ema.') and 'loss' not in k}
+            print("Load from EMA!")
+            # ! Todo: fix keys error in ema!!!!
+        else:
+            weights = {k: v for k, v in sd.items() if not k.startswith('model_ema.') and 'loss' not in k}
+        model.load_state_dict(weights, strict=True)
+            
     return model.eval()
 
 def expand2square(pil_img, background_color):
@@ -62,15 +74,15 @@ def image_transform(image, resolution=256):
 if __name__ == '__main__':
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    config_file = "/lustre/home/2201210053/GEOMETERY/results1031/vqgan/test/config.yaml"
-    ckpt_path = "/lustre/home/2201210053/GEOMETERY/checkpoints1031/vqgan/test/epoch=149-step=44700.ckpt"
+    config_file = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1105_mask/show_base/show/config.yaml"
+    ckpt_path = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1105_mask/show_base/ckpt/epoch=98-step=36828.ckpt"
     
     # 加载模型
     config_model = load_config(config_path=config_file, display=False)
     model = load_vqgan_new(config_model, ckpt_path=ckpt_path).to(device)
     
     # 图片文件夹路径
-    img_folder = '/lustre/home/2201210053/GEOMETERY/GEO-Open-MAGVIT2/old_geo_data/val'  # 记得修改文件夹路径
+    img_folder = '/lustre/home/2001110054/Show-o/data/formalgeo7k_v2/diagrams'  # 记得修改文件夹路径
     
     # 获取文件夹中的所有图片文件
     img_files = [f for f in os.listdir(img_folder) if f.endswith('.png')]  # 你可以根据需要更改扩展名
@@ -97,11 +109,8 @@ if __name__ == '__main__':
     # 模型推理
     with torch.no_grad():
             
-        quant, diff, indices, _ = model.encode(img_batch)
+        quant, indices = model.encode(img_batch)
         reconstructed_images = model.decode(quant)
-            
-        #print(f'img_tokens shape is {quant.shape}')
-        #print(f'img_tokens is {quant}')
             
     recovered_images = [custom_to_pil(recovered_img)for recovered_img in reconstructed_images]
 

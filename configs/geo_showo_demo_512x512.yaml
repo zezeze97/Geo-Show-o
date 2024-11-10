@@ -11,8 +11,16 @@ experiment:
 model:
     vq_model:
         type: "geo"
-        vq_model_config: "/lustre/home/2201210053/GEOMETERY/results1031/vqgan/test/config.yaml"
-        vq_model_checkpoint:  "/lustre/home/2201210053/GEOMETERY/checkpoints1031/vqgan/test/epoch=149-step=44700.ckpt"
+        vq_model_config: 
+            double_z: False
+            z_channels: 13
+            resolution: 512
+            in_channels: 3
+            out_ch: 3
+            ch: 128
+            ch_mult: [1,2,2,4,4]  # num_down = len(ch_mult)-1
+            num_res_blocks: 4
+        pretrained_model_path:  "/lustre/home/2201210053/GEOMETERY/checkpoints1031/vqgan/test/epoch=149-step=44700.ckpt"
 
     showo:
         pretrained_model_path: "/lustre/home/2201210053/Geo-Show-o/outputs/show-o-finetuning-512x512/checkpoint-26000/unwrapped_model"

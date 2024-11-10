@@ -18,4 +18,5 @@ module load openmpi
 export PYTHONPATH=$PYTHONPATH:/lustre/home/2201210053/Geo-Show-o
 export WANDB_MODE=offline
 source activate showo
-accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml --main_process_port=8888 training/geo_finetuning.py config=configs/showo_finetuning_512x512.yaml
+# accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml --main_process_port=8888 training/finetuning.py config=configs/showo_finetuning_512x512.yaml
+accelerate launch --config_file accelerate_configs/1_gpu.yaml --main_process_port=8888 training/finetuning.py config=configs/showo_finetuning_512x512.yaml

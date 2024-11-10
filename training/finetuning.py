@@ -42,7 +42,7 @@ from accelerate.utils import DistributedType, set_seed
 from training.custom_data import LazySupervisedDataset
 # from parquet import RefinedWebDataset
 
-from models import Showo, MAGVITv2, get_mask_chedule
+from models import Showo, MAGVITv2, VQModel, get_mask_chedule
 from training.prompting_utils import UniversalPrompting, create_attention_mask_predict_next, \
     create_attention_mask_for_mmu
 from models.lr_schedulers import get_scheduler
@@ -66,12 +66,34 @@ except ImportError:
 
 logger = get_logger(__name__, log_level="INFO")
 
+def load_vqgan_new(vq_model, config, ckpt_path=None, use_ema=False):
+    model = vq_model(**config)
+    
+    if ckpt_path is not None:
+        # 加载检查点文件中的 state_dict
+        sd = torch.load(ckpt_path, map_location="cpu")["state_dict"]
+        
+        # 提取出普通模型权重和 EMA 权重
+        if use_ema:
+            weights = {k.replace('model_ema.', ''): v for k, v in sd.items() if k.startswith('model_ema.') and 'loss' not in k}
+            print("Load from EMA!")
+            # ! Todo: fix keys error in ema!!!!
+        else:
+            weights = {k: v for k, v in sd.items() if not k.startswith('model_ema.') and 'loss' not in k}
+        
+    
+        model.load_state_dict(weights, strict=True)
+            
+  
+    return model.eval()
 
 def get_vq_model_class(model_type):
     if model_type == "magvitv2":
         return MAGVITv2
     elif model_type == "vq16":
         return VQ_16
+    elif model_type == 'geo':
+        return VQModel
     else:
         raise ValueError(f"model_type {model_type} not supported.")
 
@@ -181,9 +203,12 @@ def main():
     # VQ model for processing image into discrete tokens
     vq_model = get_vq_model_class(config.model.vq_model.type)
     if config.model.vq_model.get("pretrained_model_path", None):
-        vq_model = vq_model().to(accelerator.device)
-        state_dict = torch.load(config.model.vq_model.pretrained_model_path)['model']
-        vq_model.load_state_dict(state_dict)
+        if config.model.vq_model.type == 'geo':
+            vq_model = load_vqgan_new(vq_model, config.model.vq_model.vq_model_config, ckpt_path=config.model.vq_model.pretrained_model_path)
+        else:
+            vq_model = vq_model().to(accelerator.device)
+            state_dict = torch.load(config.model.vq_model.pretrained_model_path)['model']
+            vq_model.load_state_dict(state_dict)
     else:
         vq_model = vq_model.from_pretrained(config.model.vq_model.vq_model_name).to(accelerator.device)
     vq_model.eval()
@@ -737,10 +762,9 @@ def generate_images(
     gen_token_ids = torch.clamp(gen_token_ids, max=accelerator.unwrap_model(model).config.codebook_size - 1, min=0)
     #images = vq_model.decode_code(gen_token_ids)
     
-    print("input_ids:", input_ids.shape)
-    print("gen_token_ids: ", gen_token_ids.shape)
+    
     images = vq_model.decode_code(gen_token_ids)
-    print("images: ", images.shape)
+    
     
     model.train()
 
