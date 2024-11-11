@@ -66,18 +66,19 @@ except ImportError:
 
 logger = get_logger(__name__, log_level="INFO")
 
-def load_vqgan_new(vq_model, config, ckpt_path=None, use_ema=False):
+def load_vqgan_new(vq_model, config, ckpt_path=None, use_ema=True):
     model = vq_model(**config)
     
     if ckpt_path is not None:
         # 加载检查点文件中的 state_dict
         sd = torch.load(ckpt_path, map_location="cpu")["state_dict"]
         
-        # 提取出普通模型权重和 EMA 权重
+         # 提取出普通模型权重和 EMA 权重
         if use_ema:
-            weights = {k.replace('model_ema.', ''): v for k, v in sd.items() if k.startswith('model_ema.') and 'loss' not in k}
+            key_map = {k.replace('.', ''): k for k in sd.keys() if not k.startswith('model_ema.') and 'loss' not in k} 
+            weights = {key_map[k.replace('model_ema.', '')]: v for k, v in sd.items() if k.startswith('model_ema.') and 'loss' not in k and 'model_ema.decay' not in k and 'model_ema.num_updates' not in k}
             print("Load from EMA!")
-            # ! Todo: fix keys error in ema!!!!
+            
         else:
             weights = {k: v for k, v in sd.items() if not k.startswith('model_ema.') and 'loss' not in k}
         

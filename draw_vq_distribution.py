@@ -16,22 +16,20 @@ def load_config(config_path, display=True):
         print(OmegaConf.to_yaml(config))
     return config
 
-def load_vqgan_new(config, ckpt_path=None, use_ema=False):
+def load_vqgan_new(config, ckpt_path=None, use_ema=True):
     model = VQModel(**config.model.init_args.ddconfig)
     if ckpt_path is not None:
         # 加载检查点文件中的 state_dict
         sd = torch.load(ckpt_path, map_location="cpu")["state_dict"]
         
-        weights = {k: v for k, v in sd.items() if 'loss' not in k}
-        
         # 提取出普通模型权重和 EMA 权重
         if use_ema:
-            weights = {k.replace('model_ema.', ''): v for k, v in sd.items() if k.startswith('model_ema.') and 'loss' not in k}
+            key_map = {k.replace('.', ''): k for k in sd.keys() if not k.startswith('model_ema.') and 'loss' not in k} 
+            weights = {key_map[k.replace('model_ema.', '')]: v for k, v in sd.items() if k.startswith('model_ema.') and 'loss' not in k and 'model_ema.decay' not in k and 'model_ema.num_updates' not in k}
             print("Load from EMA!")
-            # ! Todo: fix keys error in ema!!!!       
+            # ! Todo: fix keys error in ema!!!!
         else:
             weights = {k: v for k, v in sd.items() if not k.startswith('model_ema.') and 'loss' not in k}
-            
         model.load_state_dict(weights, strict=True)
             
     return model.eval()
@@ -126,11 +124,11 @@ if __name__ == '__main__':
     model1 = MAGVITv2.from_pretrained('showlab/magvitv2')
     
     # 加载模型二
-    config_file_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1105_mask/show_base/show/config.yaml"
-    ckpt_path_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1105_mask/show_base/ckpt/epoch=98-step=36828.ckpt"
+    config_file_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1109_mask/show/config.yaml"
+    ckpt_path_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1109_mask/ckpt/epoch=148-step=55428.ckpt"
     
     config_model_2 = load_config(config_path=config_file_2, display=False)
     model2 = load_vqgan_new(config_model_2, ckpt_path=ckpt_path_2)
 
-    img_folder = '/lustre/home/2001110054/Show-o/data/formalgeo7k_v2/diagrams'  # 图片文件夹路径
+    img_folder = '/lustre/home/2001110054/Show-o/data/formalgeo7k/formalgeo7k_v2/diagrams'  # 图片文件夹路径
     compare_vq_models(model1, model2, img_folder)
