@@ -74,7 +74,7 @@ if __name__ == '__main__':
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     config_file = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/show/config.yaml"
-    ckpt_path = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/ckpt/last.ckpt"
+    ckpt_path = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/ckpt/epoch=113-step=42408.ckpt"
     
     # 加载模型
     config_model = load_config(config_path=config_file, display=False)

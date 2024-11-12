@@ -220,7 +220,7 @@ def main():
         print(f'Load from pretrained show-o: {config.model.showo.pretrained_model_path}')
         model = Showo.from_pretrained(config.model.showo.pretrained_model_path).to(accelerator.device)
         if config.model.showo.vocab_size != model.vocab_size:
-            print(f'vocab size of show-o is not currect!!!')
+            print(f'vocab size of show-o is not correct!!!')
             model.showo.resize_token_embeddings(config.model.showo.vocab_size)
             model.config.codebook_size = config.model.showo.codebook_size
             model.config.vocab_size = config.model.showo.vocab_size

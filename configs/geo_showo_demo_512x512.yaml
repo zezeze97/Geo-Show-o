@@ -13,20 +13,20 @@ model:
         type: "geo"
         vq_model_config: 
             double_z: False
-            z_channels: 13
+            z_channels: 11
             resolution: 512
             in_channels: 3
             out_ch: 3
             ch: 128
             ch_mult: [1,2,2,4,4]  # num_down = len(ch_mult)-1
             num_res_blocks: 4
-        pretrained_model_path:  "/lustre/home/2201210053/GEOMETERY/checkpoints1031/vqgan/test/epoch=149-step=44700.ckpt"
+        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1111_mask_z11/ckpt/epoch=80-step=30132.ckpt"
 
     showo:
-        pretrained_model_path: "/lustre/home/2201210053/Geo-Show-o/outputs/show-o-finetuning-512x512/checkpoint-26000/unwrapped_model"
+        pretrained_model_path: "outputs/show-o-finetuning-512x512-NewVQ"
         w_clip_vit: False
-        vocab_size: 58498
-        llm_vocab_size: 56439
+        vocab_size: 52354
+        llm_vocab_size: 50295
         llm_model_path: 'microsoft/phi-1_5'
         codebook_size: 2048
         num_vq_tokens: 1024

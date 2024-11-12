@@ -124,8 +124,8 @@ if __name__ == '__main__':
     model1 = MAGVITv2.from_pretrained('showlab/magvitv2')
     
     # 加载模型二
-    config_file_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1109_mask/show/config.yaml"
-    ckpt_path_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1109_mask/ckpt/epoch=148-step=55428.ckpt"
+    config_file_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1111_mask_z11/show/config.yaml"
+    ckpt_path_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1111_mask_z11/ckpt/epoch=80-step=30132.ckpt"
     
     config_model_2 = load_config(config_path=config_file_2, display=False)
     model2 = load_vqgan_new(config_model_2, ckpt_path=ckpt_path_2)

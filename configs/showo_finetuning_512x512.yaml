@@ -22,24 +22,24 @@ model:
         type: "geo"
         vq_model_config: 
             double_z: False
-            z_channels: 13
+            z_channels: 11
             resolution: 512
             in_channels: 3
             out_ch: 3
             ch: 128
             ch_mult: [1,2,2,4,4]  # num_down = len(ch_mult)-1
             num_res_blocks: 4
-        pretrained_model_path:  "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1105_mask/show_base/ckpt/epoch=98-step=36828.ckpt"
+        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1111_mask_z11/ckpt/epoch=80-step=30132.ckpt"
 
         
     showo:
         load_from_showo: True
         pretrained_model_path: "showlab/show-o-512x512"
         w_clip_vit: False
-        vocab_size: 58498
+        vocab_size: 52354
         llm_vocab_size: 50295
         llm_model_path: 'microsoft/phi-1_5'
-        codebook_size: 8192
+        codebook_size: 2048
         num_vq_tokens: 1024
         num_new_special_tokens: 10  # <|soi|> <|eoi|> <|sov|> <|eov|> <|t2i|> <|mmu|> <|t2v|> <|v2v|> <|lvg|> <|pad|>
 
@@ -85,9 +85,9 @@ lr_scheduler:
 training:
     gradient_accumulation_steps: 1
     noise_type: "mask"
-    batch_size_t2i: 2
-    batch_size_lm: 2
-    batch_size_mmu: 2
+    batch_size_t2i: 4
+    batch_size_lm: 4
+    batch_size_mmu: 4
     num_train_epochs: 10
     mixed_precision: "bf16"
     enable_tf32: True
