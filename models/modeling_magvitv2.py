@@ -427,11 +427,8 @@ class MAGVITv2(ModelMixin, ConfigMixin):
         return codebook_indices
 
     def decode_code(self, codebook_indices, shape=None):
-        print("codebook_indices: ", codebook_indices.shape)
         z_q = self.quantize.get_codebook_entry(codebook_indices, shape=shape)
-        print("z_q: ", z_q.shape)
         reconstructed_pixel_values = self.decoder(z_q)["output"]
-        print("reco_pix_values: ", reconstructed_pixel_values.shape)
         return reconstructed_pixel_values
 
 

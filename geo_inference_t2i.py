@@ -22,7 +22,7 @@ from tqdm import tqdm
 import numpy as np
 import torch
 import wandb
-from models import Showo, VQModel, get_mask_chedule
+from models import Showo, VQModel, get_mask_chedule, MAGVITv2
 from omegaconf import OmegaConf
 from training.prompting_utils import UniversalPrompting, create_attention_mask_predict_next
 from training.utils import get_config, flatten_omega_conf, image_transform
@@ -37,22 +37,26 @@ def get_vq_model_class(model_type):
     else:
         raise ValueError(f"model_type {model_type} not supported.")
 
-def load_vqgan_new(config, ckpt_path=None, use_ema=True):
-    model = VQModel(**config)
+def load_vqgan_new(vq_model, config, ckpt_path=None, use_ema=True):
+    model = vq_model(**config)
+    
     if ckpt_path is not None:
         # 加载检查点文件中的 state_dict
         sd = torch.load(ckpt_path, map_location="cpu")["state_dict"]
         
-        # 提取出普通模型权重和 EMA 权重
+         # 提取出普通模型权重和 EMA 权重
         if use_ema:
             key_map = {k.replace('.', ''): k for k in sd.keys() if not k.startswith('model_ema.') and 'loss' not in k} 
             weights = {key_map[k.replace('model_ema.', '')]: v for k, v in sd.items() if k.startswith('model_ema.') and 'loss' not in k and 'model_ema.decay' not in k and 'model_ema.num_updates' not in k}
             print("Load from EMA!")
-            # ! Todo: fix keys error in ema!!!!
+            
         else:
             weights = {k: v for k, v in sd.items() if not k.startswith('model_ema.') and 'loss' not in k}
+        
+    
         model.load_state_dict(weights, strict=True)
             
+  
     return model.eval()
 
 
@@ -88,14 +92,19 @@ if __name__ == '__main__':
                                        special_tokens=("<|soi|>", "<|eoi|>", "<|sov|>", "<|eov|>", "<|t2i|>", "<|mmu|>", "<|t2v|>", "<|v2v|>", "<|lvg|>"),
                                        ignore_id=-100, cond_dropout_prob=config.training.cond_dropout_prob)
 
-    #vq_model = get_vq_model_class(config.model.vq_model.type)
-    #vq_model = vq_model.from_pretrained(config.model.vq_model.vq_model_name).to(device)
-    #vq_model.requires_grad_(False)
-    #vq_model.eval()
+    vq_model = get_vq_model_class(config.model.vq_model.type)
+
     
     if config.model.vq_model.type == "geo": 
-        vq_model = load_vqgan_new(config.model.vq_model.vq_model_config, ckpt_path=config.model.vq_model.pretrained_model_path).to(device)
+        vq_model = load_vqgan_new(vq_model, config.model.vq_model.vq_model_config, ckpt_path=config.model.vq_model.pretrained_model_path).to(device)
+        vq_model.requires_grad_(False)
+        vq_model.eval()
+        
         print('Load from pretrained vq_model')
+    elif config.model.vq_model.type == "magvitv2":
+        vq_model = vq_model.from_pretrained(config.model.vq_model.vq_model_name).to(device)
+        vq_model.requires_grad_(False)
+        vq_model.eval()
 
     model = Showo.from_pretrained(config.model.showo.pretrained_model_path).to(device)
     model.eval()

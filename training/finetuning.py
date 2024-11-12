@@ -206,6 +206,7 @@ def main():
     if config.model.vq_model.get("pretrained_model_path", None):
         if config.model.vq_model.type == 'geo':
             vq_model = load_vqgan_new(vq_model, config.model.vq_model.vq_model_config, ckpt_path=config.model.vq_model.pretrained_model_path)
+            vq_model.to(accelerator.device)
         else:
             vq_model = vq_model().to(accelerator.device)
             state_dict = torch.load(config.model.vq_model.pretrained_model_path)['model']

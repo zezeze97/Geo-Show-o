@@ -22,24 +22,24 @@ model:
         type: "geo"
         vq_model_config: 
             double_z: False
-            z_channels: 11
+            z_channels: 13
             resolution: 512
             in_channels: 3
             out_ch: 3
             ch: 128
             ch_mult: [1,2,2,4,4]  # num_down = len(ch_mult)-1
             num_res_blocks: 4
-        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1111_mask_z11/ckpt/epoch=80-step=30132.ckpt"
+        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/ckpt/epoch=135-step=50592.ckpt"
 
         
     showo:
         load_from_showo: True
         pretrained_model_path: "showlab/show-o-512x512"
         w_clip_vit: False
-        vocab_size: 52354
+        vocab_size: 58498
         llm_vocab_size: 50295
         llm_model_path: 'microsoft/phi-1_5'
-        codebook_size: 2048
+        codebook_size: 8192
         num_vq_tokens: 1024
         num_new_special_tokens: 10  # <|soi|> <|eoi|> <|sov|> <|eov|> <|t2i|> <|mmu|> <|t2v|> <|v2v|> <|lvg|> <|pad|>
 

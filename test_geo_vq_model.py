@@ -1,5 +1,5 @@
 import torch
-from models import VQModel
+from models import VQModel, MAGVITv2
 import numpy as np
 from PIL import Image
 from torchvision import transforms
@@ -73,12 +73,15 @@ def image_transform(image, resolution=256):
 if __name__ == '__main__':
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    model_1 = MAGVITv2.from_pretrained('showlab/magvitv2').to(device)
+    
     config_file = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/show/config.yaml"
-    ckpt_path = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/ckpt/epoch=113-step=42408.ckpt"
+    ckpt_path = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/ckpt/epoch=135-step=50592.ckpt"
     
     # 加载模型
     config_model = load_config(config_path=config_file, display=False)
-    model = load_vqgan_new(config_model, ckpt_path=ckpt_path).to(device)
+    model_2 = load_vqgan_new(config_model, ckpt_path=ckpt_path).to(device)
     
     # 图片文件夹路径
     img_folder = '/lustre/home/2001110054/Show-o/data/formalgeo7k/formalgeo7k_v2/diagrams'  # 记得修改文件夹路径
@@ -107,22 +110,27 @@ if __name__ == '__main__':
 
     # 模型推理
     with torch.no_grad():
+        img_tokens = model_1.get_code(img_batch)
+        reconstructed_images_1 = model_1.decode_code(img_tokens)
+        
             
-        quant, indices = model.encode(img_batch)
-        reconstructed_images = model.decode(quant)
+        quant, indices = model_2.encode(img_batch)
+        reconstructed_images_2 = model_2.decode(quant)
             
-    recovered_images = [custom_to_pil(recovered_img)for recovered_img in reconstructed_images]
+    recovered_images_1 = [custom_to_pil(recovered_img)for recovered_img in reconstructed_images_1]
+    recovered_images_2 = [custom_to_pil(recovered_img)for recovered_img in reconstructed_images_2]
 
         
     # 拼接成2x8的图像网格
     combined_width = original_images[0].width * 8  # 8张图片并排
-    combined_height = original_images[0].height * 2  # 两行，第一行原图，第二行重建图
+    combined_height = original_images[0].height * 3  # 3行，第一行原图，第二行原始show/magvit, 第三行我们自己训练的magvit
 
     # 创建一张空白的图片用于拼接
     combined_img = Image.new('RGB', (combined_width, combined_height))
     for i in range(8):
         combined_img.paste(original_images[i], (i * resolution, 0))  # 原始图片放在第一行
-        combined_img.paste(recovered_images[i], (i * resolution, resolution))  # 重建图片放在第二行
+        combined_img.paste(recovered_images_1[i], (i * resolution, resolution))  # 原始show/magvit重建图片放在第二行
+        combined_img.paste(recovered_images_2[i], (i * resolution, resolution * 2)) # 自己训练的magvit重建图片放在第三行
 
     # 保存拼接后的图像
     combined_img.save(f'combined_image_grid_512.jpg')
