@@ -23,7 +23,7 @@ model:
         pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/ckpt/epoch=135-step=50592.ckpt"
 
     showo:
-        pretrained_model_path: "outputs/show-o-finetuning-512x512-NewVQ"
+        pretrained_model_path: "outputs/show-o-finetuning-512x512"
         w_clip_vit: False
         vocab_size: 58498
         llm_vocab_size: 50295
