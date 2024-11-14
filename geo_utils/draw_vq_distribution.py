@@ -61,7 +61,7 @@ def image_transform(image, resolution=256):
 
     return transformed_image
 
-def compare_vq_models(model1, model2, img_folder, num_of_sample=100, resolution=512):
+def compare_vq_models(model1, model2, img_folder, num_of_sample=200, resolution=512):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     model1.to(device).eval()
@@ -124,8 +124,10 @@ if __name__ == '__main__':
     model1 = MAGVITv2.from_pretrained('showlab/magvitv2')
     
     # 加载模型二
-    config_file_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/show/config.yaml"
-    ckpt_path_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/ckpt/epoch=135-step=50592.ckpt"
+    # config_file_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/show/config.yaml"
+    # ckpt_path_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/ckpt/epoch=135-step=50592.ckpt"
+    config_file_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1113_mask_z13/show/config.yaml"
+    ckpt_path_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1113_mask_z13/ckpt/epoch=68-step=25668.ckpt"
     
     config_model_2 = load_config(config_path=config_file_2, display=False)
     model2 = load_vqgan_new(config_model_2, ckpt_path=ckpt_path_2)

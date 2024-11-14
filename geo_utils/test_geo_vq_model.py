@@ -76,15 +76,17 @@ if __name__ == '__main__':
     
     model_1 = MAGVITv2.from_pretrained('showlab/magvitv2').to(device)
     
-    config_file = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/show/config.yaml"
-    ckpt_path = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/ckpt/epoch=135-step=50592.ckpt"
+    # config_file = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/show/config.yaml"
+    # ckpt_path = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/ckpt/epoch=135-step=50592.ckpt"
+    config_file = '/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1113_mask_z13/show/config.yaml'
+    ckpt_path = '/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1113_mask_z13/ckpt/epoch=68-step=25668.ckpt'
     
     # 加载模型
     config_model = load_config(config_path=config_file, display=False)
     model_2 = load_vqgan_new(config_model, ckpt_path=ckpt_path).to(device)
     
     # 图片文件夹路径
-    img_folder = '/lustre/home/2001110054/Show-o/data/formalgeo7k/formalgeo7k_v2/diagrams'  # 记得修改文件夹路径
+    img_folder = '/lustre/home/2001110054/GEO-Open-MAGVIT2/geo_data/val'  # 记得修改文件夹路径
     
     # 获取文件夹中的所有图片文件
     img_files = [f for f in os.listdir(img_folder) if f.endswith('.png')]  # 你可以根据需要更改扩展名
