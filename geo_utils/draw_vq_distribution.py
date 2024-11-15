@@ -1,14 +1,17 @@
 import torch
-from models import MAGVITv2, VQModel 
 import numpy as np
 from PIL import Image
 from torchvision import transforms
 import os
 import random
-from training.geo_data_aug import crop
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from omegaconf import OmegaConf
+import sys
+sys.path.append('/lustre/home/2001110054/Show-o')  # 项目根目录
+from models import MAGVITv2, VQModel 
+from training.geo_data_aug import crop
+
 
 def load_config(config_path, display=True):
     config = OmegaConf.load(config_path)
@@ -126,8 +129,8 @@ if __name__ == '__main__':
     # 加载模型二
     # config_file_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/show/config.yaml"
     # ckpt_path_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/ckpt/epoch=135-step=50592.ckpt"
-    config_file_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1113_mask_z13/show/config.yaml"
-    ckpt_path_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1113_mask_z13/ckpt/epoch=68-step=25668.ckpt"
+    config_file_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1114_mask_z13/show/config.yaml"
+    ckpt_path_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1114_mask_z13/ckpt/epoch=198-step=74028.ckpt"
     
     config_model_2 = load_config(config_path=config_file_2, display=False)
     model2 = load_vqgan_new(config_model_2, ckpt_path=ckpt_path_2)

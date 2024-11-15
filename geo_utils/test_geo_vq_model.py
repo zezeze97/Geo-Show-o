@@ -1,13 +1,15 @@
 import torch
-from models import VQModel, MAGVITv2
 import numpy as np
 from PIL import Image
 from torchvision import transforms
 import os
 import random
-from training.geo_data_aug import crop
-
 from omegaconf import OmegaConf
+import sys
+sys.path.append('/lustre/home/2001110054/Show-o')  # 项目根目录
+from training.geo_data_aug import crop
+from models import VQModel, MAGVITv2
+
 
 def custom_to_pil(x):
     x = x.detach().cpu()
@@ -78,8 +80,8 @@ if __name__ == '__main__':
     
     # config_file = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/show/config.yaml"
     # ckpt_path = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/ckpt/epoch=135-step=50592.ckpt"
-    config_file = '/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1113_mask_z13/show/config.yaml'
-    ckpt_path = '/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1113_mask_z13/ckpt/epoch=68-step=25668.ckpt'
+    config_file = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1114_mask_z13/show/config.yaml"
+    ckpt_path = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1114_mask_z13/ckpt/epoch=198-step=74028.ckpt"
     
     # 加载模型
     config_model = load_config(config_path=config_file, display=False)
