@@ -122,6 +122,11 @@ def compare_vq_models(model1, model2, img_folder, num_of_sample=200, resolution=
     plt.savefig("vq_models_token_distribution_comparison.png", format="png", dpi=300)  # 保存为PNG文件
 
 if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config')
+    parser.add_argument('--ckpt')
+    args = parser.parse_args()
     
     # model1 = MAGVITv2.from_pretrained('/lustre/home/2201210053/GEOMETERY/others/show_base/')
     model1 = MAGVITv2.from_pretrained('showlab/magvitv2')
@@ -129,8 +134,8 @@ if __name__ == '__main__':
     # 加载模型二
     # config_file_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/show/config.yaml"
     # ckpt_path_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/ckpt/epoch=135-step=50592.ckpt"
-    config_file_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1114_mask_z13/show/config.yaml"
-    ckpt_path_2 = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1114_mask_z13/ckpt/epoch=198-step=74028.ckpt"
+    config_file_2 = args.config
+    ckpt_path_2 = args.ckpt
     
     config_model_2 = load_config(config_path=config_file_2, display=False)
     model2 = load_vqgan_new(config_model_2, ckpt_path=ckpt_path_2)

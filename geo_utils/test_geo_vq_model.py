@@ -73,6 +73,11 @@ def image_transform(image, resolution=256):
     return transformed_image
 
 if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config')
+    parser.add_argument('--ckpt')
+    args = parser.parse_args()
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
@@ -80,8 +85,8 @@ if __name__ == '__main__':
     
     # config_file = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/show/config.yaml"
     # ckpt_path = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/ckpt/epoch=135-step=50592.ckpt"
-    config_file = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1114_mask_z13/show/config.yaml"
-    ckpt_path = "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1114_mask_z13/ckpt/epoch=198-step=74028.ckpt"
+    config_file = args.config
+    ckpt_path = args.ckpt
     
     # 加载模型
     config_model = load_config(config_path=config_file, display=False)
