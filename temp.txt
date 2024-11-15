@@ -1,1 +1,0 @@
-salloc -p GPU80G -N1 -n16 --gres=gpu:1 -q low -t 120:00:00
