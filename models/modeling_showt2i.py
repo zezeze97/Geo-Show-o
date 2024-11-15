@@ -20,7 +20,7 @@ from .modeling_utils import ConfigMixin, ModelMixin, register_to_config
 from .sampling import cosine_schedule, mask_by_random_topk
 from .phi import PhiForCausalLM
 
-class Showo(ModelMixin, ConfigMixin):
+class Showo_t2i(ModelMixin, ConfigMixin):
     _supports_gradient_checkpointing = True
 
     @register_to_config
@@ -64,8 +64,6 @@ class Showo(ModelMixin, ConfigMixin):
             labels=None,
             label_smoothing=0.0,
             batch_size_t2i=0,
-            batch_size_lm=0,
-            batch_size_mmu=0,
             max_seq_length=128,
             labels_mask_text=None,
             labels_mask_image=None,
@@ -85,23 +83,7 @@ class Showo(ModelMixin, ConfigMixin):
                 labels[:batch_size_t2i, max_seq_length + 1:].contiguous().view(-1), ignore_index=-100,
             )
 
-            # 2. Next token prediction for language modeling
-            loss_lm = F.cross_entropy(
-                logits[batch_size_t2i:batch_size_t2i + batch_size_lm, :-1].contiguous().view(-1, self.output_size),
-                labels[batch_size_t2i:batch_size_t2i + batch_size_lm, 1:].contiguous().view(-1), ignore_index=-100,
-            )
-
-            # 3. Next token prediction for captioning/multimodal understanding
-            loss_mmu = F.cross_entropy(
-                logits[-batch_size_mmu:, :-1].contiguous().view(-1, self.output_size),
-                labels[-batch_size_mmu:, 1:].contiguous().view(-1), ignore_index=-100,
-            )
-            
-            # 4. Mix
-            # loss_mix = F.cross_entropy(
-
-            #return logits, loss_t2i, loss_lm, loss_mmu, loss_mix
-            return logits, loss_t2i, loss_lm, loss_mmu
+            return logits, loss_t2i
 
         return logits
 
@@ -184,61 +166,4 @@ class Showo(ModelMixin, ConfigMixin):
 
         return sampled_ids
 
-    @torch.no_grad()
-    def mmu_generate(self, idx=None, input_embeddings=None, attention_mask=None, max_new_tokens=100, temperature=1.0, top_k=None, eot_token=None):
-        """
-        Take a conditioning sequence of indices idx (LongTensor of shape (b,t)) and complete
-        the sequence max_new_tokens times, feeding the predictions back into the model each time.
-        Most likely you'll want to make sure to be in model.eval() mode of operation for this.
-        """
-        try:
-            device = idx.device
-        except:
-            device = input_embeddings.device
-
-        result = []
-        for _ in range(max_new_tokens):
-            # if the sequence context is growing too long we must crop it at block_size
-            # idx_cond = idx if idx.size(1) <= self.config.block_size else idx[:, -self.config.block_size:]
-            # forward the model to get the logits for the index in the sequence
-            # logits, _ = self(idx_cond)
-            logits = self(idx, input_embeddings=input_embeddings, attention_mask=attention_mask)
-
-            L = attention_mask.shape[-1]
-            attention_mask = attention_mask.squeeze()
-            attention_mask_a = torch.hstack(
-                [
-                    attention_mask,  # L, L
-                    torch.zeros((L, 1)).to(device) + torch.finfo(logits.dtype).min,
-                ]
-            )
-            attention_mask_b = torch.vstack(
-                [
-                    attention_mask_a,  # L, L+1
-                    torch.hstack([attention_mask[-1, :], torch.tensor([0]).to(device)]).unsqueeze(0),
-                ]
-            )
-            attention_mask = attention_mask_b
-
-            # pluck the logits at the final step and scale by desired temperature
-            logits = logits[:, -1, :] / temperature
-            # optionally crop the logits to only the top k options
-            if top_k is not None:
-                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
-                logits[logits < v[:, [-1]]] = -float('Inf')
-            # apply softmax to convert logits to (normalized) probabilities
-            probs = F.softmax(logits, dim=-1)
-            # sample from the distribution
-            idx_next = torch.multinomial(probs, num_samples=1)
-            result.append(idx_next[0][0])
-            # append sampled index to the running sequence and continue
-            if self.config.w_clip_vit:
-                idx_next_embeddings = self.showo.model.embed_tokens(idx_next)
-                input_embeddings = torch.cat([input_embeddings, idx_next_embeddings], dim=1)
-            else:
-                idx = torch.cat((idx, idx_next), dim=1)
-
-            if eot_token is not None and idx_next.cpu() == eot_token:
-                break
-
-        return result
+    

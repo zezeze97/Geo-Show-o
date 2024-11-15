@@ -42,7 +42,7 @@ from accelerate.utils import DistributedType, set_seed
 from training.custom_data import LazySupervisedDataset
 # from parquet import RefinedWebDataset
 
-from models import Showo, MAGVITv2, VQModel, get_mask_chedule
+from models import Showo_t2i, MAGVITv2, VQModel, get_mask_chedule
 from training.prompting_utils import UniversalPrompting, create_attention_mask_predict_next, \
     create_attention_mask_for_mmu
 from models.lr_schedulers import get_scheduler
@@ -120,13 +120,9 @@ def main():
         split_batches=True,
     )
 
-    total_batch_size_per_gpu = (config.training.batch_size_t2i
-                                + config.training.batch_size_lm
-                                + config.training.batch_size_mmu)
-    total_batch_size = (
-            (config.training.batch_size_t2i + config.training.batch_size_lm + config.training.batch_size_mmu)
-            * accelerator.num_processes * config.training.gradient_accumulation_steps
-    )
+    total_batch_size_per_gpu = config.training.batch_size_t2i
+
+    total_batch_size = config.training.batch_size_t2i * accelerator.num_processes * config.training.gradient_accumulation_steps
 
     if accelerator.distributed_type == DistributedType.DEEPSPEED:
         accelerator.state.deepspeed_plugin.deepspeed_config["train_micro_batch_size_per_gpu"] = (
@@ -195,7 +191,7 @@ def main():
     uni_prompting = UniversalPrompting(tokenizer, max_text_len=config.dataset.preprocessing.max_seq_length,
                                        special_tokens=(
                                            "<|soi|>", "<|eoi|>", "<|sov|>", "<|eov|>", "<|t2i|>",
-                                           "<|mmu|>", "<|t2v|>", "<|v2v|>", "<|lvg|>"
+                                           "<|mmu|>", "<|t2v|>", "<|v2v|>", "<|lvg|>", "<|mix|>"
                                        ),
                                        ignore_id=-100, cond_dropout_prob=config.training.cond_dropout_prob)
 
@@ -219,7 +215,7 @@ def main():
     # Initialize Show-o model
     if config.model.showo.load_from_showo:
         print(f'Load from pretrained show-o: {config.model.showo.pretrained_model_path}')
-        model = Showo.from_pretrained(config.model.showo.pretrained_model_path).to(accelerator.device)
+        model = Showo_t2i.from_pretrained(config.model.showo.pretrained_model_path).to(accelerator.device)
         if config.model.showo.vocab_size != model.vocab_size:
             print(f'vocab size of show-o is not correct!!!')
             model.showo.resize_token_embeddings(config.model.showo.vocab_size)
@@ -230,7 +226,7 @@ def main():
             model.config.mask_token_id = config.model.showo.vocab_size - 1
             model.mask_token_id = config.model.showo.vocab_size - 1
     else:
-        model = Showo(**config.model.showo).to(accelerator.device)
+        model = Showo_t2i(**config.model.showo).to(accelerator.device)
     mask_id = model.mask_token_id
 
     ##################################
@@ -319,64 +315,12 @@ def main():
         train_dataloader_t2i = DataLoader(dataset_t2i, batch_size=config.training.batch_size_t2i,
                                           sampler=sampler, shuffle=shuffle, num_workers=dataset_config.num_workers,
                                           pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
-        # num_update_steps_per_epoch = math.ceil(
-        #     train_dataloader_t2i.num_batches / config.training.gradient_accumulation_steps)
-        
-
     else:
         raise ValueError(f"Unsupported dataset type {config.dataset.type}")
-
-    total_batch_size_mmu_without_accum = config.training.batch_size_mmu * accelerator.num_processes
-    # Data for image captioning
-    if config.dataset.und_type == "captioning":
-        dataset_mmu = LazySupervisedDataset(image_folder=dataset_config.mmu_image_folder,
-                                    json_path=dataset_config.mmu_json_path,
-                                    resolution=preproc_config.resolution,
-                                    is_mmu=True)
-        if accelerator.num_processes > 1:
-            sampler = DistributedSampler(dataset_mmu,
-                                         num_replicas=accelerator.num_processes,
-                                         rank=accelerator.process_index,
-                                         shuffle=True,
-                                         )
-            shuffle = False
-        else:
-            sampler = None
-            shuffle = True
-        
-        train_dataloader_mmu =  DataLoader(dataset_mmu, batch_size=config.training.batch_size_mmu,
-                                          sampler=sampler, shuffle=shuffle, num_workers=dataset_config.num_workers,
-                                          pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
-    else:
-        raise NotImplementedError(f"Unsupported dataset type {config.dataset.und_type}")
-
-    # LLM pure text dataset: RefinedWeb
-    if dataset_config.lm_json_path is not None:
-        
-        dataset_lm = LazySupervisedDataset(json_path=dataset_config.lm_json_path, 
-                                        is_lm=True)
-        if accelerator.num_processes > 1:
-            sampler = DistributedSampler(dataset_lm,
-                                         num_replicas=accelerator.num_processes,
-                                         rank=accelerator.process_index,
-                                         shuffle=True,
-                                         )
-            shuffle = False
-        else:
-            sampler = None
-            shuffle = True
-
-        train_dataloader_lm = DataLoader(dataset_lm, batch_size=config.training.batch_size_lm,
-                                          sampler=sampler, shuffle=shuffle, num_workers=dataset_config.num_workers,
-                                          pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
-    else:
-        raise FileNotFoundError(f"lm data not find!")
 
     # Combine these dataloaders into a single iterable model
     iterables = {
         "t2i_flow": train_dataloader_t2i,
-        "lm_flow": train_dataloader_lm,
-        "mmu_flow": train_dataloader_mmu,
     }
 
     combined_dataloader = CombinedLoader(iterables, mode=config.dataset.combined_loader_mode)
@@ -457,9 +401,6 @@ def main():
         for batch, batch_idx, dataloader_idx in combined_dataloader:
             # for loss calculation
             batch_size_t2i = batch["t2i_flow"]["images"].shape[0]
-            batch_size_lm = len(batch["lm_flow"]["input_ids"])
-            batch_size_mmu = batch["mmu_flow"]["images"].shape[0]
-
             # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
             # Build formatted sequences for class-conditional/text-to-image generation
             # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
@@ -481,63 +422,25 @@ def main():
                                                                 rm_pad_in_image=True,
                                                                 return_inverse_mask=True)
             attention_mask = attention_mask.to(mask_dtype)
-
-            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
-            # Build formatted sequences for language modeling
-            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
-            texts_lm = batch["lm_flow"]["input_ids"]
-            input_ids_lm, _, labels_lm = uni_prompting((texts_lm, input_ids.shape[-1]), 'lm')
-            attention_mask_lm = create_attention_mask_predict_next(input_ids_lm.to(input_ids.device),
-                                                                   pad_id=int(uni_prompting.sptids_dict['<|pad|>']),
-                                                                   soi_id=int(uni_prompting.sptids_dict['<|soi|>']),
-                                                                   eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']))
-            attention_mask_lm = attention_mask_lm.to(mask_dtype)
-            attention_mask = torch.cat([attention_mask, attention_mask_lm], dim=0)
-            input_ids = torch.cat((input_ids, input_ids_lm.to(input_ids.device)), dim=0)
-            labels = torch.cat((labels, labels_lm.to(input_ids.device)), dim=0)
-
-            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
-            # Build formatted sequences for captioning/multimodal understanding
-            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
-            pixel_values_mmu, texts_mmu = batch["mmu_flow"]["images"], batch["mmu_flow"]["input_ids"]
-            pixel_values_mmu = pixel_values_mmu.to(accelerator.device, non_blocking=True)
-            image_tokens_mmu = vq_model.get_code(pixel_values_mmu)
-            
-            image_tokens_mmu = image_tokens_mmu + len(uni_prompting.text_tokenizer)
-            input_ids_mmu, _, labels_mmu = uni_prompting((image_tokens_mmu, texts_mmu), 'mmu')
-            input_ids_mmu = input_ids_mmu.to(accelerator.device, non_blocking=True)
-            
-            attention_mask_mmu = create_attention_mask_for_mmu(input_ids_mmu.to(input_ids.device),
-                                                               eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']))
-            attention_mask_mmu = attention_mask_mmu.to(mask_dtype)
-            attention_mask = torch.cat([attention_mask, attention_mask_mmu], dim=0)
-            input_ids = torch.cat((input_ids, input_ids_mmu.to(input_ids.device)), dim=0)
-            labels = torch.cat((labels, labels_mmu.to(input_ids.device)), dim=0)
             
             if global_step == 0 and epoch == 0:
                 logger.info("Input ids: {}".format(input_ids))
                 logger.info("Labels: {}".format(labels))
 
             with accelerator.accumulate(model):
-                logits, loss_t2i, loss_lm, loss_mmu = model(
+                logits, loss_t2i = model(
                     input_ids=input_ids,
                     input_embeddings=None,
                     attention_mask=attention_mask,
                     labels=labels,
                     label_smoothing=config.training.label_smoothing,
                     batch_size_t2i=batch_size_t2i,
-                    batch_size_lm=batch_size_lm,
-                    batch_size_mmu=batch_size_mmu,
                     max_seq_length=config.dataset.preprocessing.max_seq_length,
                 )
 
-                # Gather the losses across all processes for logging (if we use distributed training).
                 avg_loss_t2i = accelerator.gather(loss_t2i.repeat(config.training.batch_size_t2i)).mean()
-                avg_loss_lm = accelerator.gather(loss_lm.repeat(config.training.batch_size_lm)).mean()
-                avg_loss_mmu = accelerator.gather(loss_mmu.repeat(config.training.batch_size_mmu)).mean()
-                loss = config.training.t2i_coeff * loss_t2i + \
-                       config.training.lm_coeff * loss_lm + \
-                       config.training.mmu_coeff * loss_mmu
+                
+                loss = config.training.t2i_coeff * loss_t2i 
 
                 avg_masking_rate = accelerator.gather(mask_prob.repeat(config.training.batch_size_t2i)).mean()
 
@@ -572,8 +475,6 @@ def main():
                     )
                     logs = {
                         "step_loss_t2i": avg_loss_t2i.item(),
-                        "step_loss_mmu": avg_loss_mmu.item(),
-                        "step_loss_lm": avg_loss_lm.item(),
                         "lr": lr_scheduler.get_last_lr()[0],
                         "avg_masking_rate": avg_masking_rate.item(),
                         "samples/sec/gpu": samples_per_second_per_gpu,
@@ -585,8 +486,6 @@ def main():
                     logger.info(
                         f"Step: {global_step + 1} "
                         f"Loss_t2i: {avg_loss_t2i.item():0.4f} "
-                        f"Loss_mmu: {avg_loss_mmu.item():0.4f} "
-                        f"Loss_lm: {avg_loss_lm.item():0.4f} "
                         f"Data (t): {data_time_m.val:0.4f}, {samples_per_second_per_gpu:0.2f}/s/gpu "
                         f"Batch (t): {batch_time_m.val:0.4f} "
                         f"LR: {lr_scheduler.get_last_lr()[0]:0.6f}"
@@ -694,7 +593,7 @@ def visualize_predictions(
 
     model.train()
 
-
+#对T2I的可视化
 @torch.no_grad()
 def generate_images(
         model,
@@ -764,7 +663,6 @@ def generate_images(
     gen_token_ids = torch.clamp(gen_token_ids, max=accelerator.unwrap_model(model).config.codebook_size - 1, min=0)
     images = vq_model.decode_code(gen_token_ids)
     
-    
     model.train()
 
     if config.training.get("pre_encode", False):
@@ -780,6 +678,12 @@ def generate_images(
     wandb_images = [wandb.Image(image, caption=validation_prompts[i]) for i, image in enumerate(pil_images)]
     wandb.log({"Generated images": wandb_images}, step=global_step)
 
+
+#对MIX的可视化
+@torch.no_grad()
+def generate_images_mix():
+    pass
+    
 
 def save_checkpoint(model, config, accelerator, global_step):
     output_dir = config.experiment.output_dir

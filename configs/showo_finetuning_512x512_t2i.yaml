@@ -5,10 +5,8 @@ wandb:
 
 experiment:
     project: "training"
-    name: "show-o-finetuning-512x512-ALLDATA1115"
-    output_dir: "outputs/show-o-finetuning-512x512-1115"
-    # max_train_examples_t2i: 20000000
-    # max_train_examples_mmu: 40000000
+    name: "show-o-finetuning-512x512-T2I_1115"
+    output_dir: "outputs/show-o-finetuning-512x512-1115-T2I"
     save_every: 1000
     eval_every: 1000
     generate_every: 1000
@@ -85,10 +83,8 @@ lr_scheduler:
 training:
     gradient_accumulation_steps: 1
     noise_type: "mask"
-    batch_size_t2i: 4
-    batch_size_lm: 4
-    batch_size_mmu: 4
-    num_train_epochs: 10
+    batch_size_t2i: 12
+    num_train_epochs: 20
     mixed_precision: "bf16"
     enable_tf32: True
     seed: 10086

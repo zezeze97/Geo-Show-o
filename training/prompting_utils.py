@@ -210,7 +210,15 @@ class UniversalPrompting():
             label_ids.append(temp_label_ids.unsqueeze(0))
 
         return torch.cat(sequence_ids, dim=0), torch.cat(attention_masks, dim=0), torch.cat(label_ids, dim=0)
-
+    
+    def mix_prompt(self, text_ids, image_ids, labels):
+        device = image_ids.device
+        sequence_ids = []
+        attention_masks = []
+        label_ids = []
+        probs = torch.rand(len(text_ids))
+        max_text_len = self.max_text_len - 1 
+        
     def t2v_prompt(self, text_ids, image_ids, labels):
 
         device = image_ids.device

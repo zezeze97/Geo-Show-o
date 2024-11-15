@@ -122,9 +122,10 @@ def main():
 
     total_batch_size_per_gpu = (config.training.batch_size_t2i
                                 + config.training.batch_size_lm
-                                + config.training.batch_size_mmu)
+                                + config.training.batch_size_mmu
+                                + config.training.batch_size_mix)
     total_batch_size = (
-            (config.training.batch_size_t2i + config.training.batch_size_lm + config.training.batch_size_mmu)
+            (config.training.batch_size_t2i + config.training.batch_size_lm + config.training.batch_size_mmu + config.training.batch_size_mix)
             * accelerator.num_processes * config.training.gradient_accumulation_steps
     )
 
@@ -195,7 +196,7 @@ def main():
     uni_prompting = UniversalPrompting(tokenizer, max_text_len=config.dataset.preprocessing.max_seq_length,
                                        special_tokens=(
                                            "<|soi|>", "<|eoi|>", "<|sov|>", "<|eov|>", "<|t2i|>",
-                                           "<|mmu|>", "<|t2v|>", "<|v2v|>", "<|lvg|>"
+                                           "<|mmu|>", "<|t2v|>", "<|v2v|>", "<|lvg|>", "<|mix|>"
                                        ),
                                        ignore_id=-100, cond_dropout_prob=config.training.cond_dropout_prob)
 
@@ -371,12 +372,36 @@ def main():
                                           pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
     else:
         raise FileNotFoundError(f"lm data not find!")
-
+    
+    # Mix
+    if dataset_config.mix_json_path is not None:
+        dataset_mix = LazySupervisedDataset(image_folder=dataset_config.mix_image_folder,
+                                    json_path=dataset_config.mix_json_path,
+                                    resolution=preproc_config.resolution,
+                                    is_mix=True)
+        if accelerator.num_processes > 1:
+            sampler = DistributedSampler(dataset_mix,
+                                         num_replicas=accelerator.num_processes,
+                                         rank=accelerator.process_index,
+                                         shuffle=True,
+                                         )
+            shuffle = False
+        else:
+            sampler = None
+            shuffle = True
+        
+        train_dataloader_mix =  DataLoader(dataset_mix, batch_size=config.training.batch_size_mix,
+                                          sampler=sampler, shuffle=shuffle, num_workers=dataset_config.num_workers,
+                                          pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
+    else:
+        raise FileNotFoundError(f"Mix data not find!")
+    
     # Combine these dataloaders into a single iterable model
     iterables = {
         "t2i_flow": train_dataloader_t2i,
         "lm_flow": train_dataloader_lm,
         "mmu_flow": train_dataloader_mmu,
+        "mix_flow": train_dataloader_mix,
     }
 
     combined_dataloader = CombinedLoader(iterables, mode=config.dataset.combined_loader_mode)
@@ -459,6 +484,7 @@ def main():
             batch_size_t2i = batch["t2i_flow"]["images"].shape[0]
             batch_size_lm = len(batch["lm_flow"]["input_ids"])
             batch_size_mmu = batch["mmu_flow"]["images"].shape[0]
+            batch_size_mix = batch["mix_flow"]["images"].shape[0]
 
             # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
             # Build formatted sequences for class-conditional/text-to-image generation
@@ -514,12 +540,33 @@ def main():
             input_ids = torch.cat((input_ids, input_ids_mmu.to(input_ids.device)), dim=0)
             labels = torch.cat((labels, labels_mmu.to(input_ids.device)), dim=0)
             
+            
+            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
+            # Build formatted sequences for MIX
+            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
+            
+            pixel_values_mix, texts_mix = batch["mix_flow"]["images"], batch["mix_flow"]["input_ids"]
+            pixel_values_mix = pixel_values_mix.to(accelerator.device, non_blocking=True)
+            image_tokens_mix = vq_model.get_code(pixel_values_mix)
+            
+            image_tokens_mix = image_tokens_mix + len(uni_prompting.text_tokenizer)
+            input_ids_mix, _, labels_mix = uni_prompting((image_tokens_mix, texts_mmu), 'mix')
+            input_ids_mmu = input_ids_mmu.to(accelerator.device, non_blocking=True)
+            
+            # prepare_inputs_and_labels
+            # attention_mask = create_attention_mask_predict_next
+            # attention_mask = attention_mask.to(mask_dtype)
+            
+            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
+            # Build formatted sequences for MIX
+            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
+            
             if global_step == 0 and epoch == 0:
                 logger.info("Input ids: {}".format(input_ids))
                 logger.info("Labels: {}".format(labels))
 
             with accelerator.accumulate(model):
-                logits, loss_t2i, loss_lm, loss_mmu = model(
+                logits, loss_t2i, loss_lm, loss_mmu, loss_mix = model(
                     input_ids=input_ids,
                     input_embeddings=None,
                     attention_mask=attention_mask,
@@ -528,6 +575,7 @@ def main():
                     batch_size_t2i=batch_size_t2i,
                     batch_size_lm=batch_size_lm,
                     batch_size_mmu=batch_size_mmu,
+                    batch_size_mix=batch_size_mix,
                     max_seq_length=config.dataset.preprocessing.max_seq_length,
                 )
 
@@ -535,9 +583,11 @@ def main():
                 avg_loss_t2i = accelerator.gather(loss_t2i.repeat(config.training.batch_size_t2i)).mean()
                 avg_loss_lm = accelerator.gather(loss_lm.repeat(config.training.batch_size_lm)).mean()
                 avg_loss_mmu = accelerator.gather(loss_mmu.repeat(config.training.batch_size_mmu)).mean()
+                avg_loss_mix = accelerator.gather(loss_mix.repeat(config.training.batch_size_mix)).mean()
                 loss = config.training.t2i_coeff * loss_t2i + \
                        config.training.lm_coeff * loss_lm + \
-                       config.training.mmu_coeff * loss_mmu
+                       config.training.mmu_coeff * loss_mmu + \
+                       config.training.mix_coeff * loss_mix
 
                 avg_masking_rate = accelerator.gather(mask_prob.repeat(config.training.batch_size_t2i)).mean()
 
@@ -573,6 +623,7 @@ def main():
                     logs = {
                         "step_loss_t2i": avg_loss_t2i.item(),
                         "step_loss_mmu": avg_loss_mmu.item(),
+                        "step_loss_mix": avg_loss_mix.item(),
                         "step_loss_lm": avg_loss_lm.item(),
                         "lr": lr_scheduler.get_last_lr()[0],
                         "avg_masking_rate": avg_masking_rate.item(),
@@ -586,6 +637,7 @@ def main():
                         f"Step: {global_step + 1} "
                         f"Loss_t2i: {avg_loss_t2i.item():0.4f} "
                         f"Loss_mmu: {avg_loss_mmu.item():0.4f} "
+                        f"Loss_mix: {avg_loss_mix.item():0.4f} "
                         f"Loss_lm: {avg_loss_lm.item():0.4f} "
                         f"Data (t): {data_time_m.val:0.4f}, {samples_per_second_per_gpu:0.2f}/s/gpu "
                         f"Batch (t): {batch_time_m.val:0.4f} "
@@ -694,7 +746,7 @@ def visualize_predictions(
 
     model.train()
 
-
+#对T2I的可视化
 @torch.no_grad()
 def generate_images(
         model,
@@ -780,6 +832,12 @@ def generate_images(
     wandb_images = [wandb.Image(image, caption=validation_prompts[i]) for i, image in enumerate(pil_images)]
     wandb.log({"Generated images": wandb_images}, step=global_step)
 
+
+#对MIX的可视化
+@torch.no_grad()
+def generate_images_mix():
+    pass
+    
 
 def save_checkpoint(model, config, accelerator, global_step):
     output_dir = config.experiment.output_dir

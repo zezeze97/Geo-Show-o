@@ -57,13 +57,13 @@ mmu_image_root=./mmu_validation question='Please describe this image in detail. 
 
 ```shell
 # 使用4卡A800, deepspeed zero2训练
-sbatch train.slurm
+sbatch train_512.slurm
 ```
 
 其他训练配置
 ```shell
 # 单卡A800
-accelerate launch --config_file accelerate_configs/1_gpu.yaml --main_process_port=8888 training/finetuning.py config=configs/showo_finetuning.yaml
+accelerate launch --config_file accelerate_configs/1_gpu.yaml --main_process_port=8888 training/finetuning.py config=configs/showo_finetuning_512x512.yaml
 
 # 4卡
 accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml --main_process_port=8888 training/finetuning.py config=configs/showo_finetuning.yaml
