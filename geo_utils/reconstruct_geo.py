@@ -1,6 +1,4 @@
 import os
-import sys
-sys.path.append(os.getcwd())
 import torch
 from omegaconf import OmegaConf
 import numpy as np
@@ -9,8 +7,10 @@ from tqdm import tqdm
 import argparse
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
-from training.geo_data_aug import crop
+import sys
+sys.path.append('/lustre/home/2001110054/Show-o')  # 项目根目录
 from models import VQModel, MAGVITv2
+from training.geo_data_aug import crop
 
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

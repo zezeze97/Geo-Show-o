@@ -20,10 +20,10 @@ model:
             ch: 128
             ch_mult: [1,2,2,4,4]  # num_down = len(ch_mult)-1
             num_res_blocks: 4
-        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1110_mask/ckpt/epoch=135-step=50592.ckpt"
+        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1114_mask_z13/ckpt/epoch=198-step=74028.ckpt"
 
     showo:
-        pretrained_model_path: "outputs/show-o-finetuning-512x512"
+        pretrained_model_path: "outputs/show-o-finetuning-512x512-1116-overfit-T2I"
         w_clip_vit: False
         vocab_size: 58498
         llm_vocab_size: 50295
