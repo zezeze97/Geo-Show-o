@@ -27,6 +27,7 @@ from typing import Union
 
 import numpy as np
 from PIL import Image
+from copy import deepcopy
 from omegaconf import OmegaConf
 import wandb
 import torch
@@ -215,20 +216,35 @@ def main():
         vq_model = vq_model.from_pretrained(config.model.vq_model.vq_model_name).to(accelerator.device)
     vq_model.eval()
     vq_model.requires_grad_(False)
-
+    
     # Initialize Show-o model
     if config.model.showo.load_from_showo:
         print(f'Load from pretrained show-o: {config.model.showo.pretrained_model_path}')
         model = Showo.from_pretrained(config.model.showo.pretrained_model_path).to(accelerator.device)
         if config.model.showo.vocab_size != model.vocab_size:
             print(f'vocab size of show-o is not correct!!!')
+            print("codebook_size!!!!!: ",config.model.showo.codebook_size)
+            print("config1: ", model.config)
+            
+            model.register_to_config(
+                            vocab_size=config.model.showo.vocab_size,
+                            mask_token_id=config.model.showo.vocab_size - 1,
+                            codebook_size=config.model.showo.codebook_size)
+            
             model.showo.resize_token_embeddings(config.model.showo.vocab_size)
-            model.config.codebook_size = config.model.showo.codebook_size
+            model.vocab_size = config.model.showo.vocab_size
+            model.output_size = config.model.showo.vocab_size
+            model.mask_token_id = config.model.showo.vocab_size - 1
+            
+            """model.config.codebook_size = config.model.showo.codebook_size
             model.config.vocab_size = config.model.showo.vocab_size
             model.vocab_size = config.model.showo.vocab_size
             model.output_size = config.model.showo.vocab_size
             model.config.mask_token_id = config.model.showo.vocab_size - 1
             model.mask_token_id = config.model.showo.vocab_size - 1
+            print("embedding size: ", config.model.showo.vocab_size) """
+            print("config2: ", model.config)
+            
     else:
         model = Showo(**config.model.showo).to(accelerator.device)
     mask_id = model.mask_token_id
