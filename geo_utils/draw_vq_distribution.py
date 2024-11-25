@@ -141,4 +141,4 @@ if __name__ == '__main__':
     model2 = load_vqgan_new(config_model_2, ckpt_path=ckpt_path_2)
 
     img_folder = '/lustre/home/2001110054/Show-o/data/formalgeo7k/formalgeo7k_v2/diagrams'  # 图片文件夹路径
-    compare_vq_models(model1, model2, img_folder)
+    compare_vq_models(model1, model2, img_folder, resolution=512)
