@@ -64,7 +64,7 @@ def image_transform(image, resolution=256):
 
     return transformed_image
 
-def compare_vq_models(model1, model2, img_folder, num_of_sample=200, resolution=512):
+def compare_vq_models(model1, model2, img_folder, num_of_sample=200, resolution=512, save_path=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     model1.to(device).eval()
@@ -119,13 +119,14 @@ def compare_vq_models(model1, model2, img_folder, num_of_sample=200, resolution=
     plt.xlabel('Token Value')
     plt.ylabel('Frequency')
     plt.legend()
-    plt.savefig("vq_models_token_distribution_comparison.png", format="png", dpi=300)  # 保存为PNG文件
+    plt.savefig(f"{save_path}/vq_models_token_distribution_comparison.png", format="png", dpi=300)  # 保存为PNG文件
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--config')
     parser.add_argument('--ckpt')
+    parser.add_argument('--save_path')
     args = parser.parse_args()
     
     # model1 = MAGVITv2.from_pretrained('/lustre/home/2201210053/GEOMETERY/others/show_base/')
@@ -141,4 +142,4 @@ if __name__ == '__main__':
     model2 = load_vqgan_new(config_model_2, ckpt_path=ckpt_path_2)
 
     img_folder = '/lustre/home/2001110054/Show-o/data/formalgeo7k/formalgeo7k_v2/diagrams'  # 图片文件夹路径
-    compare_vq_models(model1, model2, img_folder, resolution=512)
+    compare_vq_models(model1, model2, img_folder, resolution=512, save_path=args.save_path)

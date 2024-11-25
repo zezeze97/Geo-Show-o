@@ -77,6 +77,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config')
     parser.add_argument('--ckpt')
+    parser.add_argument('--save_path')
     args = parser.parse_args()
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -142,4 +143,4 @@ if __name__ == '__main__':
         combined_img.paste(recovered_images_2[i], (i * resolution, resolution * 2)) # 自己训练的magvit重建图片放在第三行
 
     # 保存拼接后的图像
-    combined_img.save(f'combined_image_grid_512.jpg')
+    combined_img.save(f'{args.save_path}/combined_image_grid_512.jpg')

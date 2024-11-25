@@ -1,6 +1,8 @@
-Draw a geometric image based on consCDL: Shape(JK,KL,LJ) and imgCDL: Equal(LengthOfLine(JK),33),Equal(LengthOfLine(LK),x),Equal(MeasureOfAngle(KLJ),45),PerpendicularBetweenLine(JK,LK)
 Draw a geometric image based on this description: JK=33, LK=x, ∠KLJ=45°, JK⊥LK.
-Draw a geometric image based on this description: JK=33, LK=x, ∠KLJ=45°, JK⊥LK, consCDL: Shape(JK,KL,LJ) and imgCDL: Equal(LengthOfLine(JK),33),Equal(LengthOfLine(LK),x),Equal(MeasureOfAngle(KLJ),45),PerpendicularBetweenLine(JK,LK)
-Draw a geometric image based on consCDL: Shape(OCD,DC),Shape(OD,ODA,AO),Shape(CD,DO,OB,BC),Shape(OBC,CB),Shape(BO,OA,OAB),Collinear(AOB),Cocircular(O,ABCD) and imgCDL: Equal(MeasureOfAngle(BCD),110)
 Draw a geometric image based on this description: ∠BCD=110°, the center of ⊙O is O, AB is the diameter of circle O.
-Draw a geometric image based on this description: ∠BCD=110°, the center of ⊙O is O, AB is the diameter of circle O, consCDL: Shape(OCD,DC),Shape(OD,ODA,AO),Shape(CD,DO,OB,BC),Shape(OBC,CB),Shape(BO,OA,OAB),Collinear(AOB),Cocircular(O,ABCD) and imgCDL: Equal(MeasureOfAngle(BCD),110)
+Draw a geometric image based on this description: CA=10, CD=2, CE=t-2, EB=t+1, AB is parallel to DE.
+Draw a geometric image based on this description: ∠DBE=25°, ∠CAG=5*x°, ∠CED=90°, the center of circle C is C.
+Draw a geometric image based on this description: ∠DCB=64°, quadrilateral ADCB is a rhombus.
+Draw a geometric image based on this description: ∠EAD=22°, O is the center of circle O, AB is the diameter of ⊙O, AD⊥FD.
+Draw a geometric image based on this description: BC=3, ∠CAB=30°, O is the center of ⊙O.
+Draw a geometric image based on this description: PB=1, PC=3, the center of ⊙O is O, PC is the tangent to circle O.

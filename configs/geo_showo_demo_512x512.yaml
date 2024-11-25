@@ -20,10 +20,10 @@ model:
             ch: 128
             ch_mult: [1,2,2,4,4]  # num_down = len(ch_mult)-1
             num_res_blocks: 4
-        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1114_mask_z13/ckpt/epoch=198-step=74028.ckpt"
+        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1115_mask_z13/ckpt/epoch=245-step=91512.ckpt"
 
     showo:
-        pretrained_model_path: "outputs/show-o-finetuning-512x512-1116-overfit-T2I"
+        pretrained_model_path: "outputs/show-o-finetuning-512x512-1119-overfit-T2I/checkpoint-18000/unwrapped_model"
         w_clip_vit: False
         vocab_size: 58498
         llm_vocab_size: 50295
@@ -46,10 +46,8 @@ dataset:
         persistent_workers: True
 
     preprocessing:
-        max_seq_length: 128
+        max_seq_length: 1024
         resolution: 512
-        center_crop: False
-        random_flip: False
 
 training:
     gradient_accumulation_steps: 1
