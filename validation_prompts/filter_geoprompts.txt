@@ -1,0 +1,8 @@
+Draw a geometric image based on this description: BA is perpendicular to CA, AC=12, AB=16.
+Draw a geometric image based on this description: DE=2, DF=3, E bisects segment CD, ABCD is a parallelogram.
+Draw a geometric image based on this description: AC is perpendicular to OC, OC⊥BC, the tangent to ⊙O is PB, AE is the diameter of circle O, the center of ⊙O is O, BP=6, ∠BPA=30°.
+Draw a geometric image based on this description: In the diagram, a triangle labeled ABC is inscribed within a circle denoted as circle O. The triangle's vertices, A, B, and C, all lie on the circumference of the circle. Moreover, there is a point E where the circle and line EC come into contact tangentially.
+Draw a geometric image based on this description: The diagram consists of a circle with point C located on its circumference. The diameter of the circle is represented by line segment AB.
+Draw a geometric image based on this description: The diagram consists of a circle with a point O at its center. Two strings labeled as AB and AC are connected to points B and C on the circumference of the circle, respectively. Point A is also on the circumference of the circle, and it is connected to points B and C by the strings AB and AC.
+Draw a geometric image based on this description: JK=33, ∠KLJ=45°, JK⊥LK, LK=x.
+Draw a geometric image based on this description: The diagram illustrates a large rectangle labeled as ABCD. Inside this rectangle, there are five smaller rectangles aligned with the diagonals of the larger rectangle. The length of one side of the large rectangle is indicated as AB, and the length of an adjacent side is indicated as BC.

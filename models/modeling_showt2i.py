@@ -19,6 +19,7 @@ from transformers import AutoConfig
 from .modeling_utils import ConfigMixin, ModelMixin, register_to_config
 from .sampling import cosine_schedule, mask_by_random_topk
 from .phi import PhiForCausalLM
+from training.prompting_utils import new_create_attention_mask_predict_next, UniversalPrompting, t2i_gen_create_attention_mask_predict_next
 
 class Showo_t2i(ModelMixin, ConfigMixin):
     _supports_gradient_checkpointing = True
@@ -79,8 +80,8 @@ class Showo_t2i(ModelMixin, ConfigMixin):
             # 1. Mask token prediction (discrete diffusion) for image generation
             # Note that, max_seq_length indicates the maximum number of text tokens, maybe a bit confused.
             loss_t2i = F.cross_entropy(
-                logits[:batch_size_t2i, max_seq_length + 1:].contiguous().view(-1, self.output_size),
-                labels[:batch_size_t2i, max_seq_length + 1:].contiguous().view(-1), ignore_index=-100,
+                logits[:batch_size_t2i, max_seq_length + 1: -1].contiguous().view(-1, self.output_size),
+                labels[:batch_size_t2i, max_seq_length + 2:].contiguous().view(-1), ignore_index=-100,
             )
 
             return logits, loss_t2i
@@ -135,7 +136,7 @@ class Showo_t2i(ModelMixin, ConfigMixin):
             probs = logits.softmax(dim=-1)
             sampled = probs.reshape(-1, logits.size(-1))
             sampled_ids = torch.multinomial(sampled, 1, generator=generator)[:, 0].view(*logits.shape[:-1])
-
+            print("sampled_ids", sampled_ids)
             unknown_map = input_ids_minus_lm_vocab_size == mask_token_id
             sampled_ids = torch.where(unknown_map, sampled_ids, input_ids_minus_lm_vocab_size)
             # Defines the mask ratio for the next round. The number to mask out is
@@ -163,7 +164,74 @@ class Showo_t2i(ModelMixin, ConfigMixin):
                                                           sampled_ids + config.model.showo.llm_vocab_size
                                                           + num_new_special_tokens)
             input_ids_minus_lm_vocab_size = torch.where(masking, mask_token_id, sampled_ids)
-
+        
+        
         return sampled_ids
 
     
+    def new_t2i_generate(
+        self,
+        input_ids: torch.LongTensor = None,
+        uncond_input_ids: torch.LongTensor = None,
+        attention_mask = None,
+        generator: torch.Generator = None,
+        temperature=1.0,
+        top_k = None,
+        config=None,
+        pad_id=None,
+        soi_id=None,
+        eoi_id=None,
+        **kwargs,
+    ):
+        # 获取图像tokens数量
+        num_vq_tokens = config.model.showo.num_vq_tokens
+        num_new_special_tokens = config.model.showo.num_new_special_tokens
+    
+        max_new_tokens = num_vq_tokens
+        result = torch.empty((input_ids.shape[0], 0), dtype=torch.long, device=input_ids.device)
+        
+        # 去掉原先的占位mask（假设input_ids结尾num_vq_tokens是需要预测的区域）
+        # 保留文本及<|soi|>等起始部分
+        sequence = input_ids[:, :-num_vq_tokens].clone().to(dtype=torch.long)
+        print(sequence)
+        print("sequence: ", sequence.shape)
+        
+        current_length = sequence.shape[1]
+        attention_mask = torch.tril(torch.ones((1, current_length, current_length), dtype=torch.bool)).to(sequence.device)
+        
+        for step in range(max_new_tokens):
+            # 前向计算，获取logits
+            #print("sequence: ", sequence.shape)
+            #print("attentionmask: ", attention_mask.shape)
+            logits = self(sequence, attention_mask=attention_mask)  # shape: [N, L, vocab_size]
+            #print("logits:", logits.shape)
+            logits = logits[:, -(num_vq_tokens + 1):-1, config.model.showo.llm_vocab_size + num_new_special_tokens:-1]
+            logits = logits[:, -1, :]  # 取最后一个位置的logits
+            #print("logits:", logits.shape)
+            
+            # 调整logits：除以temperature
+            logits = logits / temperature
+
+            # 如果使用top_k截断
+            if top_k is not None:
+                v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
+                logits[logits < v[:, [-1]]] = float('-inf')
+
+            # 计算概率并采样
+            probs = torch.softmax(logits, dim=-1)
+            sampled_ids = torch.multinomial(probs, 1, generator=generator).squeeze(1)
+        
+            # 将采样到的token映射到图像token ID空间
+            sampled_ids = sampled_ids.unsqueeze(1)
+            #print("sampled_ids", sampled_ids)
+            result = torch.cat([result, sampled_ids], dim=1)
+            
+            sampled_ids = sampled_ids + config.model.showo.llm_vocab_size + num_new_special_tokens
+            # 将新token拼接到sequence中
+            sequence = torch.cat([sequence, sampled_ids], dim=1)
+
+            # 更新attention_mask
+            current_length = sequence.shape[1]
+            attention_mask = torch.tril(torch.ones((1, current_length, current_length), dtype=torch.bool)).to(sequence.device)
+    
+        return result

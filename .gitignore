@@ -5,3 +5,4 @@ pretrained_ckpt/
 data/
 ./download_llama.sh
 *.out
+*.png

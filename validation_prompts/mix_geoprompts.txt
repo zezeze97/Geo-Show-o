@@ -1,0 +1,1 @@
+Provide an answer based on the input image and the geometry question.\nThe geometry question is: As shown in the diagram, AB=16, AC=12, BA is perpendicular to CA. Find the perimeter of \u25b3CBA.

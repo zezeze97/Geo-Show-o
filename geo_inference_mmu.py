@@ -146,10 +146,10 @@ if __name__ == '__main__':
                     (torch.ones(input_ids.shape[0], 1) * uni_prompting.sptids_dict['<|sot|>']).to(device),
                     input_ids
                 ], dim=1).long()
-
+            
                 attention_mask = create_attention_mask_for_mmu(input_ids.to(device),
-                                                               eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']))
-
+                                                              eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']))
+                
                 cont_toks_list = model.mmu_generate(input_ids, attention_mask=attention_mask,
                                             max_new_tokens=config.max_new_tokens, top_k=top_k,
                                             eot_token=uni_prompting.sptids_dict['<|eot|>'])

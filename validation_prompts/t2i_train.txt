@@ -1,0 +1,3 @@
+Draw a geometric image based on this description: JK=33, ∠KLJ=45°, JK⊥LK, LK=x.
+Draw a geometric image based on this description: ∠BCD=110°, AB is the diameter of circle O, the center of ⊙O is O.
+Draw a geometric image based on this description: The diagram illustrates a large rectangle labeled as ABCD. Inside this rectangle, there are five smaller rectangles aligned with the diagonals of the larger rectangle. The length of one side of the large rectangle is indicated as AB, and the length of an adjacent side is indicated as BC.

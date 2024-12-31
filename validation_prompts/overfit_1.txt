@@ -1,0 +1,6 @@
+Draw a geometric image based on this description: JK=33, ∠KLJ=45°, JK⊥LK, LK=x.
+Draw a geometric image based on this description: FG is perpendicular to CG, GF⊥DF, ∠DGF=53°, CB⊥GB, ∠AGC=40°.
+Draw a geometric image based on this description: ∠AYW=x°, ∠AXZ=110°, the center of ⊙A is A, ∠YVW=25°.
+Draw a geometric image based on this description: AJ=2*x+3, JD=4*y, CJ=8*y-36, AD and CB are opposite sides of the parallelogram ACBD, JB=5*x.
+Draw a geometric image based on this description: the incenter of △CBA is J, AJ=15, AE=12, AF is perpendicular to JF, ∠JBE=34°, CD is perpendicular to JD, JE is perpendicular to AE, ∠JCD=32°.
+Draw a geometric image based on this description: ∠EDB=10*x°, E is the center of ⊙E, ∠EFD=40°, ∠FCD=x°, CD is the tangent to circle E.

@@ -5,10 +5,8 @@ wandb:
 
 experiment:
     project: "training"
-    name: "show-o-finetuning-512x512-ALLDATA1123-16down-step100"
-    output_dir: "outputs/show-o-finetuning-512x512-1123"
-    # max_train_examples_t2i: 20000000
-    # max_train_examples_mmu: 40000000
+    name: "show-o-finetuning-512x512-T2I_1203"
+    output_dir: "outputs/show-o-finetuning-512x512-1203-T2I"
     save_every: 1000
     eval_every: 1000
     generate_every: 1000
@@ -27,9 +25,9 @@ model:
             in_channels: 3
             out_ch: 3
             ch: 128
-            ch_mult: [1,2,2,4,4]  # num_down = len(ch_mult)-1
+            ch_mult: [1,2,2,2,4,4]  # num_down = len(ch_mult)-1
             num_res_blocks: 4
-        pretrained_model_path: "/lustre/home/2201210053/GEOMETERY/OpenMagVit-CKPT/expr_1115_mask_z13/ckpt/epoch=245-step=91512.ckpt"
+        pretrained_model_path: "/lustre/home/2201210053/GEOMETERY/OpenMagVit-CKPT/expr_1120_mask_down32_z13/ckpt/epoch=184-step=68820.ckpt"
 
         
     showo:
@@ -40,7 +38,7 @@ model:
         llm_vocab_size: 50295
         llm_model_path: 'microsoft/phi-1_5'
         codebook_size: 8192
-        num_vq_tokens: 1024
+        num_vq_tokens: 256
         num_new_special_tokens: 10  # <|soi|> <|eoi|> <|sov|> <|eov|> <|t2i|> <|mmu|> <|t2v|> <|v2v|> <|lvg|> <|pad|>
 
     # gradient_checkpointing: True
@@ -51,13 +49,10 @@ dataset:
     combined_loader_mode: "max_size_cycle"
     params:
         t2i_image_folder: data/formalgeo7k/formalgeo7k_v2
-        t2i_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/t2i/train.json
-        mmu_image_folder: data/formalgeo7k/formalgeo7k_v2
-        mmu_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/mmu/train.json
-        lm_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/lm/train.json
-        validation_prompts_file: "validation_prompts/geoprompts.txt"
+        t2i_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/t2i_merged/train.json
+        validation_prompts_file: "validation_prompts/geoprompts_merged.txt"
         shuffle_buffer_size: 1000
-        num_workers: 8
+        num_workers: 16
         resolution: 512
         pin_memory: True
         persistent_workers: True
@@ -85,21 +80,19 @@ lr_scheduler:
 training:
     gradient_accumulation_steps: 1
     noise_type: "mask"
-    batch_size_t2i: 4
-    batch_size_lm: 4
-    batch_size_mmu: 4
-    num_train_epochs: 20
+    batch_size_t2i: 10
+    num_train_epochs: 200
     mixed_precision: "bf16"
     enable_tf32: True
     seed: 10086
-    max_train_steps: 50000 # to be determined according to the scale of high-quality dataset
+    max_train_steps: 200000 # to be determined according to the scale of high-quality dataset
     overfit_one_batch: False
     cond_dropout_prob: 0.1
     min_masking_rate: 0.0
     label_smoothing: 0.0
     max_grad_norm: null
     guidance_scale: 0.0
-    generation_timesteps: 100
-    t2i_coeff: 2.0
+    generation_timesteps: 20
+    t2i_coeff: 1.0
     lm_coeff: 0.1
     mmu_coeff: 1.0

@@ -70,7 +70,8 @@ class LazySupervisedDataset(Dataset):
                  resolution: int = 256,
                  is_t2i: bool = False,
                  is_lm: bool = False,
-                 is_mmu: bool = False
+                 is_mmu: bool = False,
+                 is_mix: bool = False,
                  ):
         super(LazySupervisedDataset, self).__init__()
         
@@ -84,6 +85,7 @@ class LazySupervisedDataset(Dataset):
         self.is_t2i = is_t2i
         self.is_lm = is_lm
         self.is_mmu = is_mmu
+        self.is_mix = is_mix
     
 
     def __len__(self):
@@ -92,6 +94,7 @@ class LazySupervisedDataset(Dataset):
 
     def __getitem__(self, i):
         sources = self.list_data_dict[i]
+        
         assert len(sources['conversations']) == 2
         instruction = ''
         response = ''
@@ -108,7 +111,7 @@ class LazySupervisedDataset(Dataset):
                         image = enhance_image(image)
                     if self.image_aspect_ratio == 'pad':
                         image = expand2square(image, (255, 255, 255))
-                    image = image_transform(image, self.resolution)
+                        image = image_transform(image, self.resolution)
                 else:
                     image = torch.zeros(3, self.resolution, self.resolution)
         
@@ -123,11 +126,29 @@ class LazySupervisedDataset(Dataset):
                 }
             elif self.is_lm:
                 text = 'USER: \n' + instruction + ' ASSISTANT:' + response
+                data_dict = {"input_ids": text}
+            elif self.is_mix:
+                if 'image' in sources:
+                    image_file = sources['image']
+                    image = Image.open(os.path.join(self.image_folder, image_file)).convert('RGB')
+                    if self.geo_customized_aug:
+                        image = enhance_image(image)
+                    if self.image_aspect_ratio == 'pad':
+                        image = expand2square(image, (255, 255, 255))
+                        image = image_transform(image, self.resolution)
+                else:
+                    image = torch.zeros(3, self.resolution, self.resolution)
+        
+        
+                input = instruction
+                output = response
+            
                 data_dict = {
-                "input_ids": text
+                    "images": image,
+                    "input_ids": input,
+                    "output_ids": output
                 }
-            
-            
+                
         return data_dict
 
 

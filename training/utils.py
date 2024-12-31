@@ -73,7 +73,6 @@ def soft_target_cross_entropy(logits, targets, soft_targets):
 def get_loss_weight(t, mask, min_val=0.3):
     return 1 - (1 - mask) * ((1 - t) * (1 - min_val))[:, None]
 
-
 def mask_or_random_replace_tokens(image_tokens, mask_id, config, mask_schedule, is_train=True):
     batch_size, seq_len = image_tokens.shape
 

@@ -5,8 +5,8 @@ wandb:
 
 experiment:
     project: "training"
-    name: "show-o-finetuning-512x512-ALLDATA1123-16down-step100"
-    output_dir: "outputs/show-o-finetuning-512x512-1123"
+    name: "show-o-finetuning-256x256-ALLDATA1122-32down"
+    output_dir: "outputs/show-o-finetuning-256x256-1122-32down"
     # max_train_examples_t2i: 20000000
     # max_train_examples_mmu: 40000000
     save_every: 1000
@@ -23,24 +23,24 @@ model:
         vq_model_config: 
             double_z: False
             z_channels: 13
-            resolution: 512
+            resolution: 256
             in_channels: 3
             out_ch: 3
-            ch: 128
-            ch_mult: [1,2,2,4,4]  # num_down = len(ch_mult)-1
+            ch: 128 
+            ch_mult: [1,2,2,4,4]  # num_down = len(ch_mult)-1 
             num_res_blocks: 4
-        pretrained_model_path: "/lustre/home/2201210053/GEOMETERY/OpenMagVit-CKPT/expr_1115_mask_z13/ckpt/epoch=245-step=91512.ckpt"
+        pretrained_model_path: "/lustre/home/2201210053/GEOMETERY/OpenMagVit-CKPT/expr_1120_mask_z13_256/ckpt/epoch=197-step=73656.ckpt"
 
         
     showo:
         load_from_showo: True
-        pretrained_model_path: "showlab/show-o-512x512"
+        pretrained_model_path: "showlab/show-o"
         w_clip_vit: False
-        vocab_size: 58498
+        vocab_size: 58498 
         llm_vocab_size: 50295
         llm_model_path: 'microsoft/phi-1_5'
         codebook_size: 8192
-        num_vq_tokens: 1024
+        num_vq_tokens: 256
         num_new_special_tokens: 10  # <|soi|> <|eoi|> <|sov|> <|eov|> <|t2i|> <|mmu|> <|t2v|> <|v2v|> <|lvg|> <|pad|>
 
     # gradient_checkpointing: True
@@ -58,13 +58,13 @@ dataset:
         validation_prompts_file: "validation_prompts/geoprompts.txt"
         shuffle_buffer_size: 1000
         num_workers: 8
-        resolution: 512
+        resolution: 256
         pin_memory: True
         persistent_workers: True
 
     preprocessing:
         max_seq_length: 512 # for text tokens
-        resolution: 512
+        resolution: 256
 
 optimizer:
     name: adamw
@@ -85,9 +85,9 @@ lr_scheduler:
 training:
     gradient_accumulation_steps: 1
     noise_type: "mask"
-    batch_size_t2i: 4
-    batch_size_lm: 4
-    batch_size_mmu: 4
+    batch_size_t2i: 10
+    batch_size_lm: 6
+    batch_size_mmu: 6
     num_train_epochs: 20
     mixed_precision: "bf16"
     enable_tf32: True
@@ -99,7 +99,7 @@ training:
     label_smoothing: 0.0
     max_grad_norm: null
     guidance_scale: 0.0
-    generation_timesteps: 100
+    generation_timesteps: 12
     t2i_coeff: 2.0
     lm_coeff: 0.1
     mmu_coeff: 1.0

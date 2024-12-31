@@ -5,8 +5,8 @@ wandb:
 
 experiment:
     project: "training"
-    name: "show-o-finetuning-512x512-ALLDATA1123-16down-step100"
-    output_dir: "outputs/show-o-finetuning-512x512-1123"
+    name: "show-o-finetuning-512x512-MIX1125"
+    output_dir: "outputs/show-o-finetuning-512x512-MIX1125"
     # max_train_examples_t2i: 20000000
     # max_train_examples_mmu: 40000000
     save_every: 1000
@@ -29,19 +29,19 @@ model:
             ch: 128
             ch_mult: [1,2,2,4,4]  # num_down = len(ch_mult)-1
             num_res_blocks: 4
-        pretrained_model_path: "/lustre/home/2201210053/GEOMETERY/OpenMagVit-CKPT/expr_1115_mask_z13/ckpt/epoch=245-step=91512.ckpt"
+        pretrained_model_path: "/lustre/home/2201210053/GEOMETERY/OpenMagVit-CKPT/expr_1114_mask_z13/ckpt/epoch=198-step=74028.ckpt"
 
         
     showo:
         load_from_showo: True
         pretrained_model_path: "showlab/show-o-512x512"
         w_clip_vit: False
-        vocab_size: 58498
+        vocab_size: 58499
         llm_vocab_size: 50295
         llm_model_path: 'microsoft/phi-1_5'
         codebook_size: 8192
         num_vq_tokens: 1024
-        num_new_special_tokens: 10  # <|soi|> <|eoi|> <|sov|> <|eov|> <|t2i|> <|mmu|> <|t2v|> <|v2v|> <|lvg|> <|pad|>
+        num_new_special_tokens: 11  # <|soi|> <|eoi|> <|sov|> <|eov|> <|t2i|> <|mmu|> <|t2v|> <|v2v|> <|lvg|> <|pad|> <|mix|>
 
     # gradient_checkpointing: True
 
@@ -55,7 +55,10 @@ dataset:
         mmu_image_folder: data/formalgeo7k/formalgeo7k_v2
         mmu_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/mmu/train.json
         lm_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/lm/train.json
+        mix_image_folder: data/formalgeo7k/formalgeo7k_v2
+        mix_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/mmu/train.json
         validation_prompts_file: "validation_prompts/geoprompts.txt"
+        mix_validation_prompts_file: "validation_prompts/mix_geoprompts.txt"
         shuffle_buffer_size: 1000
         num_workers: 8
         resolution: 512
@@ -85,10 +88,11 @@ lr_scheduler:
 training:
     gradient_accumulation_steps: 1
     noise_type: "mask"
-    batch_size_t2i: 4
-    batch_size_lm: 4
-    batch_size_mmu: 4
-    num_train_epochs: 20
+    batch_size_t2i: 2
+    batch_size_lm: 2
+    batch_size_mmu: 2
+    batch_size_mix: 1
+    num_train_epochs: 10
     mixed_precision: "bf16"
     enable_tf32: True
     seed: 10086
@@ -99,7 +103,8 @@ training:
     label_smoothing: 0.0
     max_grad_norm: null
     guidance_scale: 0.0
-    generation_timesteps: 100
-    t2i_coeff: 2.0
-    lm_coeff: 0.1
-    mmu_coeff: 1.0
+    generation_timesteps: 4
+    t2i_coeff: 1.0
+    lm_coeff: 2.0
+    mmu_coeff: 2.0
+    mix_coeff: 0.2

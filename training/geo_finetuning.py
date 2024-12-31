@@ -39,10 +39,10 @@ from accelerate.logging import get_logger
 from accelerate.utils import DistributedType, set_seed
 
 
-from training.custom_data import LazySupervisedDataset
+from training.geo_custom_data import LazySupervisedDataset
 # from parquet import RefinedWebDataset
 
-from models import Showo, MAGVITv2, VQModel, get_mask_chedule
+from models import GEOShowo, MAGVITv2, VQModel, get_mask_chedule
 from training.prompting_utils import UniversalPrompting, create_attention_mask_predict_next, \
     create_attention_mask_for_mmu
 from models.lr_schedulers import get_scheduler
@@ -104,7 +104,6 @@ def main():
     # SETUP Accelerator     #
     #########################
     config = get_config()
-
     # Enable TF32 on Ampere GPUs
     if config.training.enable_tf32:
         torch.backends.cuda.matmul.allow_tf32 = True
@@ -220,18 +219,23 @@ def main():
     # Initialize Show-o model
     if config.model.showo.load_from_showo:
         print(f'Load from pretrained show-o: {config.model.showo.pretrained_model_path}')
-        model = Showo.from_pretrained(config.model.showo.pretrained_model_path).to(accelerator.device)
+        model = GEOShowo.from_pretrained(config.model.showo.pretrained_model_path).to(accelerator.device)
         if config.model.showo.vocab_size != model.vocab_size:
             print(f'vocab size of show-o is not correct!!!')
+            print("codebook_size!!!!!: ",config.model.showo.codebook_size)
+            print("config1: ", model.config)
+            
+            model.register_to_config(
+                            vocab_size=config.model.showo.vocab_size,
+                            mask_token_id=config.model.showo.vocab_size - 1,
+                            codebook_size=config.model.showo.codebook_size)
+            
             model.showo.resize_token_embeddings(config.model.showo.vocab_size)
-            model.config.codebook_size = config.model.showo.codebook_size
-            model.config.vocab_size = config.model.showo.vocab_size
             model.vocab_size = config.model.showo.vocab_size
             model.output_size = config.model.showo.vocab_size
-            model.config.mask_token_id = config.model.showo.vocab_size - 1
             model.mask_token_id = config.model.showo.vocab_size - 1
     else:
-        model = Showo(**config.model.showo).to(accelerator.device)
+        model = GEOShowo(**config.model.showo).to(accelerator.device)
     mask_id = model.mask_token_id
 
     ##################################
@@ -285,7 +289,6 @@ def main():
     #         DATALOADER             #
     #################################
     logger.info("Creating dataloaders and lr_scheduler")
-
     total_batch_size_t2i_without_accum = config.training.batch_size_t2i * accelerator.num_processes
     total_batch_size_t2i = (
             config.training.batch_size_t2i * accelerator.num_processes * config.training.gradient_accumulation_steps
@@ -472,7 +475,32 @@ def main():
         input_ids, masks, labels = uni_prompting((texts, input_ids, labels), 't2i')
 
         return input_ids, labels, mask_prob, image_tokens
+    
+    @torch.no_grad()
+    def prepare_inputs_and_labels_mix(
+            pixel_values_or_image_ids: Union[torch.FloatTensor, torch.LongTensor],
+            input: Union[str, str],
+            output: Union[str, str],
+            min_masking_rate: float = 0.0,
+            is_train: bool = True,
+    ):
 
+        image_tokens = vq_model.get_code(pixel_values_or_image_ids)
+        image_tokens = image_tokens + len(uni_prompting.text_tokenizer)
+        
+        # create MLM mask and labels
+        input_ids, labels, loss_weight, mask_prob = mask_or_random_replace_tokens(
+            image_tokens,
+            mask_id,
+            config,
+            mask_schedule=mask_schedule,
+            is_train=is_train,
+        )
+        
+        input_ids, masks, labels = uni_prompting((input, output, input_ids, labels), 'mix')
+
+        return input_ids, labels, mask_prob, image_tokens
+    
     batch_time_m = AverageMeter()
     data_time_m = AverageMeter()
     end = time.time()
@@ -545,21 +573,49 @@ def main():
             # Build formatted sequences for MIX
             # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
             
-            pixel_values_mix, texts_mix = batch["mix_flow"]["images"], batch["mix_flow"]["input_ids"]
+            pixel_values_mix, input_text, output_text = batch["mix_flow"]["images"], batch["mix_flow"]["input_ids"], batch["mix_flow"]["output_ids"]
             pixel_values_mix = pixel_values_mix.to(accelerator.device, non_blocking=True)
-            image_tokens_mix = vq_model.get_code(pixel_values_mix)
+
+            # Encode images to image tokens, mask them and create input and labels
+            (
+                input_ids_mix,
+                labels_mix,
+                mask_prob,
+                image_tokens_ori
+            ) = prepare_inputs_and_labels_mix(pixel_values, input_text, output_text, config.training.min_masking_rate)
             
-            image_tokens_mix = image_tokens_mix + len(uni_prompting.text_tokenizer)
-            input_ids_mix, _, labels_mix = uni_prompting((image_tokens_mix, texts_mmu), 'mix')
-            input_ids_mmu = input_ids_mmu.to(accelerator.device, non_blocking=True)
+            attention_mask_mix = create_attention_mask_predict_next(input_ids_mix,
+                                                                pad_id=int(uni_prompting.sptids_dict['<|pad|>']),
+                                                                soi_id=int(uni_prompting.sptids_dict['<|soi|>']),
+                                                                eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']),
+                                                                rm_pad_in_image=True,
+                                                                return_inverse_mask=True)
+            attention_mask_mix = attention_mask_mix.to(mask_dtype)
             
-            # prepare_inputs_and_labels
-            # attention_mask = create_attention_mask_predict_next
-            # attention_mask = attention_mask.to(mask_dtype)
+            padding_height = attention_mask_mix.shape[2] - attention_mask.shape[2]
+            padding_width = attention_mask_mix.shape[3] - attention_mask.shape[3]
+            padding = torch.zeros((attention_mask.shape[0], attention_mask.shape[1], padding_height, attention_mask.shape[3]), dtype=attention_mask.dtype, device=attention_mask.device)
+
+            attention_mask_padded = torch.cat((attention_mask, padding), dim=2)
+            padding_right = torch.zeros((attention_mask_padded.shape[0], attention_mask_padded.shape[1], attention_mask_padded.shape[2], padding_width), dtype=attention_mask_padded.dtype, device=attention_mask_padded.device)
+
+            attention_mask_padded = torch.cat((attention_mask_padded, padding_right), dim=3)
             
-            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
-            # Build formatted sequences for MIX
-            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
+            attention_mask = torch.cat([attention_mask_padded, attention_mask_mix], dim=0)
+            
+            #Use padding for input_ids
+            pad_id=int(uni_prompting.sptids_dict['<|pad|>'])
+            padding_length = input_ids_mix.shape[1] - input_ids.shape[1]
+            padding = torch.full((input_ids.shape[0], padding_length), pad_id, dtype=input_ids.dtype, device=input_ids.device)
+            input_ids_padded = torch.cat((input_ids, padding), dim=1)
+            input_ids = torch.cat((input_ids_padded, input_ids_mix.to(input_ids.device)), dim=0)
+            
+            
+            padding_length = labels_mix.shape[1] - labels.shape[1]
+            padding = torch.full((labels.shape[0], padding_length), -100, dtype=input_ids.dtype, device=input_ids.device)
+            labels_padded = torch.cat((labels, padding), dim=1)
+
+            labels = torch.cat((labels_padded, labels_mix.to(input_ids.device)), dim=0)
             
             if global_step == 0 and epoch == 0:
                 logger.info("Input ids: {}".format(input_ids))
@@ -662,6 +718,16 @@ def main():
                         global_step + 1,
                         mask_schedule=mask_schedule,
                     )
+                    
+                    generate_images_texts_mix(
+                        model,
+                        vq_model,
+                        uni_prompting,
+                        accelerator,
+                        config,
+                        global_step + 1,
+                        mask_schedule=mask_schedule, 
+                    )
 
                     visualize_predictions(
                         model,
@@ -726,11 +792,24 @@ def visualize_predictions(
     predictions = predictions.argmax(axis=-1)
 
     mask_token_id = config.model.showo.vocab_size - 1 - len(uni_prompting.text_tokenizer)
-    input_ids = input_ids[:config.training.batch_size_t2i, -(config.model.showo.num_vq_tokens + 1):-1:] - len(
+    print("before: ", input_ids.shape)
+    
+    soi_id=50296
+    eoi_id=50297
+            
+    #FIND Image Part
+    soi_pos = (input_ids == soi_id).nonzero(as_tuple=True)[1][0]
+    eoi_pos = (input_ids == eoi_id).nonzero(as_tuple=True)[1][0]    
+    image_part = input_ids[:config.training.batch_size_t2i, soi_pos:eoi_pos-1]  - len(
         uni_prompting.text_tokenizer)
-    mask_ratio = list((torch.where(input_ids == mask_token_id, 1, 0).sum(
+
+    #input_ids = input_ids[:config.training.batch_size_t2i, -(config.model.showo.num_vq_tokens + 1):-1:] - len(
+        #uni_prompting.text_tokenizer)
+        
+    print("after: ", image_part.shape)
+    mask_ratio = list((torch.where(image_part == mask_token_id, 1, 0).sum(
         dim=-1) / config.model.showo.num_vq_tokens).cpu().numpy())
-    predicted_images = torch.where(input_ids == mask_token_id, predictions, input_ids)
+    predicted_images = torch.where(image_part  == mask_token_id, predictions, image_part)
 
     predicted_images = vq_model.decode_code(predicted_images)
     predicted_images = torch.clamp((predicted_images + 1.0) / 2.0, min=0.0, max=1.0)
@@ -773,6 +852,7 @@ def generate_images(
     image_tokens = torch.ones((len(validation_prompts), config.model.showo.num_vq_tokens), dtype=torch.long,
                               device=accelerator.device) * mask_token_id
     input_ids, _ = uni_prompting((validation_prompts, image_tokens), 't2i_gen')
+
     if config.training.guidance_scale > 0:
         uncond_input_ids, _ = uni_prompting(([''] * len(validation_prompts), image_tokens), 't2i_gen')
         attention_mask = create_attention_mask_predict_next(torch.cat([input_ids, uncond_input_ids], dim=0),
@@ -787,7 +867,7 @@ def generate_images(
                                                             eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']),
                                                             rm_pad_in_image=True).to(mask_dtype)
         uncond_input_ids = None
-
+    print("attention_mask: ", attention_mask.shape)
     if accelerator.mixed_precision == "fp16":
         weight_dtype = torch.float16
     elif accelerator.mixed_precision == "bf16":
@@ -835,8 +915,98 @@ def generate_images(
 
 #对MIX的可视化
 @torch.no_grad()
-def generate_images_mix():
-    pass
+def generate_images_texts_mix(
+        model,
+        vq_model,
+        uni_prompting,
+        accelerator,
+        config,
+        global_step,
+        mask_schedule,
+):
+    logger.info("Generating  MIX images and texts...")
+    model.eval()
+
+    # read validation prompts from file
+    with open(config.dataset.params.mix_validation_prompts_file, "r") as f:
+        validation_prompts = f.read().splitlines()
+
+    if hasattr(model, 'module'):
+        mask_dtype = model.module.showo.model.embed_tokens.weight.dtype
+    else:
+        mask_dtype = model.showo.model.embed_tokens.weight.dtype
+
+    mask_token_id = config.model.showo.vocab_size - 1
+    image_tokens = torch.ones((len(validation_prompts), config.model.showo.num_vq_tokens), dtype=torch.long,
+                              device=accelerator.device) * mask_token_id
+    input_ids, _ = uni_prompting((validation_prompts, image_tokens), 'mix_gen')
+    print("MIX: ")
+    print("iamge token:" , image_tokens.shape)
+    print("input_ids: ", input_ids.shape)
+
+    if config.training.guidance_scale > 0:
+        uncond_input_ids, _ = uni_prompting(([''] * len(validation_prompts), image_tokens), 'mix_gen')
+        attention_mask = create_attention_mask_predict_next(torch.cat([input_ids, uncond_input_ids], dim=0),
+                                                            pad_id=int(uni_prompting.sptids_dict['<|pad|>']),
+                                                            soi_id=int(uni_prompting.sptids_dict['<|soi|>']),
+                                                            eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']),
+                                                            rm_pad_in_image=True).to(mask_dtype)
+    else:
+        attention_mask = create_attention_mask_predict_next(input_ids,
+                                                            pad_id=int(uni_prompting.sptids_dict['<|pad|>']),
+                                                            soi_id=int(uni_prompting.sptids_dict['<|soi|>']),
+                                                            eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']),
+                                                            rm_pad_in_image=True).to(mask_dtype)
+        uncond_input_ids = None
+    
+    print("attention_mask: ", attention_mask.shape)
+    if accelerator.mixed_precision == "fp16":
+        weight_dtype = torch.float16
+    elif accelerator.mixed_precision == "bf16":
+        weight_dtype = torch.bfloat16
+    else:
+        weight_dtype = torch.float32
+
+    with torch.autocast("cuda", dtype=weight_dtype, enabled=accelerator.mixed_precision != "no"):
+        # Generate images
+        gen_token_ids, text_ids = accelerator.unwrap_model(model).mix_generate(
+            input_ids=input_ids,
+            uncond_input_ids=uncond_input_ids,
+            attention_mask=attention_mask,
+            guidance_scale=config.training.guidance_scale,
+            temperature=config.training.get("generation_temperature", 1.0),
+            timesteps=config.training.generation_timesteps,
+            noise_schedule=mask_schedule,
+            noise_type=config.training.get("noise_type", "mask"),
+            predict_all_tokens=config.training.get("predict_all_tokens", False),
+            seq_len=config.model.showo.num_vq_tokens,
+            uni_prompting=uni_prompting,
+            config=config,
+        )
+    # In the beginning of training, the model is not fully trained and the generated token ids can be out of range
+    # so we clamp them to the correct range.
+    gen_token_ids = torch.clamp(gen_token_ids, max=accelerator.unwrap_model(model).config.codebook_size - 1, min=0)
+    images = vq_model.decode_code(gen_token_ids)
+    
+    
+    model.train()
+
+    if config.training.get("pre_encode", False):
+        del vq_model
+
+    # Convert to PIL images
+    images = torch.clamp((images + 1.0) / 2.0, min=0.0, max=1.0)
+    images *= 255.0
+    images = images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
+    pil_images = [Image.fromarray(image) for image in images]
+    
+    # TEXT
+    text = uni_prompting.text_tokenizer.batch_decode(text_ids, skip_special_tokens=True)
+    print(text)
+
+    # Log images
+    wandb_images = [wandb.Image(image, caption=text) for i, image in enumerate(pil_images)]
+    wandb.log({"Generated MIX images": wandb_images}, step=global_step)
     
 
 def save_checkpoint(model, config, accelerator, global_step):

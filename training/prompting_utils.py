@@ -14,10 +14,12 @@
 # limitations under the License.
 
 import torch
+import numpy as np
+
 # TODO - SHOULD BE FURTHER IMPROVED.
 class UniversalPrompting():
     def __init__(self, text_tokenizer,
-                 special_tokens=("<|soi|>", "<|eoi|>", "<|sov|>", "<|eov|>", "<|t2i|>", "<|mmu|>", "<|t2v|>", "<|v2v|>", "<|lvg|>"),
+                 special_tokens=("<|soi|>", "<|eoi|>", "<|sov|>", "<|eov|>", "<|t2i|>", "<|mmu|>", "<|t2v|>", "<|v2v|>", "<|lvg|>","<|mix|>"),
                  max_text_len=8000, max_seq_len=377, ignore_id=-100, cond_dropout_prob=0.1):
         """
         :param text_tokenizer: original text tokenizer
@@ -35,9 +37,8 @@ class UniversalPrompting():
         self.pad_id = self.text_tokenizer.convert_tokens_to_ids('[PAD]')
         self.ignore_id = ignore_id
         self.cond_dropout_prob = cond_dropout_prob
-
+        
     def t2i_prompt(self, text_ids, image_ids, labels):
-
         device = image_ids.device
         sequence_ids = []
         attention_masks = []
@@ -49,13 +50,12 @@ class UniversalPrompting():
                 text_ids[i] = [self.text_tokenizer.bos_token_id]
             elif text_ids[i][0] != self.text_tokenizer.bos_token_id:
                 text_ids[i] = [self.text_tokenizer.bos_token_id] + text_ids[i]
-
             temp_ids = [int(self.sptids_dict['<|t2i|>'])] + text_ids[i] + [self.text_tokenizer.eos_token_id]
 
             # randomly dropout text condition
             if probs[i] < self.cond_dropout_prob:
                 temp_ids = [int(self.sptids_dict['<|t2i|>']), self.text_tokenizer.bos_token_id, self.text_tokenizer.eos_token_id]
-
+            
             if self.max_text_len >= len(temp_ids):
                 temp_ids = [self.pad_id] * (self.max_text_len - len(temp_ids)) + temp_ids
                 temp_masks = [0] * (self.max_text_len - len(temp_ids)) + [1] * (len(temp_ids) + image_ids.shape[-1] + 3)
@@ -63,7 +63,7 @@ class UniversalPrompting():
                 # should add the eos token
                 temp_ids = temp_ids[:self.max_text_len - 1] + [self.text_tokenizer.eos_token_id]
                 temp_masks = [1] * (len(temp_ids) + image_ids.shape[-1] + 3)  # +2 for two special tokens
-
+            
             # prompting -- [task token] [sot] [text tokens] [eot] [soi] [image tokens] [eoi]
             temp_label_ids = torch.cat([
                 # should we predict text tokens when doing image reconstruction?
@@ -80,13 +80,12 @@ class UniversalPrompting():
                 self.sptids_dict['<|soi|>'].to(device),
                 image_ids[i],
                 self.sptids_dict['<|eoi|>'].to(device)
-            ], dim=0)
-
+            ], dim=0)        
             temp_masks = torch.tensor(temp_masks).to(device)
             sequence_ids.append(temp_ids.unsqueeze(0))
             attention_masks.append(temp_masks.unsqueeze(0))
             label_ids.append(temp_label_ids.unsqueeze(0))
-
+        
         return torch.cat(sequence_ids, dim=0), torch.cat(attention_masks, dim=0), torch.cat(label_ids, dim=0)
 
     def t2i_gen_prompt(self, text_ids, image_ids):
@@ -107,7 +106,6 @@ class UniversalPrompting():
             else:
                 temp_ids = temp_ids[:self.max_text_len - 1] + [self.text_tokenizer.eos_token_id]
                 temp_masks = [1] * len(temp_ids)  # +2 for two special tokens
-
             # prompting -- [task token] [sot] [text tokens] [eot] [soi] [image tokens] [eoi]
             temp_ids = torch.cat([
                 torch.tensor(temp_ids).to(device),
@@ -121,7 +119,114 @@ class UniversalPrompting():
             attention_masks.append(temp_masks.unsqueeze(0))
 
         return torch.cat(sequence_ids, dim=0), torch.cat(attention_masks, dim=0)
+    
+    def mix_prompt(self, input_text_ids, output_text_ids, image_ids, labels):
+        device = image_ids.device
+        sequence_ids = []
+        attention_masks = []
+        label_ids = []
+        for i in range(len(input_text_ids)):
+            # Process input text ids
+            if len(input_text_ids[i]) == 0:
+                input_text_ids[i] = [self.text_tokenizer.bos_token_id]
+            elif input_text_ids[i][0] != self.text_tokenizer.bos_token_id:
+                input_text_ids[i] = [self.text_tokenizer.bos_token_id] + input_text_ids[i]
 
+            input_text_ids[i] = input_text_ids[i] + [self.text_tokenizer.eos_token_id]
+            
+            # Truncate and pad input text ids and calculate input mask
+            if self.max_text_len >= len(input_text_ids[i]):
+                input_ids = [self.pad_id] * (self.max_text_len - len(input_text_ids[i])) + input_text_ids[i]
+                input_masks = [0] * (self.max_text_len - len(input_text_ids[i])) + [1] * (len(input_text_ids[i]) + 1)
+            else:
+                # should add the eos token
+                input_ids = input_text_ids[i][:self.max_text_len - 1] + [self.text_tokenizer.eos_token_id]
+                input_masks = [1] * (len(input_text_ids[i]) + 1)  
+                
+            # Process output text ids
+            if len(output_text_ids[i]) == 0:
+                output_text_ids[i] = [self.text_tokenizer.bos_token_id]
+            elif output_text_ids[i][0] != self.text_tokenizer.bos_token_id:
+                output_text_ids[i] = [self.text_tokenizer.bos_token_id] + output_text_ids[i]
+            
+            output_text_ids[i] = output_text_ids[i] + [self.text_tokenizer.eos_token_id]
+            
+            # Truncate and pad output text ids and calculate output mask
+            if self.max_text_len >= len(output_text_ids[i]):
+                output_ids = output_text_ids[i] + [self.pad_id] * (self.max_text_len - len(output_text_ids[i]))
+                output_masks = [1] * len(output_text_ids[i]) + [0] * (self.max_text_len - len(output_text_ids[i]))
+            else:
+                output_ids = output_text_ids[i][:self.max_text_len] + [self.text_tokenizer.eos_token_id]
+                output_masks = [1] * (self.max_text_len + 1)
+                
+            # Concatenate input text, image, and output text
+            temp_ids = [self.sptids_dict['<|mix|>']] + input_ids + [self.sptids_dict['<|soi|>']] + image_ids[i].tolist() + [self.sptids_dict['<|eoi|>']] + output_ids
+            temp_masks = input_masks + [1] * (image_ids.shape[-1] + 3) + output_masks
+            
+            # Convert to tensors
+            temp_ids = torch.tensor(temp_ids).to(device)
+            temp_masks = torch.tensor(temp_masks).to(device)
+            
+            # Create label ids
+            temp_label_ids = torch.cat([
+                torch.tensor([self.ignore_id]).to(device),
+                torch.tensor(input_ids).to(device),
+                self.sptids_dict['<|soi|>'].to(device),
+                labels[i],
+                self.sptids_dict['<|eoi|>'].to(device),
+                torch.tensor(output_ids).to(device)
+            ], dim=0)
+            
+            temp_label_ids = torch.where(temp_label_ids == self.pad_id, self.ignore_id, temp_label_ids)
+                    
+            sequence_ids.append(temp_ids.unsqueeze(0))
+            attention_masks.append(temp_masks.unsqueeze(0))
+            label_ids.append(temp_label_ids.unsqueeze(0))
+            
+
+        return torch.cat(sequence_ids, dim=0), torch.cat(attention_masks, dim=0), torch.cat(label_ids, dim=0)
+    
+    def mix_gen_prompt(self, input_text_ids, image_ids):
+        device = image_ids.device
+        sequence_ids = []
+        attention_masks = []
+        for i in range(len(input_text_ids)):
+            # Process input text ids
+            if len(input_text_ids[i]) == 0:
+                input_text_ids[i] = [self.text_tokenizer.bos_token_id]
+            elif input_text_ids[i][0] != self.text_tokenizer.bos_token_id:
+                input_text_ids[i] = [self.text_tokenizer.bos_token_id] + input_text_ids[i]
+
+            input_text_ids[i] = input_text_ids[i] + [self.text_tokenizer.eos_token_id]
+            
+            # Truncate and pad input text ids and calculate input mask
+            if self.max_text_len >= len(input_text_ids[i]):
+                input_ids = [self.pad_id] * (self.max_text_len - len(input_text_ids[i])) + input_text_ids[i]
+                input_masks = [0] * (self.max_text_len - len(input_text_ids[i])) + [1] * (len(input_text_ids[i]) + 1)
+            else:
+                # should add the eos token
+                input_ids = input_text_ids[i][:self.max_text_len - 1] + [self.text_tokenizer.eos_token_id]
+                input_masks = [1] * (len(input_text_ids[i]) + 1)  
+            
+            temp_ids = [int(self.sptids_dict['<|mix|>'])]  + input_ids 
+            
+            temp_ids = torch.cat([
+                torch.tensor(temp_ids).to(device),
+                self.sptids_dict['<|soi|>'].to(device),
+                image_ids[i],
+                self.sptids_dict['<|eoi|>'].to(device)
+            ], dim=0)
+            
+            temp_masks = input_masks + [1] * (image_ids.shape[-1] + 3) 
+            
+            # Convert to tensors
+            temp_masks = torch.tensor(temp_masks).to(device)
+            
+            sequence_ids.append(temp_ids.unsqueeze(0))
+            attention_masks.append(temp_masks.unsqueeze(0))
+            
+        return torch.cat(sequence_ids, dim=0), torch.cat(attention_masks, dim=0)
+    
     # language modeling
     def lm_prompt(self, text_ids, max_seq_len):
 
@@ -211,13 +316,6 @@ class UniversalPrompting():
 
         return torch.cat(sequence_ids, dim=0), torch.cat(attention_masks, dim=0), torch.cat(label_ids, dim=0)
     
-    def mix_prompt(self, text_ids, image_ids, labels):
-        device = image_ids.device
-        sequence_ids = []
-        attention_masks = []
-        label_ids = []
-        probs = torch.rand(len(text_ids))
-        max_text_len = self.max_text_len - 1 
         
     def t2v_prompt(self, text_ids, image_ids, labels):
 
@@ -414,7 +512,13 @@ class UniversalPrompting():
             text_ids = self.text_tokenizer(input[0])['input_ids']  # (B, max_len)
             image_ids = input[1]  # (B, #tokens)
             sequence_ids_with_masks = self.t2i_prompt(text_ids, image_ids, input[2])
-
+            
+        elif task == "mix":
+            input_text_ids = self.text_tokenizer(input[0])['input_ids']  # (B, max_len)
+            output_text_ids = self.text_tokenizer(input[1])['input_ids']
+            image_ids = input[2]  # (B, #tokens)
+            sequence_ids_with_masks = self.mix_prompt(input_text_ids, output_text_ids, image_ids, input[3])
+            
         elif task == "t2v":
             text_ids = self.text_tokenizer(input[0])['input_ids']  # (B, max_len)
             image_ids = input[1]  # (B, #tokens)
@@ -432,6 +536,11 @@ class UniversalPrompting():
             text_ids = self.text_tokenizer(input[0])['input_ids']  # (B, max_len)
             image_ids = input[1]  # (B, #tokens)
             sequence_ids_with_masks = self.t2i_gen_prompt(text_ids, image_ids)
+        
+        elif task == "mix_gen":
+            input_text_ids = self.text_tokenizer(input[0])['input_ids']  # (B, max_len)
+            image_ids = input[1]  # (B, #tokens)
+            sequence_ids_with_masks = self.mix_gen_prompt(input_text_ids, image_ids)
 
         elif task == "t2v_gen":
             text_ids = self.text_tokenizer(input[0])['input_ids']  # (B, max_len)
@@ -471,6 +580,108 @@ class UniversalPrompting():
 
         return sequence_ids_with_masks
 
+def t2i_gen_create_attention_mask_predict_next(sequence, pad_id, soi_id, eoi_id, rm_pad_in_image=False, return_inverse_mask=True):
+    # sequence is expected to be of shape [N, L]
+    N, L = sequence.shape
+
+    # Masks to identify different types of tokens
+    is_padding = sequence == pad_id
+    is_start_image = (sequence == soi_id)  
+    is_end_image = (sequence == eoi_id) 
+    print(is_start_image)
+    # Create cumulative sum masks to identify regions of image tokens
+    cumulative_start = torch.cumsum(is_start_image, dim=1)
+    cumulative_end = torch.cumsum(is_end_image, dim=1)
+    in_image_segment = (cumulative_start > cumulative_end) | is_start_image.bool() | is_end_image.bool()
+
+    is_text = ~in_image_segment
+
+    # Create causal masks for text and image segments
+    causal_mask = torch.tril(torch.ones((L, L), dtype=torch.bool)).to(sequence.device)
+    
+    # Text causal mask
+    mask_text = is_text[:, :, None] * causal_mask[None, :, :]
+    
+    # Image causal mask
+    mask_image = in_image_segment[:, :, None] * causal_mask[None, :, :]
+
+    # Combine text and image causal masks
+    combined_mask = mask_text | mask_image
+
+    # Optionally remove padding tokens' influence in the image segment
+    if rm_pad_in_image:
+        sid_img = torch.where(sequence == soi_id)[1]
+        for i in range(combined_mask.shape[0]):
+            pad_end_idx = torch.where(sequence[i] == pad_id)
+            if len(pad_end_idx[0]) != 0:
+                pad_end_idx = pad_end_idx[0][-1]
+                combined_mask[i][pad_end_idx + 1:, :pad_end_idx + 1] = 0
+            id_padding = torch.where(is_padding[i] == True)
+            combined_mask[i][sid_img[i]:, id_padding[0]] = 0
+
+    # Return inverse mask if required
+    if return_inverse_mask:
+        inverted_mask = 1.0 - combined_mask.type(torch.float)  # Ensure we work with a float for inversion
+        inverted_mask = inverted_mask.masked_fill(
+            inverted_mask.to(torch.bool), torch.iinfo(torch.int32).min  # Use an appropriate min value for the dtype
+        )
+        return inverted_mask.unsqueeze(1)
+    else:
+        return combined_mask.unsqueeze(1)
+
+
+def new_create_attention_mask_predict_next(sequence, pad_id=128256, soi_id=128257, eoi_id=128258, rm_pad_in_image=False, 
+                                       return_inverse_mask=True):
+    # sequence is expected to be of shape [N, L]
+    N, L = sequence.shape
+
+    # Masks to identify different types of tokens
+    is_padding = sequence == pad_id
+    is_start_image = sequence == soi_id
+    is_end_image = sequence == eoi_id
+
+    # Create cumulative sum masks to identify regions of image tokens
+    cumulative_start = torch.cumsum(is_start_image, dim=1)
+    cumulative_end = torch.cumsum(is_end_image, dim=1)
+    in_image_segment = (cumulative_start > cumulative_end) | is_start_image | is_end_image
+
+    is_text = ~in_image_segment
+
+    # Create causal masks for text and image segments
+    causal_mask = torch.tril(torch.ones((L, L), dtype=torch.bool)).to(sequence.device)
+    
+    # Text causal mask
+    mask_text = is_text[:, :, None] * causal_mask[None, :, :]
+    
+    # Image causal mask
+    mask_image = in_image_segment[:, :, None] * causal_mask[None, :, :]
+
+    # Combine text and image causal masks
+    combined_mask = mask_text | mask_image
+
+    # Optionally remove padding tokens' influence in the image segment
+    if rm_pad_in_image:
+        sid_img = torch.where(sequence == soi_id)[1]
+        for i in range(combined_mask.shape[0]):
+            pad_end_idx = torch.where(sequence[i] == pad_id)
+            if len(pad_end_idx[0]) != 0:
+                pad_end_idx = pad_end_idx[0][-1]
+                combined_mask[i][pad_end_idx + 1:, :pad_end_idx + 1] = 0
+            id_padding = torch.where(is_padding[i] == True)
+            combined_mask[i][sid_img[i]:, id_padding[0]] = 0
+
+    # Return inverse mask if required
+    if return_inverse_mask:
+        inverted_mask = 1.0 - combined_mask.type(sequence.dtype)
+        inverted_mask = inverted_mask.masked_fill(
+            inverted_mask.to(torch.bool), torch.iinfo(sequence.dtype).min
+        )
+        return inverted_mask.unsqueeze(1)
+    else:
+        return combined_mask.unsqueeze(1)
+
+
+
 def create_attention_mask_predict_next(sequence, pad_id=128256, soi_id=128257, eoi_id=128258, rm_pad_in_image=False,
                                        return_inverse_mask=True):
     # sequence is expected to be of shape [N, L]
@@ -484,8 +695,8 @@ def create_attention_mask_predict_next(sequence, pad_id=128256, soi_id=128257, e
     is_end_image = sequence == eoi_id
 
     # Create cumulative sum masks to identify regions of image tokens
-    cumulative_start = torch.cumsum(is_start_image, dim=1)
-    cumulative_end = torch.cumsum(is_end_image, dim=1)
+    cumulative_start = torch.cumsum(is_start_image.long(), dim=1)
+    cumulative_end = torch.cumsum(is_end_image.long(), dim=1)
     in_image_segment = (cumulative_start > cumulative_end) | is_start_image | is_end_image
 
     is_text = ~(in_image_segment)

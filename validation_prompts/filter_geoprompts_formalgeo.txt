@@ -1,0 +1,5 @@
+Draw a geometric image based on this description: BA is perpendicular to CA, AC=12, AB=16.
+Draw a geometric image based on this description: DE=2, DF=3, E bisects segment CD, ABCD is a parallelogram.
+Draw a geometric image based on this description: AC is perpendicular to OC, OC⊥BC, the tangent to ⊙O is PB, AE is the diameter of circle O, the center of ⊙O is O, BP=6, ∠BPA=30°.
+Draw a geometric image based on this description: JK=33, ∠KLJ=45°, JK⊥LK, LK=x.
+Draw a geometric image based on this description: ∠ACB=60°, AB=12, AC=y, BC=x, ∠BAC=30°, CB is perpendicular to AB.
