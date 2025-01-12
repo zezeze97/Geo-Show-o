@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -o job.%j.out
-#SBATCH --partition=GPU80G
+#SBATCH --partition=GPU40G
 #SBATCH --qos=low
 #SBATCH -J Infer
 #SBATCH --nodes=1    
@@ -17,7 +17,6 @@ export PYTHONPATH=$PYTHONPATH:/lustre/home/2001110054/Show-o
 export OMP_NUM_THREADS=16
 source activate show-o
 
-srun python3 geo_inference_t2i.py config=configs/formalgeo-maskgit-32Down-512x512-t2i-0112/test.yaml \
-batch_size=8 validation_prompts_file=data/formalgeo7k/formalgeo7k_v2/custom_json/t2i_noAug_v2/train.json \
-guidance_scale=0.0 generation_timesteps=50 \
+srun python3 geo_inference_t2i_autoreg.py config=configs/formalgeo-autoreg-32Down-512x512-t2i-0112/test.yaml \
+batch_size=8 validation_prompts_file=data/formalgeo7k/formalgeo7k_v2/custom_json/t2i_noAug_v2/test.json \
 mode='t2i'

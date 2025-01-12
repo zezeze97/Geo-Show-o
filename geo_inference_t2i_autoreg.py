@@ -22,9 +22,9 @@ from tqdm import tqdm
 import numpy as np
 import torch
 # import wandb
-from models import Showo, VQModel, get_mask_chedule, MAGVITv2, Showo_t2i
+from models import Showo, VQModel, get_mask_chedule, MAGVITv2, Showo_t2i_autoreg
 from omegaconf import OmegaConf
-from training.prompting_utils import UniversalPrompting, create_attention_mask_predict_next
+from training.prompting_utils import UniversalPrompting, create_attention_mask_predict_next, create_casual_attention_mask
 from training.utils import get_config, flatten_omega_conf, image_transform
 from transformers import AutoTokenizer
 import torch.nn.functional as F
@@ -102,17 +102,14 @@ if __name__ == '__main__':
         vq_model.requires_grad_(False)
         vq_model.eval()
 
-    model = Showo_t2i.from_pretrained(config.model.showo.pretrained_model_path).to(device)
+    model = Showo_t2i_autoreg.from_pretrained(config.model.showo.pretrained_model_path).to(device)
     model.eval()
 
-    mask_token_id = model.config.mask_token_id
 
     # load from users passed arguments
     if config.get("validation_prompts_file", None) is not None:
         config.dataset.params.validation_prompts_file = config.validation_prompts_file
     config.training.batch_size = config.batch_size
-    config.training.guidance_scale = config.guidance_scale
-    config.training.generation_timesteps = config.generation_timesteps
     # load from users passed arguments
     if config.mode == 't2i':
         validation_info = []
@@ -127,45 +124,20 @@ if __name__ == '__main__':
                 prompts.append(item['conversations'][0]['value'])
 
 
-            image_tokens = torch.ones((len(prompts), config.model.showo.num_vq_tokens),
-                                      dtype=torch.long, device=device) * mask_token_id
+            input_ids, _ = uni_prompting(prompts, 't2i_autoreg_gen')
+            input_ids = input_ids.to(device)
 
-            input_ids, _ = uni_prompting((prompts, image_tokens), 't2i_gen')
-
-            if config.training.guidance_scale > 0:
-                uncond_input_ids, _ = uni_prompting(([''] * len(prompts), image_tokens), 't2i_gen')
-                attention_mask = create_attention_mask_predict_next(torch.cat([input_ids, uncond_input_ids], dim=0),
-                                                                    pad_id=int(uni_prompting.sptids_dict['<|pad|>']),
-                                                                    soi_id=int(uni_prompting.sptids_dict['<|soi|>']),
-                                                                    eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']),
-                                                                    rm_pad_in_image=True)
-            else:
-                attention_mask = create_attention_mask_predict_next(input_ids,
-                                                                    pad_id=int(uni_prompting.sptids_dict['<|pad|>']),
-                                                                    soi_id=int(uni_prompting.sptids_dict['<|soi|>']),
-                                                                    eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']),
-                                                                    rm_pad_in_image=True)
-                uncond_input_ids = None
-
-            if config.get("mask_schedule", None) is not None:
-                schedule = config.mask_schedule.schedule
-                args = config.mask_schedule.get("params", {})
-                mask_schedule = get_mask_chedule(schedule, **args)
-            else:
-                mask_schedule = get_mask_chedule(config.training.get("mask_schedule", "cosine"))
+            
+            attention_mask = create_casual_attention_mask(input_ids,
+                                                 return_inverse_mask=True)
+            attention_mask = attention_mask.to(device)
+            
 
             with torch.no_grad():
                 gen_token_ids = model.t2i_generate(
                     input_ids=input_ids,
-                    uncond_input_ids=uncond_input_ids,
                     attention_mask=attention_mask,
-                    guidance_scale=config.training.guidance_scale,
                     temperature=config.training.get("generation_temperature", 1.0),
-                    timesteps=config.training.generation_timesteps,
-                    noise_schedule=mask_schedule,
-                    noise_type=config.training.get("noise_type", "mask"),
-                    seq_len=config.model.showo.num_vq_tokens,
-                    uni_prompting=uni_prompting,
                     config=config,
                 )
 

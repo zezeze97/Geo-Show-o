@@ -1,0 +1,9 @@
+Draw a geometric image based on consCDL: Shape(JK,KL,LJ) and imgCDL: Equal(LengthOfLine(JK),33),Equal(LengthOfLine(LK),x),Equal(MeasureOfAngle(KLJ),45),PerpendicularBetweenLine(JK,LK)
+Draw a geometric image based on this description: LK=x, JK⊥LK, ∠KLJ=45°, JK=33.
+Draw a geometric image based on this description: LK=x, JK⊥LK, ∠KLJ=45°, JK=33, consCDL: Shape(JK,KL,LJ) and imgCDL: Equal(LengthOfLine(JK),33),Equal(LengthOfLine(LK),x),Equal(MeasureOfAngle(KLJ),45),PerpendicularBetweenLine(JK,LK)
+Draw a geometric image based on consCDL: Shape(AC,CB,BA) and imgCDL: Equal(LengthOfLine(AB),16),Equal(LengthOfLine(AC),12),PerpendicularBetweenLine(BA,CA)
+Draw a geometric image based on this description: AB=16, AC=12, BA is perpendicular to CA.
+Draw a geometric image based on this description: AB=16, AC=12, BA is perpendicular to CA, consCDL: Shape(AC,CB,BA) and imgCDL: Equal(LengthOfLine(AB),16),Equal(LengthOfLine(AC),12),PerpendicularBetweenLine(BA,CA)
+Draw a geometric image based on consCDL: Shape(FD,DE,EF),Shape(DA,AB,BE,ED),Shape(EB,BC,CE),Collinear(FEB),Collinear(DEC),Collinear(FDA) and imgCDL: Equal(LengthOfLine(DE),2),Equal(LengthOfLine(DF),3)
+Draw a geometric image based on this description: DE=2, DF=3, E bisects segment CD, ABCD is a parallelogram.
+Draw a geometric image based on this description: DE=2, DF=3, E bisects segment CD, ABCD is a parallelogram, consCDL: Shape(FD,DE,EF),Shape(DA,AB,BE,ED),Shape(EB,BC,CE),Collinear(FEB),Collinear(DEC),Collinear(FDA) and imgCDL: Equal(LengthOfLine(DE),2),Equal(LengthOfLine(DF),3)

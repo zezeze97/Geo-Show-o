@@ -42,16 +42,14 @@ from accelerate.utils import DistributedType, set_seed
 from training.custom_data import LazySupervisedDataset
 # from parquet import RefinedWebDataset
 
-from models import Showo_t2i, MAGVITv2, VQModel, get_mask_chedule
-from training.prompting_utils import UniversalPrompting, create_attention_mask_predict_next, \
-    create_attention_mask_for_mmu
+from models import Showo_t2i_autoreg, MAGVITv2, VQModel
+from training.prompting_utils import UniversalPrompting, create_attention_mask_predict_next, create_casual_attention_mask
 from models.lr_schedulers import get_scheduler
 from models.logging import set_verbosity_info, set_verbosity_error
 
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
-from llava.llava_data_vq_unified import get_instruct_data_loader
 
 SYSTEM_PROMPT_LEN = 28
 
@@ -65,6 +63,7 @@ except ImportError:
     is_apex_available = False
 
 logger = get_logger(__name__, log_level="INFO")
+
 
 def load_vqgan_new(vq_model, config, ckpt_path=None, use_ema=True):
     model = vq_model(**config)
@@ -215,7 +214,7 @@ def main():
     # Initialize Show-o model
     if config.model.showo.load_from_showo:
         print(f'Load from pretrained show-o: {config.model.showo.pretrained_model_path}')
-        model = Showo_t2i.from_pretrained(config.model.showo.pretrained_model_path).to(accelerator.device)
+        model = Showo_t2i_autoreg.from_pretrained(config.model.showo.pretrained_model_path).to(accelerator.device)
         if config.model.showo.vocab_size != model.vocab_size:
             print(f'vocab size of show-o is not correct!!!')
             model.showo.resize_token_embeddings(config.model.showo.vocab_size)
@@ -226,7 +225,7 @@ def main():
             model.config.mask_token_id = config.model.showo.vocab_size - 1
             model.mask_token_id = config.model.showo.vocab_size - 1
     else:
-        model = Showo_t2i(**config.model.showo).to(accelerator.device)
+        model = Showo_t2i_autoreg(**config.model.showo).to(accelerator.device)
     mask_id = model.mask_token_id
 
     ##################################
@@ -261,13 +260,6 @@ def main():
     else:
         raise ValueError(f"Optimizer {optimizer_type} not supported")
 
-    # Create mask scheduler
-    if config.get("mask_schedule", None) is not None:
-        schedule = config.mask_schedule.schedule
-        args = config.mask_schedule.get("params", {})
-        mask_schedule = get_mask_chedule(schedule, **args)
-    else:
-        mask_schedule = get_mask_chedule(config.training.get("mask_schedule", "cosine"))
 
     lr_scheduler = get_scheduler(
         config.lr_scheduler.scheduler,
@@ -373,24 +365,16 @@ def main():
     def prepare_inputs_and_labels(
             pixel_values_or_image_ids: Union[torch.FloatTensor, torch.LongTensor],
             texts: Union[str, str],
-            min_masking_rate: float = 0.0,
-            is_train: bool = True,
     ):
 
         image_tokens = vq_model.get_code(pixel_values_or_image_ids)
         image_tokens = image_tokens + len(uni_prompting.text_tokenizer)
         
-        # create MLM mask and labels
-        input_ids, labels, loss_weight, mask_prob = mask_or_random_replace_tokens(
-            image_tokens,
-            mask_id,
-            config,
-            mask_schedule=mask_schedule,
-            is_train=is_train,
-        )
-        input_ids, masks, labels = uni_prompting((texts, input_ids, labels), 't2i')
+        input_ids = image_tokens
+        labels = image_tokens
+        input_ids, _, labels = uni_prompting((texts, input_ids, labels), 't2i_autoreg')
 
-        return input_ids, labels, mask_prob, image_tokens
+        return input_ids, labels, image_tokens
 
     batch_time_m = AverageMeter()
     data_time_m = AverageMeter()
@@ -409,18 +393,12 @@ def main():
             data_time_m.update(time.time() - end)
 
             # Encode images to image tokens, mask them and create input and labels
-            (
-                input_ids,
+            (   input_ids,
                 labels,
-                mask_prob,
                 image_tokens_ori
-            ) = prepare_inputs_and_labels(pixel_values, texts, config.training.min_masking_rate)
-            attention_mask = create_attention_mask_predict_next(input_ids,
-                                                                pad_id=int(uni_prompting.sptids_dict['<|pad|>']),
-                                                                soi_id=int(uni_prompting.sptids_dict['<|soi|>']),
-                                                                eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']),
-                                                                rm_pad_in_image=True,
-                                                                return_inverse_mask=True)
+            ) = prepare_inputs_and_labels(pixel_values, texts)
+            attention_mask = create_casual_attention_mask(input_ids,
+                                                        return_inverse_mask=True)
             attention_mask = attention_mask.to(mask_dtype)
             
             if global_step == 0 and epoch == 0:
@@ -428,6 +406,8 @@ def main():
                 logger.info("Labels: {}".format(labels))
 
             with accelerator.accumulate(model):
+                # print(f'Training Input ids: {input_ids[0]}')
+                # print(f'Training text: {custom_decode(uni_prompting.text_tokenizer, input_ids[0])}')
                 logits, loss_t2i = model(
                     input_ids=input_ids,
                     input_embeddings=None,
@@ -441,8 +421,6 @@ def main():
                 avg_loss_t2i = accelerator.gather(loss_t2i.repeat(config.training.batch_size_t2i)).mean()
                 
                 loss = config.training.t2i_coeff * loss_t2i 
-
-                avg_masking_rate = accelerator.gather(mask_prob.repeat(config.training.batch_size_t2i)).mean()
 
                 accelerator.backward(loss)
 
@@ -476,7 +454,6 @@ def main():
                     logs = {
                         "step_loss_t2i": avg_loss_t2i.item(),
                         "lr": lr_scheduler.get_last_lr()[0],
-                        "avg_masking_rate": avg_masking_rate.item(),
                         "samples/sec/gpu": samples_per_second_per_gpu,
                         "data_time": data_time_m.val,
                         "batch_time": batch_time_m.val,
@@ -507,7 +484,6 @@ def main():
                         accelerator,
                         config,
                         global_step + 1,
-                        mask_schedule=mask_schedule,
                     )
 
                     visualize_predictions(
@@ -572,14 +548,7 @@ def visualize_predictions(
                   config.model.showo.llm_vocab_size + config.model.showo.num_new_special_tokens:-1]
     predictions = predictions.argmax(axis=-1)
 
-    mask_token_id = config.model.showo.vocab_size - 1 - len(uni_prompting.text_tokenizer)
-    input_ids = input_ids[:config.training.batch_size_t2i, -(config.model.showo.num_vq_tokens + 1):-1:] - len(
-        uni_prompting.text_tokenizer)
-    mask_ratio = list((torch.where(input_ids == mask_token_id, 1, 0).sum(
-        dim=-1) / config.model.showo.num_vq_tokens).cpu().numpy())
-    predicted_images = torch.where(input_ids == mask_token_id, predictions, input_ids)
-
-    predicted_images = vq_model.decode_code(predicted_images)
+    predicted_images = vq_model.decode_code(predictions)
     predicted_images = torch.clamp((predicted_images + 1.0) / 2.0, min=0.0, max=1.0)
     predicted_images *= 255.0
     predicted_images = predicted_images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
@@ -587,8 +556,8 @@ def visualize_predictions(
     pil_images = [Image.fromarray(image) for image in predicted_images]
 
     # Log images
-    wandb_images = [wandb.Image(image, caption=f'mask ratio: {r:0.2f} \n caption: {texts[i]}') for i, (image, r) in
-                    enumerate(zip(pil_images, mask_ratio))]
+    wandb_images = [wandb.Image(image, caption=f'caption: {texts[i]}') for i, image in
+                    enumerate(pil_images)]
     wandb.log({"Original images v.s. Reconstructed images v.s. Predicted images": wandb_images}, step=global_step)
 
     model.train()
@@ -602,7 +571,6 @@ def generate_images(
         accelerator,
         config,
         global_step,
-        mask_schedule,
 ):
     logger.info("Generating images...")
     model.eval()
@@ -616,24 +584,13 @@ def generate_images(
     else:
         mask_dtype = model.showo.model.embed_tokens.weight.dtype
 
-    mask_token_id = config.model.showo.vocab_size - 1
-    image_tokens = torch.ones((len(validation_prompts), config.model.showo.num_vq_tokens), dtype=torch.long,
-                              device=accelerator.device) * mask_token_id
-    input_ids, _ = uni_prompting((validation_prompts, image_tokens), 't2i_gen')
-    if config.training.guidance_scale > 0:
-        uncond_input_ids, _ = uni_prompting(([''] * len(validation_prompts), image_tokens), 't2i_gen')
-        attention_mask = create_attention_mask_predict_next(torch.cat([input_ids, uncond_input_ids], dim=0),
-                                                            pad_id=int(uni_prompting.sptids_dict['<|pad|>']),
-                                                            soi_id=int(uni_prompting.sptids_dict['<|soi|>']),
-                                                            eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']),
-                                                            rm_pad_in_image=True).to(mask_dtype)
-    else:
-        attention_mask = create_attention_mask_predict_next(input_ids,
-                                                            pad_id=int(uni_prompting.sptids_dict['<|pad|>']),
-                                                            soi_id=int(uni_prompting.sptids_dict['<|soi|>']),
-                                                            eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']),
-                                                            rm_pad_in_image=True).to(mask_dtype)
-        uncond_input_ids = None
+    input_ids, _ = uni_prompting(validation_prompts, 't2i_autoreg_gen')
+    input_ids = input_ids.to(accelerator.device)
+    
+    
+    attention_mask = create_casual_attention_mask(input_ids,
+                                                 return_inverse_mask=True).to(mask_dtype)
+    # print(f'attention_mask: {attention_mask}')
 
     if accelerator.mixed_precision == "fp16":
         weight_dtype = torch.float16
@@ -641,25 +598,20 @@ def generate_images(
         weight_dtype = torch.bfloat16
     else:
         weight_dtype = torch.float32
-
+    # print(f'Test input id is: {input_ids[0]}')
+    # print(f'Test text: {custom_decode(uni_prompting.text_tokenizer, input_ids[0])}')
     with torch.autocast("cuda", dtype=weight_dtype, enabled=accelerator.mixed_precision != "no"):
         # Generate images
         gen_token_ids = accelerator.unwrap_model(model).t2i_generate(
             input_ids=input_ids,
-            uncond_input_ids=uncond_input_ids,
             attention_mask=attention_mask,
-            guidance_scale=config.training.guidance_scale,
             temperature=config.training.get("generation_temperature", 1.0),
-            timesteps=config.training.generation_timesteps,
-            noise_schedule=mask_schedule,
-            noise_type=config.training.get("noise_type", "mask"),
-            predict_all_tokens=config.training.get("predict_all_tokens", False),
-            seq_len=config.model.showo.num_vq_tokens,
-            uni_prompting=uni_prompting,
             config=config,
         )
     # In the beginning of training, the model is not fully trained and the generated token ids can be out of range
     # so we clamp them to the correct range.
+    # print(f'gen_token_ids: {gen_token_ids}')
+    # print(f'gen_token_ids shape: {gen_token_ids.shape}')
     gen_token_ids = torch.clamp(gen_token_ids, max=accelerator.unwrap_model(model).config.codebook_size - 1, min=0)
     images = vq_model.decode_code(gen_token_ids)
     

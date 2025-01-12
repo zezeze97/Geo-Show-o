@@ -6,7 +6,7 @@ experiment:
     project: "demo"
     name: "show-o-demo"
     output_dir: "show-o-demo"
-output_dir: outputs/show-o-finetuning-512x512-0110-FormalLanguage-32Down/train_imgs
+output_dir: outputs/formalgeo-maskgit-32Down-512x512-t2i-0112/gen_imgs
 model:
     vq_model:
         type: "geo"
@@ -22,7 +22,7 @@ model:
         pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1120_mask_down32_z13/ckpt/epoch=184-step=68820.ckpt"
 
     showo:
-        pretrained_model_path: "outputs/show-o-finetuning-512x512-0110-FormalLanguage-32Down"
+        pretrained_model_path: "outputs/formalgeo-maskgit-32Down-512x512-t2i-0112"
         w_clip_vit: False
         vocab_size: 58498
         llm_vocab_size: 50295
@@ -45,7 +45,7 @@ dataset:
         persistent_workers: True
 
     preprocessing:
-        max_seq_length: 256
+        max_seq_length: 384
         resolution: 512
 
 training:

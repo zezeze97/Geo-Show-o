@@ -5,14 +5,14 @@ wandb:
 
 experiment:
     project: "training"
-    name: "show-o-finetuning-512x512-T2I_1122-overfit-NatrualLanguage"
-    output_dir: "outputs/show-o-finetuning-512x512-1122-overfit-T2I-NatrualLanguage"
+    name: "show-o-finetuning-512x512-T2I_0109-overfit-FormalLanguage-32Down-AutoReg"
+    output_dir: "outputs/show-o-finetuning-512x512-0109-overfit-T2I-FormalLanguage-32Down-AutoReg"
     save_every: 1000
     eval_every: 1000
-    generate_every: 1000
+    generate_every: 500
     log_every: 50
     log_grad_norm_every: 500
-    resume_from_checkpoint: null # 'latest'
+    resume_from_checkpoint: 'latest' # 'latest'
     checkpoints_total_limit: 1
 
 model:
@@ -25,9 +25,9 @@ model:
             in_channels: 3
             out_ch: 3
             ch: 128
-            ch_mult: [1,2,2,4,4]  # num_down = len(ch_mult)-1
+            ch_mult: [1,2,2,2,4,4]  # num_down = len(ch_mult)-1
             num_res_blocks: 4
-        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1115_mask_z13/ckpt/epoch=245-step=91512.ckpt"
+        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1120_mask_down32_z13/ckpt/epoch=184-step=68820.ckpt"
 
         
     showo:
@@ -38,7 +38,7 @@ model:
         llm_vocab_size: 50295
         llm_model_path: 'microsoft/phi-1_5'
         codebook_size: 8192
-        num_vq_tokens: 1024
+        num_vq_tokens: 256
         num_new_special_tokens: 10  # <|soi|> <|eoi|> <|sov|> <|eov|> <|t2i|> <|mmu|> <|t2v|> <|v2v|> <|lvg|> <|pad|>
 
     # gradient_checkpointing: True
@@ -49,11 +49,8 @@ dataset:
     combined_loader_mode: "max_size_cycle"
     params:
         t2i_image_folder: data/formalgeo7k/formalgeo7k_v2
-        t2i_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/t2i_noAug_v1/train.json
-        mmu_image_folder: data/formalgeo7k/formalgeo7k_v2
-        mmu_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/mmu/train.json
-        lm_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/lm/train.json
-        validation_prompts_file: "validation_prompts/geoprompts.txt"
+        t2i_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/t2i_overfit/train.json
+        validation_prompts_file: "validation_prompts/geoprompts_test.txt"
         shuffle_buffer_size: 1000
         num_workers: 8
         resolution: 512
@@ -67,7 +64,7 @@ dataset:
 optimizer:
     name: adamw
     params: # default adamw params
-        learning_rate: 5e-5
+        learning_rate: 1e-5
         scale_lr: False # scale learning rate by total batch size
         beta1: 0.9
         beta2: 0.999
@@ -78,24 +75,24 @@ lr_scheduler:
     scheduler: "cosine"
     params:
         learning_rate: ${optimizer.params.learning_rate}
-        warmup_steps: 5000
+        warmup_steps: 1000
 
 training:
     gradient_accumulation_steps: 1
     noise_type: "mask"
     batch_size_t2i: 8
-    num_train_epochs: 300
+    num_train_epochs: 30000000
     mixed_precision: "bf16"
     enable_tf32: True
-    seed: 10086
-    max_train_steps: 1000000 # to be determined according to the scale of high-quality dataset
+    seed: 111
+    max_train_steps: 100000 # to be determined according to the scale of high-quality dataset
     overfit_one_batch: False
-    cond_dropout_prob: 0.1
+    cond_dropout_prob: 0.0
     min_masking_rate: 0.0
     label_smoothing: 0.0
     max_grad_norm: null
     guidance_scale: 0.0
-    generation_timesteps: 25
+    generation_timesteps: 12
     t2i_coeff: 1.0
     lm_coeff: 0.1
     mmu_coeff: 1.0
