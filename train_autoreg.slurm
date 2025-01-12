@@ -5,8 +5,8 @@
 #SBATCH -J FormalLanguage
 #SBATCH --nodes=1    
 #SBATCH --ntasks-per-node=1          # crucial - only 1 task per dist per node!
-#SBATCH --cpus-per-task=16          # number of cores per tasks
-#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=64          # number of cores per tasks
+#SBATCH --gres=gpu:4
 #SBATCH --time=5-00:00:00
 #SBATCH --exclude=l12gpu26   # 添加这一行排除节点
 
@@ -24,9 +24,6 @@ export WANDB_MODE=offline
 export OMP_NUM_THREADS=16
 # source activate showo
 source activate show-o
-accelerate launch --config_file accelerate_configs/1_gpu.yaml --main_process_port=8888 training/finetuning_T2I.py config=configs/showo_finetuning_512x512_t2i.yaml
-# accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml --main_process_port=8888 training/finetuning_T2I_AutoReg.py config=configs/showo_finetuning_512x512_t2i.yaml
-# accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml --main_process_port=8888 training/finetuning_T2I.py config=configs/showo_finetuning_512x512_t2i_overfit.yaml
-# accelerate launch --config_file accelerate_configs/1_gpu.yaml --main_process_port=8888 training/finetuning_T2I_AutoReg.py config=configs/showo_finetuning_512x512_t2i_overfit.yaml
-# accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml --main_process_port=8888 training/finetuning.py config=configs/showo_finetuning_512x512.yaml
-#accelerate launch --config_file accelerate_configs/2_gpus_deepspeed_zero2.yaml --main_process_port=8888 training/finetuning_T2I.py config=configs/showo_finetuning_512x512_t2i.yaml
+# accelerate launch --config_file accelerate_configs/1_gpu.yaml --main_process_port=8888 training/finetuning_T2I.py config=configs/showo_finetuning_512x512_t2i.yaml
+accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml --main_process_port=8888 training/finetuning_T2I_AutoReg.py config=configs/formalgeo-autoreg-32Down-512x512-t2i-0112/train.yaml
+
