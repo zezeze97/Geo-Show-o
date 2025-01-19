@@ -1,4 +1,4 @@
-output_dir: outputs/formalgeo-maskgit-32Down-512x512-t2i-0112/gen_imgs
+output_dir: outputs/formalgeo-autoreg-32Down-512x512-t2i-0117/gen_imgs
 model:
     vq_model:
         type: "geo"
@@ -14,7 +14,7 @@ model:
         pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1120_mask_down32_z13/ckpt/epoch=184-step=68820.ckpt"
 
     showo:
-        pretrained_model_path: "outputs/formalgeo-maskgit-32Down-512x512-t2i-0112"
+        pretrained_model_path: "outputs/formalgeo-autoreg-32Down-512x512-t2i-0117"
         w_clip_vit: False
         vocab_size: 58498
         llm_vocab_size: 50295

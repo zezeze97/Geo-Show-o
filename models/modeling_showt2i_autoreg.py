@@ -100,7 +100,7 @@ class Showo_t2i_autoreg(ModelMixin, ConfigMixin):
     def t2i_generate(
             self,
             input_ids: torch.LongTensor,
-            attention_mask=None,
+            # attention_mask=None,
             temperature=1.0,
             top_k=None,
             config=None,
@@ -110,31 +110,25 @@ class Showo_t2i_autoreg(ModelMixin, ConfigMixin):
         num_vq_tokens = config.model.showo.num_vq_tokens
         num_new_special_tokens = config.model.showo.num_new_special_tokens
         llm_vocab_size = config.model.showo.llm_vocab_size
-        B = input_ids.shape[0]
+        N, L = input_ids.shape
+        
+        
+        causal_mask = torch.tril(torch.ones((N, 1, L + num_vq_tokens, L + num_vq_tokens), dtype=torch.bool)).to(device)
+        
+        inverted_mask = 1.0 - causal_mask.type(input_ids.dtype)
+        inverted_mask = inverted_mask.masked_fill(
+            inverted_mask.to(torch.bool), torch.iinfo(input_ids.dtype).min
+        )
+        full_mask = inverted_mask
 
         # 保存生成的 token
         new_tokens = []
 
         idx = input_ids
         for step in tqdm(range(num_vq_tokens)):
+            attention_mask = full_mask[:, :, :L + step, :L + step]
             logits = self(idx, attention_mask=attention_mask)
             
-            L = attention_mask.shape[-1]
-            attention_mask_a = torch.cat(
-                [
-                    attention_mask,  # B, 1, L, L
-                    torch.zeros((B, 1, L, 1)).to(device) + torch.finfo(attention_mask.dtype).min,
-                ],
-                dim=-1
-            )
-            attention_mask_b = torch.cat(
-                [
-                    attention_mask_a,  # B, 1, L, L+1
-                    torch.zeros((B, 1, 1, L+1)).to(device),
-                ],
-                dim=-2
-            )
-            attention_mask = attention_mask_b
             
 
             # 处理 logits
@@ -154,6 +148,3 @@ class Showo_t2i_autoreg(ModelMixin, ConfigMixin):
 
         # 返回新生成的 token 列表
         return torch.cat(new_tokens, dim=1)
-
-
-    

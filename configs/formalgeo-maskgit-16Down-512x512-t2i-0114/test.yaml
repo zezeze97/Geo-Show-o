@@ -1,4 +1,4 @@
-output_dir: outputs/formalgeo-maskgit-32Down-512x512-t2i-0112/gen_imgs
+output_dir: outputs/formalgeo-maskgit-16Down-512x512-t2i-0114/gen_imgs
 model:
     vq_model:
         type: "geo"
@@ -9,18 +9,18 @@ model:
             in_channels: 3
             out_ch: 3
             ch: 128
-            ch_mult: [1,2,2,2,4,4]  # num_down = len(ch_mult)-1
+            ch_mult: [1,2,2,4,4]  # num_down = len(ch_mult)-1
             num_res_blocks: 4
-        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1120_mask_down32_z13/ckpt/epoch=184-step=68820.ckpt"
+        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1115_mask_z13/ckpt/epoch=245-step=91512.ckpt"
 
     showo:
-        pretrained_model_path: "outputs/formalgeo-maskgit-32Down-512x512-t2i-0112"
+        pretrained_model_path: "outputs/formalgeo-maskgit-16Down-512x512-t2i-0114"
         w_clip_vit: False
         vocab_size: 58498
         llm_vocab_size: 50295
         llm_model_path: 'microsoft/phi-1_5'
         codebook_size: 8192
-        num_vq_tokens: 256
+        num_vq_tokens: 1024
         num_new_special_tokens: 10  # <|soi|> <|eoi|> <|sov|> <|eov|> <|t2i|> <|mmu|> <|t2v|> <|v2v|> <|lvg|> <|pad|>
 
     gradient_checkpointing: True

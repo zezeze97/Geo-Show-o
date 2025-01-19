@@ -128,15 +128,15 @@ if __name__ == '__main__':
             input_ids = input_ids.to(device)
 
             
-            attention_mask = create_casual_attention_mask(input_ids,
-                                                 return_inverse_mask=True)
-            attention_mask = attention_mask.to(device)
+            # attention_mask = create_casual_attention_mask(input_ids,
+            #                                      return_inverse_mask=True)
+            # attention_mask = attention_mask.to(device)
             
 
             with torch.no_grad():
                 gen_token_ids = model.t2i_generate(
                     input_ids=input_ids,
-                    attention_mask=attention_mask,
+                    # attention_mask=attention_mask,
                     temperature=config.training.get("generation_temperature", 1.0),
                     config=config,
                 )

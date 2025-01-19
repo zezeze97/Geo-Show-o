@@ -25,5 +25,5 @@ export OMP_NUM_THREADS=16
 # source activate showo
 source activate show-o
 # accelerate launch --config_file accelerate_configs/1_gpu.yaml --main_process_port=8888 training/finetuning_T2I.py config=configs/showo_finetuning_512x512_t2i.yaml
-accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml --main_process_port=8888 training/finetuning_T2I_AutoReg.py config=configs/formalgeo-autoreg-32Down-512x512-t2i-0112/train.yaml
+accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml --main_process_port=8888 training/finetuning_T2I_AutoReg.py config=configs/formalgeo-autoreg-32Down-512x512-t2i-0117/train.yaml
 

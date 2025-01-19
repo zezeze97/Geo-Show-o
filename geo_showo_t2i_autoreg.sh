@@ -17,6 +17,17 @@ export PYTHONPATH=$PYTHONPATH:/lustre/home/2001110054/Show-o
 export OMP_NUM_THREADS=16
 source activate show-o
 
-srun python3 geo_inference_t2i_autoreg.py config=configs/formalgeo-autoreg-32Down-512x512-t2i-0112/test.yaml \
-batch_size=8 validation_prompts_file=data/formalgeo7k/formalgeo7k_v2/custom_json/t2i_noAug_v2/test.json \
+srun python3 geo_inference_t2i_autoreg.py config=configs/formalgeo-autoreg-16Down-512x512-t2i-0115/test.yaml \
+batch_size=8 validation_prompts_file=data/formalgeo7k/formalgeo7k_v2/custom_json/t2i/test_2cdl2i.json \
+output_dir=outputs/formalgeo-autoreg-16Down-512x512-t2i-0115/gen_imgs_2cdl2i \
+mode='t2i'
+
+srun python3 geo_inference_t2i_autoreg.py config=configs/formalgeo-autoreg-16Down-512x512-t2i-0115/test.yaml \
+batch_size=8 validation_prompts_file=data/formalgeo7k/formalgeo7k_v2/custom_json/t2i/test_caption2i.json \
+output_dir=outputs/formalgeo-autoreg-16Down-512x512-t2i-0115/gen_imgs_caption2i \
+mode='t2i'
+
+srun python3 geo_inference_t2i_autoreg.py config=configs/formalgeo-autoreg-16Down-512x512-t2i-0115/test.yaml \
+batch_size=8 validation_prompts_file=data/formalgeo7k/formalgeo7k_v2/custom_json/t2i/test_caption_2cdl2i.json \
+output_dir=outputs/formalgeo-autoreg-16Down-512x512-t2i-0115/gen_imgs_caption_2cdl2i \
 mode='t2i'
