@@ -1,8 +1,0 @@
-Draw a geometric image based on this description: triangle ABC, point D is on segment AB, point E is on segment AC, BC // DE, a line through point C is perpendicular to segment AB.
-Draw a geometric image based on this description: triangle ABC, AB = AC, point D is the midpoint of segment AB, point E is the midpoint of segment AC, line DE, BC // DE, incircle O of triangle ABC.
-Draw a geometric image based on this description: trapezoid ABCD, AB // CD, AB ⊥ AD, a line through point A.
-Draw a geometric image based on this description: triangle ABC, a line through point C is perpendicular to segment AB, excircle O of triangle ABC is tangent to segment BC.
-Draw a geometric image based on this description: triangle ABC, AB = AC, a line through point C is perpendicular to segment AB, circumcircle O of triangle ABC.
-Draw a geometric image based on this description: quadrilateral ABCD, circumcircle O of quadrilateral ABCD, point P is on the circle O.
-Draw a geometric image based on this description: trapezoid ABCD, AB // CD, AB ⊥ AD, point P is on the extension line of AB.
-Draw a geometric image based on this description: circle O, a line is tangent to circle O.

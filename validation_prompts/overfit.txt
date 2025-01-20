@@ -1,6 +1,0 @@
-Draw a geometric image based on this description: JK=33, ∠KLJ=45°, JK⊥LK, LK=x.
-Draw a geometric image based on this description: ∠BCD=110°, AB is the diameter of circle O, the center of ⊙O is O.
-Draw a geometric image based on this description: AB is parallel to DE, CE=t-2, CD=2, EB=t+1, CA=10.
-Draw a geometric image based on this description: ∠CAG=5*x°, ∠DBE=25°, the center of circle C is C, ∠CED=90°.
-Draw a geometric image based on this description: ∠DCB=64°, quadrilateral ADCB is a rhombus.
-Draw a geometric image based on this description: AB is the diameter of ⊙O, ∠EAD=22°, AD⊥FD, O is the center of circle O.

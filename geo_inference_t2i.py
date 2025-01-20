@@ -16,18 +16,21 @@
 import os
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
-os.environ["WANDB_MODE"]="offline"
-from PIL import Image
+# os.environ["WANDB_MODE"]="offline"
+from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
 import numpy as np
 import torch
-import wandb
-from models import Showo, VQModel, get_mask_chedule, MAGVITv2
+# import wandb
+from models import VQModel, MAGVITv2, GeoUniForCausalLM
 from omegaconf import OmegaConf
-from training.prompting_utils import UniversalPrompting, create_attention_mask_predict_next
-from training.utils import get_config, flatten_omega_conf, image_transform
+from training.prompting_utils import UniversalPrompting
+from training.utils import get_config
 from transformers import AutoTokenizer
 import torch.nn.functional as F
+import json
+from training.geo_data_aug import crop
+from training.custom_data import expand2square
 
 def get_vq_model_class(model_type):
     if model_type == "magvitv2":
@@ -37,7 +40,7 @@ def get_vq_model_class(model_type):
     else:
         raise ValueError(f"model_type {model_type} not supported.")
 
-def load_vqgan_new(vq_model, config, ckpt_path=None, use_ema=True):
+def load_geo_vqgan(vq_model, config, ckpt_path=None, use_ema=True):
     model = vq_model(**config)
     
     if ckpt_path is not None:
@@ -67,36 +70,31 @@ def load_config(config_path, display=True):
     return config
 
 if __name__ == '__main__':
+    # 原本图片的目录
+    ori_image_root_path = 'data/formalgeo7k/formalgeo7k_v2'
+    
+
 
     config = get_config()
+    save_path = config.output_dir
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
 
-    resume_wandb_run = config.wandb.resume
-    run_id = config.wandb.get("run_id", None)
-    if run_id is None:
-        resume_wandb_run = False
-        run_id = wandb.util.generate_id()
-        config.wandb.run_id = run_id
-
-    wandb_config = {k: v for k, v in flatten_omega_conf(config, resolve=True)}
-
-    wandb.init(
-        project="demo",
-        name=config.experiment.name + '_t2i' + f'_{config.mode}',
-        config=wandb_config,
-    )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    tokenizer = AutoTokenizer.from_pretrained(config.model.showo.llm_model_path, padding_side="left")
+    tokenizer = AutoTokenizer.from_pretrained(config.model.geouni.llm_model_path, padding_side="left")
 
     uni_prompting = UniversalPrompting(tokenizer, max_text_len=config.dataset.preprocessing.max_seq_length,
-                                       special_tokens=("<|soi|>", "<|eoi|>", "<|sov|>", "<|eov|>", "<|t2i|>", "<|mmu|>", "<|t2v|>", "<|v2v|>", "<|lvg|>"),
-                                       ignore_id=-100, cond_dropout_prob=config.training.cond_dropout_prob)
+                                       special_tokens=(
+                                           "<|soi|>", "<|eoi|>", "<|t2i|>", "<|mmu|>", "<|mix|>"
+                                       ),
+                                       ignore_id=-100)
 
     vq_model = get_vq_model_class(config.model.vq_model.type)
 
     
     if config.model.vq_model.type == "geo": 
-        vq_model = load_vqgan_new(vq_model, config.model.vq_model.vq_model_config, ckpt_path=config.model.vq_model.pretrained_model_path).to(device)
+        vq_model = load_geo_vqgan(vq_model, config.model.vq_model.vq_model_config, ckpt_path=config.model.vq_model.pretrained_model_path).to(device)
         vq_model.requires_grad_(False)
         vq_model.eval()
         
@@ -106,75 +104,71 @@ if __name__ == '__main__':
         vq_model.requires_grad_(False)
         vq_model.eval()
 
-    model = Showo.from_pretrained(config.model.showo.pretrained_model_path).to(device)
+    model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, torch_dtype=torch.bfloat16).to(device)    
     model.eval()
 
-    mask_token_id = model.config.mask_token_id
 
     # load from users passed arguments
     if config.get("validation_prompts_file", None) is not None:
         config.dataset.params.validation_prompts_file = config.validation_prompts_file
     config.training.batch_size = config.batch_size
-    config.training.guidance_scale = config.guidance_scale
-    config.training.generation_timesteps = config.generation_timesteps
     # load from users passed arguments
     if config.mode == 't2i':
+        validation_info = []
         with open(config.dataset.params.validation_prompts_file, "r") as f:
-            validation_prompts = f.read().splitlines()
+            validation_info = json.load(f)
 
-        for step in tqdm(range(0, len(validation_prompts), config.training.batch_size)):
-            prompts = validation_prompts[step:step + config.training.batch_size]
+        for step in tqdm(range(0, len(validation_info), config.training.batch_size)):
+            temp_info = validation_info[step:step + config.training.batch_size]
+            prompts = []
+            for item in temp_info:
+                assert item['conversations'][0]['from'] == 'human'
+                prompts.append(item['conversations'][0]['value'])
 
-            image_tokens = torch.ones((len(prompts), config.model.showo.num_vq_tokens),
-                                      dtype=torch.long, device=device) * mask_token_id
 
-            input_ids, _ = uni_prompting((prompts, image_tokens), 't2i_gen')
-
-            if config.training.guidance_scale > 0:
-                uncond_input_ids, _ = uni_prompting(([''] * len(prompts), image_tokens), 't2i_gen')
-                attention_mask = create_attention_mask_predict_next(torch.cat([input_ids, uncond_input_ids], dim=0),
-                                                                    pad_id=int(uni_prompting.sptids_dict['<|pad|>']),
-                                                                    soi_id=int(uni_prompting.sptids_dict['<|soi|>']),
-                                                                    eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']),
-                                                                    rm_pad_in_image=True)
-            else:
-                attention_mask = create_attention_mask_predict_next(input_ids,
-                                                                    pad_id=int(uni_prompting.sptids_dict['<|pad|>']),
-                                                                    soi_id=int(uni_prompting.sptids_dict['<|soi|>']),
-                                                                    eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']),
-                                                                    rm_pad_in_image=True)
-                uncond_input_ids = None
-
-            if config.get("mask_schedule", None) is not None:
-                schedule = config.mask_schedule.schedule
-                args = config.mask_schedule.get("params", {})
-                mask_schedule = get_mask_chedule(schedule, **args)
-            else:
-                mask_schedule = get_mask_chedule(config.training.get("mask_schedule", "cosine"))
-
+            input_ids, attention_masks = uni_prompting(prompts, 't2i_gen')
+            input_ids = input_ids.to(device)
+            attention_masks = attention_masks.to(device)
             with torch.no_grad():
                 gen_token_ids = model.t2i_generate(
                     input_ids=input_ids,
-                    uncond_input_ids=uncond_input_ids,
-                    attention_mask=attention_mask,
-                    guidance_scale=config.training.guidance_scale,
+                    pad_token_id=uni_prompting.text_tokenizer.pad_token_id,
+                    attention_masks=attention_masks,
                     temperature=config.training.get("generation_temperature", 1.0),
-                    timesteps=config.training.generation_timesteps,
-                    noise_schedule=mask_schedule,
-                    noise_type=config.training.get("noise_type", "mask"),
-                    seq_len=config.model.showo.num_vq_tokens,
-                    uni_prompting=uni_prompting,
-                    config=config,
                 )
 
-            gen_token_ids = torch.clamp(gen_token_ids, max=config.model.showo.codebook_size - 1, min=0)
             images = vq_model.decode_code(gen_token_ids)
 
             images = torch.clamp((images + 1.0) / 2.0, min=0.0, max=1.0)
             images *= 255.0
             #images = images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
             images = images.detach().cpu().permute(0, 2, 3, 1).numpy().astype(np.uint8)
-            pil_images = [Image.fromarray(image) for image in images]
+            gen_images = [Image.fromarray(image) for image in images]
+            for i, gen_image in enumerate(gen_images):
+                caption = prompts[i]
+                ori_image = Image.open(os.path.join(ori_image_root_path, temp_info[i]['image'])).convert('RGB')
+                ori_image = expand2square(crop(ori_image), (255, 255, 255))
+                # 调整 ori_image 的大小，使其与 gen_image 保持一致
+                ori_image = ori_image.resize(gen_image.size, Image.Resampling.LANCZOS)
+                 # 创建一个新的图像，宽度为两个图像宽度之和，高度为两个图像高度加上文本高度
+                new_width = gen_image.width + ori_image.width
+                # text_height = font.getsize(caption)[1]  # 获取文本高度
+                new_height = gen_image.height # + text_height
+                new_image = Image.new('RGB', (new_width, new_height), (255, 255, 255))  # 白色背景
 
-            wandb_images = [wandb.Image(image, caption=prompts[i]) for i, image in enumerate(pil_images)]
-            wandb.log({"generated_images": wandb_images}, step=step)
+                # 将 gen_image 和 ori_image 拼接到新图像中
+                new_image.paste(gen_image, (0, 0))
+                new_image.paste(ori_image, (gen_image.width, 0))
+
+                # 在新图像下方添加文本
+                # draw = ImageDraw.Draw(new_image)
+                # text_width = font.getsize(caption)[0]
+                # text_x = (new_width - text_width) // 2  # 文本居中
+                # text_y = gen_image.height
+                # draw.text((text_x, text_y), caption, font=font, fill=(0, 0, 0))  # 黑色文本
+                
+                image_id = temp_info[i]['image'].split('/')[-1].replace('.png', '')
+                new_image.save(os.path.join(save_path, f'combined_{image_id}.png'))  # 保存图像为 PNG 格式
+
+
+            

@@ -8,8 +8,7 @@ import argparse
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 import sys
-#sys.path.append('/lustre/home/2001110054/Show-o')  # 项目根目录
-sys.path.append('/lustre/home/2201210053/GEO-Show-o')  # 项目根目录
+sys.path.append('/lustre/home/2001110054/Show-o')  # 项目根目录
 from models import VQModel, MAGVITv2
 from training.geo_data_aug import crop
 

@@ -52,7 +52,7 @@ def enhance_image(image, enhancements=None, probabilities=None):
     if enhancements is None:
         enhancements = [random_rotate, crop]
     if probabilities is None:
-        probabilities = [0.5, 1.0]  # 每种方法被选中的概率
+        probabilities = [-0.1, 1.0]  # 每种方法被选中的概率
         
     for enhance, probability in zip(enhancements, probabilities):
         if random.random() < probability:

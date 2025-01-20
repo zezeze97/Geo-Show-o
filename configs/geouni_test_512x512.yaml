@@ -1,0 +1,42 @@
+output_dir: outputs/geouni-512x512-0119-debug/gen_imgs
+model:
+    vq_model:
+        type: "geo"
+        vq_model_config: 
+            double_z: False
+            z_channels: 13
+            resolution: 512
+            in_channels: 3
+            out_ch: 3
+            ch: 128
+            ch_mult: [1,2,2,2,4,4]   # num_down = len(ch_mult)-1
+            num_res_blocks: 4
+        pretrained_model_path: "/lustre/home/2201210053/GEOMETERY/OpenMagVit-CKPT/expr_1120_mask_down32_z13/ckpt/epoch=184-step=68820.ckpt"
+
+    geouni:
+        load_from_geouni: False
+        pretrained_model_path: "outputs/geouni-512x512-0119-debug/checkpoint-1500/unwrapped_model"
+        vocab_size: 159864
+        llm_vocab_size: 151665
+        llm_model_path: 'Qwen/Qwen2.5-0.5B'
+        codebook_size: 8192
+        num_vq_tokens: 256
+        num_new_special_tokens: 7  # <|soi|>, <|eoi|>, <|t2i|>, <|mmu|>, <|mix|>, <|sot|>, [PAD]
+
+dataset:
+    gen_type: "t2i"
+    und_type: "captioning"
+    params:
+        batch_size: ${training.batch_size}
+        shuffle_buffer_size: 1000
+        num_workers: 32
+        resolution: 512
+        pin_memory: True
+        persistent_workers: True
+
+    preprocessing:
+        max_seq_length: 384
+        resolution: 512
+
+training:
+    batch_size: 20

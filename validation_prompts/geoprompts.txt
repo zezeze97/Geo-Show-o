@@ -1,6 +1,0 @@
-Draw a geometric image based on consCDL: Shape(JK,KL,LJ) and imgCDL: Equal(LengthOfLine(JK),33),Equal(LengthOfLine(LK),x),Equal(MeasureOfAngle(KLJ),45),PerpendicularBetweenLine(JK,LK)
-Draw a geometric image based on this description: JK=33, LK=x, ∠KLJ=45°, JK⊥LK.
-Draw a geometric image based on this description: JK=33, LK=x, ∠KLJ=45°, JK⊥LK, consCDL: Shape(JK,KL,LJ) and imgCDL: Equal(LengthOfLine(JK),33),Equal(LengthOfLine(LK),x),Equal(MeasureOfAngle(KLJ),45),PerpendicularBetweenLine(JK,LK)
-Draw a geometric image based on consCDL: Shape(OCD,DC),Shape(OD,ODA,AO),Shape(CD,DO,OB,BC),Shape(OBC,CB),Shape(BO,OA,OAB),Collinear(AOB),Cocircular(O,ABCD) and imgCDL: Equal(MeasureOfAngle(BCD),110)
-Draw a geometric image based on this description: ∠BCD=110°, the center of ⊙O is O, AB is the diameter of circle O.
-Draw a geometric image based on this description: ∠BCD=110°, the center of ⊙O is O, AB is the diameter of circle O, consCDL: Shape(OCD,DC),Shape(OD,ODA,AO),Shape(CD,DO,OB,BC),Shape(OBC,CB),Shape(BO,OA,OAB),Collinear(AOB),Cocircular(O,ABCD) and imgCDL: Equal(MeasureOfAngle(BCD),110)

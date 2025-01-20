@@ -1,4 +1,3 @@
-python3 geo_inference_t2i.py config=configs/geo_showo_demo_512x512.yaml \
-batch_size=1 validation_prompts_file=validation_prompts/t2i_merged.txt \
-guidance_scale=5 generation_timesteps=100 \
+python3 geo_inference_t2i.py config=configs/geouni_test_512x512.yaml \
+batch_size=8 validation_prompts_file=data/formalgeo7k/formalgeo7k_v2/custom_json/t2i_overfit/train.json \
 mode='t2i'

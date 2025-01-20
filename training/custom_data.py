@@ -1,32 +1,11 @@
 # coding=utf-8
-import itertools
 import json
-import math
 import os
-import random
-import re
-from functools import partial
-from typing import List, Optional, Union
 from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
 from .geo_data_aug import enhance_image
 from PIL import Image
 import torch
-
-Image.warnings.simplefilter('error', Image.DecompressionBombWarning)
-
-import webdataset as wds
-import yaml
-from braceexpand import braceexpand
-from torch.utils.data import default_collate
 from torchvision import transforms
-from transformers import PreTrainedTokenizer
-from webdataset.tariterators import (
-    base_plus_ext,
-    tar_file_expander,
-    url_opener,
-    valid_sample,
-)
 
 
 def expand2square(pil_img, background_color):
@@ -92,6 +71,7 @@ class LazySupervisedDataset(Dataset):
 
     def __getitem__(self, i):
         sources = self.list_data_dict[i]
+        
         assert len(sources['conversations']) == 2
         instruction = ''
         response = ''
@@ -100,32 +80,33 @@ class LazySupervisedDataset(Dataset):
                 instruction = item['value']
             elif item['from'] == 'gpt':
                 response = item['value']
-            if self.is_t2i or self.is_mmu:
-                if 'image' in sources:
-                    image_file = sources['image']
-                    image = Image.open(os.path.join(self.image_folder, image_file)).convert('RGB')
-                    if self.geo_customized_aug:
-                        image = enhance_image(image)
-                    if self.image_aspect_ratio == 'pad':
-                        image = expand2square(image, (255, 255, 255))
-                    image = image_transform(image, self.resolution)
-                else:
-                    image = torch.zeros(3, self.resolution, self.resolution)
+        if self.is_t2i or self.is_mmu:
+            if 'image' in sources:
+                image_file = sources['image']
+                image = Image.open(os.path.join(self.image_folder, image_file)).convert('RGB')
+                if self.geo_customized_aug:
+                    image = enhance_image(image)
+                if self.image_aspect_ratio == 'pad':
+                    
+                    image = expand2square(image, (255, 255, 255))
+                image = image_transform(image, self.resolution)
+            else:
+                image = torch.zeros(3, self.resolution, self.resolution)
         
-                if self.is_t2i:
-                    text = instruction
-                elif self.is_mmu:
-                    text = 'USER: \n' + instruction + ' ASSISTANT:' + response
-            
-                data_dict = {
-                    "images": image,
-                    "input_ids": text
-                }
-            elif self.is_lm:
+            if self.is_t2i:
+                text = instruction
+            elif self.is_mmu:
                 text = 'USER: \n' + instruction + ' ASSISTANT:' + response
-                data_dict = {
+            
+            data_dict = {
+                "images": image,
                 "input_ids": text
-                }
+            }
+        elif self.is_lm:
+            text = 'USER: \n' + instruction + ' ASSISTANT:' + response
+            data_dict = {
+                "input_ids": text
+            }
             
             
         return data_dict
