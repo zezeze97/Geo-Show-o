@@ -15,7 +15,7 @@ model:
 
     geouni:
         load_from_geouni: False
-        pretrained_model_path: "outputs/geouni-512x512-0119-debug/checkpoint-1500/unwrapped_model"
+        pretrained_model_path: "outputs/geouni-512x512-0120/checkpoint-52000/unwrapped_model"
         vocab_size: 159864
         llm_vocab_size: 151665
         llm_model_path: 'Qwen/Qwen2.5-0.5B'

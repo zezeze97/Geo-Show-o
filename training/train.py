@@ -353,7 +353,10 @@ def main():
     data_time_m = AverageMeter()
     end = time.time()
 
+    stop_training = False
     for epoch in range(0, num_train_epochs):
+        if stop_training:
+            break
         model.train()
         for batch, batch_idx, dataloader_idx in combined_dataloader:
             # for loss calculation
@@ -466,6 +469,7 @@ def main():
 
             # Stop training if max steps is reached
             if global_step >= config.training.max_train_steps:
+                stop_training = True
                 break
             # End for
 
@@ -562,7 +566,7 @@ def generate_images(
             attention_masks=attention_masks,
             temperature=config.training.get("generation_temperature", 1.0),
         )
-        print("gen_token_ids :", gen_token_ids.shape)
+        # print("gen_token_ids :", gen_token_ids.shape)
 
     images = vq_model.decode_code(gen_token_ids)
     
