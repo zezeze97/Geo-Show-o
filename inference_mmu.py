@@ -14,15 +14,13 @@
 # limitations under the License.
 
 import os
-os.environ["TOKENIZERS_PARALLELISM"] = "true"
-os.environ["WANDB_MODE"]="offline"
 from PIL import Image
 from tqdm import tqdm
 import numpy as np
 import torch
 import wandb
-from models import Showo, MAGVITv2, VQModel
-from training.prompting_utils import UniversalPrompting, create_attention_mask_for_mmu
+from models import MAGVITv2, VQModel, GeoUniForCausalLM
+from training.prompting_utils import UniversalPrompting
 from training.utils import get_config, flatten_omega_conf
 from training.geo_data_aug import crop
 from training.custom_data import image_transform
@@ -50,7 +48,7 @@ def get_vq_model_class(model_type):
     else:
         raise ValueError(f"model_type {model_type} not supported.")
 
-def load_vqgan_new(vq_model, config, ckpt_path=None, use_ema=True):
+def load_geo_vqgan(vq_model, config, ckpt_path=None, use_ema=True):
     model = vq_model(**config)
     
     if ckpt_path is not None:
@@ -75,33 +73,23 @@ def load_vqgan_new(vq_model, config, ckpt_path=None, use_ema=True):
 if __name__ == '__main__':
 
     config = get_config()
-
-    resume_wandb_run = config.wandb.resume
-    run_id = config.wandb.get("run_id", None)
-    if run_id is None:
-        resume_wandb_run = False
-        run_id = wandb.util.generate_id()
-        config.wandb.run_id = run_id
-
-    wandb_config = {k: v for k, v in flatten_omega_conf(config, resolve=True)}
-
-    wandb.init(
-        project="demo",
-        name=config.experiment.name + '_mmu',
-        config=wandb_config,
-    )
+    save_path = config.output_dir
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    tokenizer = AutoTokenizer.from_pretrained(config.model.showo.llm_model_path, padding_side="left")
+    tokenizer = AutoTokenizer.from_pretrained(config.model.geouni.llm_model_path, padding_side="left")
 
     uni_prompting = UniversalPrompting(tokenizer, max_text_len=config.dataset.preprocessing.max_seq_length,
-                                       special_tokens=("<|soi|>", "<|eoi|>", "<|sov|>", "<|eov|>", "<|t2i|>", "<|mmu|>", "<|t2v|>", "<|v2v|>", "<|lvg|>"),
-                                       ignore_id=-100, cond_dropout_prob=config.training.cond_dropout_prob)
+                                       special_tokens=(
+                                           "<|soi|>", "<|eoi|>", "<|t2i|>", "<|mmu|>", "<|mix|>"
+                                       ),
+                                       ignore_id=-100)
 
     vq_model = get_vq_model_class(config.model.vq_model.type)
    
     if config.model.vq_model.type == "geo": 
-        vq_model = load_vqgan_new(vq_model, config.model.vq_model.vq_model_config, ckpt_path=config.model.vq_model.pretrained_model_path).to(device)
+        vq_model = load_geo_vqgan(vq_model, config.model.vq_model.vq_model_config, ckpt_path=config.model.vq_model.pretrained_model_path).to(device)
         vq_model.requires_grad_(False)
         vq_model.eval()
         
@@ -111,16 +99,15 @@ if __name__ == '__main__':
         vq_model.requires_grad_(False)
         vq_model.eval()
 
-    model = Showo.from_pretrained(config.model.showo.pretrained_model_path).to(device)
+    model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, torch_dtype=torch.bfloat16).to(device)    
     model.eval()
-
-    temperature = 0.8  # 1.0 = no change, < 1.0 = less random, > 1.0 = more random, in predictions
-    top_k = 1  # retain only the top_k most likely tokens, clamp others to have 0 probability
+    
+    temperature = 1.0
 
     file_list = os.listdir(config.mmu_image_root)
     responses = ['' for i in range(len(file_list))]
     images = []
-    config.question = config.question.split(' *** ')
+    
     for i, file_name in enumerate(tqdm(file_list)):
         image_path = os.path.join(config.mmu_image_root, file_name)
         image_ori = Image.open(image_path).convert("RGB")
@@ -130,42 +117,29 @@ if __name__ == '__main__':
         image = image.unsqueeze(0)
         images.append(image)
         image_tokens = vq_model.get_code(image) + len(uni_prompting.text_tokenizer)
-        batch_size = 1
 
-        for question in config.question:
-            if not config.model.showo.w_clip_vit:
-                input_ids = uni_prompting.text_tokenizer(['USER: \n' + question + ' ASSISTANT:'])['input_ids']
-                # input_ids = uni_prompting.text_tokenizer([' \n' + question])['input_ids']
-                input_ids = torch.tensor(input_ids).to(device)
+        
+        # input_ids = uni_prompting.text_tokenizer(['USER: \n' + question + ' ASSISTANT:'])['input_ids']
+        input_ids = uni_prompting.text_tokenizer(['USER: \n'])['input_ids']
+                            
+        input_ids = torch.tensor(input_ids).to(device)
 
-                input_ids = torch.cat([
-                    (torch.ones(input_ids.shape[0], 1) * uni_prompting.sptids_dict['<|mmu|>']).to(device),
-                    (torch.ones(input_ids.shape[0], 1) * uni_prompting.sptids_dict['<|soi|>']).to(device),
-                    image_tokens,
-                    (torch.ones(input_ids.shape[0], 1) * uni_prompting.sptids_dict['<|eoi|>']).to(device),
-                    (torch.ones(input_ids.shape[0], 1) * uni_prompting.sptids_dict['<|sot|>']).to(device),
-                    input_ids
-                ], dim=1).long()
-            
-                attention_mask = create_attention_mask_for_mmu(input_ids.to(device),
-                                                              eoi_id=int(uni_prompting.sptids_dict['<|eoi|>']))
-                
-                cont_toks_list = model.mmu_generate(input_ids, attention_mask=attention_mask,
-                                            max_new_tokens=config.max_new_tokens, top_k=top_k,
-                                            eot_token=uni_prompting.sptids_dict['<|eot|>'])
+        input_ids = torch.cat([
+            (torch.ones(input_ids.shape[0], 1) * uni_prompting.sptids_dict['<|mmu|>']).to(device),
+            (torch.ones(input_ids.shape[0], 1) * uni_prompting.sptids_dict['<|soi|>']).to(device),
+            image_tokens,
+            (torch.ones(input_ids.shape[0], 1) * uni_prompting.sptids_dict['<|eoi|>']).to(device),
+            (torch.ones(input_ids.shape[0], 1) * uni_prompting.sptids_dict['<|sot|>']).to(device),
+            input_ids
+        ], dim=1).long()
+        output_ids = model.generate(input_ids=input_ids,
+                                    max_new_tokens=config.max_new_tokens,
+                                    temperature=temperature,
+                                    pad_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('[PAD]'),
+                                    # eot_token=uni_prompting.sptids_dict['<|eot|>'],
+                                    use_cache=True)
 
-            cont_toks_list = torch.stack(cont_toks_list).squeeze()[None]
-
-            text = uni_prompting.text_tokenizer.batch_decode(cont_toks_list, skip_special_tokens=True)
-            print(text)
-            responses[i] += f'User: ' + question + f'\n Answer : ' + text[0] + '\n'
-
-    images = torch.cat(images, dim=0)
-    images = torch.clamp((images + 1.0) / 2.0, min=0.0, max=1.0)
-    images *= 255.0
-    images = images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
-    pil_images = [Image.fromarray(image) for image in images]
-
-    wandb_images = [wandb.Image(image, caption=responses[i]) for i, image in enumerate(pil_images)]
-    wandb.log({"multimodal understanding": wandb_images}, step=0)
+        text = uni_prompting.text_tokenizer.batch_decode(output_ids[:, input_ids.shape[1]:], skip_special_tokens=True)
+        print(text)
+    # responses[i] += f'User: ' + question + f'\n Answer : ' + text[0] + '\n'
 

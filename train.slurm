@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -o job.%j.out
-#SBATCH --partition=GPU40G
+#SBATCH --partition=GPU80G
 #SBATCH --qos=low
 #SBATCH -J GeoUni
 #SBATCH --nodes=1    
@@ -25,5 +25,5 @@ export OMP_NUM_THREADS=16
 # source activate showo
 source activate show-o
 
-# accelerate launch --config_file accelerate_configs/1_gpu.yaml --main_process_port=8888 training/train.py config=configs/geouni_pretraining_512x512.yaml
-accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml --main_process_port=8888 training/train.py config=configs/geouni_pretraining_512x512.yaml
+# accelerate launch --config_file accelerate_configs/1_gpu.yaml --main_process_port=8888 training/train.py config=configs/geouni_sft_512x512.yaml
+accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml --main_process_port=8888 training/train.py config=configs/geouni_sft_512x512.yaml

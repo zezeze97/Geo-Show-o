@@ -115,9 +115,10 @@ def main():
         split_batches=True,
     )
 
-    total_batch_size_per_gpu = config.training.batch_size_t2i
+    total_batch_size_per_gpu = config.training.batch_size_t2i + config.training.batch_size_mmu
 
-    total_batch_size = config.training.batch_size_t2i * accelerator.num_processes * config.training.gradient_accumulation_steps
+    total_batch_size = ((config.training.batch_size_t2i + config.training.batch_size_mmu) 
+                        * accelerator.num_processes * config.training.gradient_accumulation_steps)
 
     if accelerator.distributed_type == DistributedType.DEEPSPEED:
         accelerator.state.deepspeed_plugin.deepspeed_config["train_micro_batch_size_per_gpu"] = (
@@ -302,10 +303,36 @@ def main():
                                           pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
     else:
         raise ValueError(f"Unsupported dataset type {config.dataset.gen_type}")
+    
+    
+    
+    # Data for image captioning
+    if config.dataset.und_type == "captioning":
+        dataset_mmu = LazySupervisedDataset(image_folder=dataset_config.mmu_image_folder,
+                                    json_path=dataset_config.mmu_json_path,
+                                    resolution=preproc_config.resolution,
+                                    is_mmu=True)
+        if accelerator.num_processes > 1:
+            sampler = DistributedSampler(dataset_mmu,
+                                         num_replicas=accelerator.num_processes,
+                                         rank=accelerator.process_index,
+                                         shuffle=True,
+                                         )
+            shuffle = False
+        else:
+            sampler = None
+            shuffle = True
+        
+        train_dataloader_mmu =  DataLoader(dataset_mmu, batch_size=config.training.batch_size_mmu,
+                                          sampler=sampler, shuffle=shuffle, num_workers=dataset_config.num_workers,
+                                          pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
+    else:
+        raise NotImplementedError(f"Unsupported dataset type {config.dataset.und_type}")
 
     # Combine these dataloaders into a single iterable model
     iterables = {
         "t2i_flow": train_dataloader_t2i,
+        "mmu_flow": train_dataloader_mmu,
     }
 
     combined_dataloader = CombinedLoader(iterables, mode=config.dataset.combined_loader_mode)
@@ -358,34 +385,60 @@ def main():
         if stop_training:
             break
         model.train()
-        for batch, batch_idx, dataloader_idx in combined_dataloader:
+        for batch, batch_idx, dataloader_idx in combined_dataloader:   
+            data_time_m.update(time.time() - end)   
             # for loss calculation
-            pixel_values, texts = batch["t2i_flow"]["images"], batch["t2i_flow"]["input_ids"]
-            pixel_values = pixel_values.to(accelerator.device, non_blocking=True)
-            data_time_m.update(time.time() - end)
-
-            # Encode images to image tokens, mask them and create input and labels
+            batch_size_t2i = batch["t2i_flow"]["images"].shape[0]
+            batch_size_mmu = batch["mmu_flow"]["images"].shape[0]
             
+            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
+            # Build formatted sequences for class-conditional/text-to-image generation
+            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
+            pixel_values, instructions = batch["t2i_flow"]["images"], batch["t2i_flow"]["instructions"]
+            pixel_values = pixel_values.to(accelerator.device, non_blocking=True)
+            
+
+            # Encode images to image tokens and create input and labels
             image_tokens_ori = vq_model.get_code(pixel_values)
             image_tokens = image_tokens_ori + len(uni_prompting.text_tokenizer)
+            input_ids, attention_mask, labels = uni_prompting((instructions, image_tokens, image_tokens), task='t2i')
             
-            input_ids, attention_masks, labels = uni_prompting((texts, image_tokens, image_tokens), task='t2i')
+            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
+            # Build formatted sequences for captioning/multimodal understanding
+            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
+            pixel_values_mmu, instructions_mmu, responses_mmu = batch["mmu_flow"]["images"], batch["mmu_flow"]["instructions"], batch["mmu_flow"]["responses"]
+            pixel_values_mmu = pixel_values_mmu.to(accelerator.device, non_blocking=True)
+            image_tokens_mmu = vq_model.get_code(pixel_values_mmu)
+            image_tokens_mmu = image_tokens_mmu + len(uni_prompting.text_tokenizer)
+            input_ids_mmu, attention_mask_mmu, labels_mmu = uni_prompting((image_tokens_mmu, instructions_mmu, responses_mmu), 'mmu')
+            input_ids_mmu = input_ids_mmu.to(accelerator.device, non_blocking=True)
+            
+            attention_mask = torch.cat([attention_mask, attention_mask_mmu], dim=0)
+            input_ids = torch.cat((input_ids, input_ids_mmu.to(input_ids.device)), dim=0)
+            labels = torch.cat((labels, labels_mmu.to(input_ids.device)), dim=0)
+            
+        
             
             if global_step == 0 and epoch == 0:
                 logger.info("Input ids: {}".format(input_ids))
-                logger.info("Attention masks: {}".format(attention_masks))
+                logger.info("Attention mask: {}".format(attention_mask))
                 logger.info("Labels: {}".format(labels))
 
             with accelerator.accumulate(model):
-                logits, loss_t2i = model(
+                logits, loss_t2i, loss_mmu = model(
                     input_ids=input_ids,
-                    attention_mask=attention_masks,
-                    labels=labels
+                    attention_mask=attention_mask,
+                    labels=labels,
+                    batch_size_t2i=batch_size_t2i,
+                    batch_size_mmu=batch_size_mmu,
                 )
 
                 avg_loss_t2i = accelerator.gather(loss_t2i.repeat(config.training.batch_size_t2i)).mean()
+                avg_loss_mmu = accelerator.gather(loss_mmu.repeat(config.training.batch_size_mmu)).mean()
                 
-                loss = config.training.t2i_coeff * loss_t2i 
+                loss = config.training.t2i_coeff * loss_t2i + \
+                    config.training.mmu_coeff * loss_mmu
+                    
 
 
                 accelerator.backward(loss)
@@ -419,6 +472,7 @@ def main():
                     )
                     logs = {
                         "step_loss_t2i": avg_loss_t2i.item(),
+                        "step_loss_mmu": avg_loss_mmu.item(),
                         "lr": lr_scheduler.get_last_lr()[0],
                         "samples/sec/gpu": samples_per_second_per_gpu,
                         "data_time": data_time_m.val,
@@ -429,6 +483,7 @@ def main():
                     logger.info(
                         f"Step: {global_step + 1} "
                         f"Loss_t2i: {avg_loss_t2i.item():0.4f} "
+                        f"Loss_mmu: {avg_loss_mmu.item():0.4f} "
                         f"Data (t): {data_time_m.val:0.4f}, {samples_per_second_per_gpu:0.2f}/s/gpu "
                         f"Batch (t): {batch_time_m.val:0.4f} "
                         f"LR: {lr_scheduler.get_last_lr()[0]:0.6f}"
@@ -461,7 +516,7 @@ def main():
                         input_ids,
                         image_tokens_ori,
                         batch["t2i_flow"]["images"],
-                        texts,
+                        instructions,
                         logits,
                     )
 

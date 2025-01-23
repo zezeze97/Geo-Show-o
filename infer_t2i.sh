@@ -19,15 +19,15 @@ source activate show-o
 
 srun python3 inference_t2i.py config=configs/geouni_test_512x512.yaml \
 batch_size=16 validation_prompts_file=data/formalgeo7k/formalgeo7k_v2/custom_json/t2i/test_2cdl2i.json \
-output_dir=outputs/geouni-512x512-0120/gen_imgs_2cdl2i \
+output_dir=outputs/geouni-512x512-0121-t2i-mmu/gen_imgs_2cdl2i \
 mode='t2i'
 
 srun python3 inference_t2i.py config=configs/geouni_test_512x512.yaml \
 batch_size=16 validation_prompts_file=data/formalgeo7k/formalgeo7k_v2/custom_json/t2i/test_caption2i.json \
-output_dir=outputs/geouni-512x512-0120/gen_imgs_caption2i \
+output_dir=outputs/geouni-512x512-0121-t2i-mmu/gen_imgs_caption2i \
 mode='t2i'
 
 srun python3 inference_t2i.py config=configs/geouni_test_512x512.yaml \
 batch_size=16 validation_prompts_file=data/formalgeo7k/formalgeo7k_v2/custom_json/t2i/test_caption_2cdl2i.json \
-output_dir=outputs/geouni-512x512-0120/gen_imgs_caption_2cdl2i \
+output_dir=outputs/geouni-512x512-0121-t2i-mmu/gen_imgs_caption_2cdl2i \
 mode='t2i'

@@ -1,4 +1,4 @@
-output_dir: outputs/geouni-512x512-0119-debug/gen_imgs
+output_dir: outputs/geouni-512x512-0121-t2i-mmu/gen_imgs
 model:
     vq_model:
         type: "geo"
@@ -15,13 +15,13 @@ model:
 
     geouni:
         load_from_geouni: False
-        pretrained_model_path: "outputs/geouni-512x512-0120/checkpoint-52000/unwrapped_model"
-        vocab_size: 159864
+        pretrained_model_path: "outputs/geouni-512x512-0121-t2i-mmu"
+        vocab_size: 159865
         llm_vocab_size: 151665
-        llm_model_path: 'Qwen/Qwen2.5-0.5B'
+        llm_model_path: 'Qwen/Qwen2.5-Math-1.5B'
         codebook_size: 8192
         num_vq_tokens: 256
-        num_new_special_tokens: 7  # <|soi|>, <|eoi|>, <|t2i|>, <|mmu|>, <|mix|>, <|sot|>, [PAD]
+        num_new_special_tokens: 8  # <|soi|>, <|eoi|>, <|t2i|>, <|mmu|>, <|mix|>, <|sot|>, <|eot|>, [PAD]
 
 dataset:
     gen_type: "t2i"

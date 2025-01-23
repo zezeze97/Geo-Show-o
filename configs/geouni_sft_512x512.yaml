@@ -5,8 +5,8 @@ wandb:
 
 experiment:
     project: "training"
-    name: "geouni-512x512-0120"
-    output_dir: "outputs/geouni-512x512-0120"
+    name: "geouni-512x512-0122-t2i-mmu"
+    output_dir: "outputs/geouni-512x512-0122-t2i-mmu"
     save_every: 500
     generate_every: 500
     log_every: 50
@@ -32,12 +32,12 @@ model:
     geouni:
         load_from_geouni: false
         pretrained_model_path: null
-        vocab_size: 159864
+        vocab_size: 159865
         llm_vocab_size: 151665
-        llm_model_path: 'Qwen/Qwen2.5-0.5B'
+        llm_model_path: 'Qwen/Qwen2.5-Math-1.5B'
         codebook_size: 8192
         num_vq_tokens: 256
-        num_new_special_tokens: 7 # <|soi|>, <|eoi|>, <|t2i|>, <|mmu|>, <|mix|>, <|sot|>, [PAD]
+        num_new_special_tokens: 8 # <|soi|>, <|eoi|>, <|t2i|>, <|mmu|>, <|mix|>, <|sot|>, <|eot|>, [PAD]
 
 dataset:
     gen_type: "t2i"
@@ -46,6 +46,8 @@ dataset:
     params:
         t2i_image_folder: data/formalgeo7k/formalgeo7k_v2
         t2i_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/t2i/train.json
+        mmu_image_folder: data/formalgeo7k/formalgeo7k_v2
+        mmu_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/qa_structure_only/qa_structure_only_train.json
         validation_prompts_file: "validation_prompts/geoprompts_test.txt"
         shuffle_buffer_size: 1000
         num_workers: 16
@@ -74,8 +76,9 @@ lr_scheduler:
         warmup_steps: 200
 
 training:
-    gradient_accumulation_steps: 1
-    batch_size_t2i: 8
+    gradient_accumulation_steps: 8
+    batch_size_t2i: 4
+    batch_size_mmu: 4
     num_train_epochs: 10000000
     mixed_precision: "bf16"
     enable_tf32: True
@@ -83,5 +86,4 @@ training:
     max_train_steps: 50000 # to be determined according to the scale of high-quality dataset
     max_grad_norm: null
     t2i_coeff: 1.0
-    lm_coeff: 0.1
     mmu_coeff: 1.0

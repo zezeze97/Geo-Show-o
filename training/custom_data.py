@@ -80,35 +80,38 @@ class LazySupervisedDataset(Dataset):
                 instruction = item['value']
             elif item['from'] == 'gpt':
                 response = item['value']
-        if self.is_t2i or self.is_mmu:
-            if 'image' in sources:
-                image_file = sources['image']
-                image = Image.open(os.path.join(self.image_folder, image_file)).convert('RGB')
-                if self.geo_customized_aug:
-                    image = enhance_image(image)
-                if self.image_aspect_ratio == 'pad':
-                    
-                    image = expand2square(image, (255, 255, 255))
-                image = image_transform(image, self.resolution)
-            else:
-                image = torch.zeros(3, self.resolution, self.resolution)
         
-            if self.is_t2i:
-                text = instruction
-            elif self.is_mmu:
-                text = 'USER: \n' + instruction + ' ASSISTANT:' + response
+        if 'image' in sources:
+            image_file = sources['image']
+            image = Image.open(os.path.join(self.image_folder, image_file)).convert('RGB')
+            if self.geo_customized_aug:
+                image = enhance_image(image)
+            if self.image_aspect_ratio == 'pad':
+                
+                image = expand2square(image, (255, 255, 255))
+            image = image_transform(image, self.resolution)
+        else:
+            image = torch.zeros(3, self.resolution, self.resolution)
+    
+        if self.is_t2i:
+            data_dict = {
+                "images": image,
+                "instructions": instruction
+            }
+        elif self.is_mmu:
+            # text = 'USER: \n' + instruction + ' ASSISTANT:' + response
+            
+            if instruction.startswith('<image>\n'):
+                instruction = instruction.lstrip('<image>\n')
+            instruction = 'USER: \n' + instruction
+            response = 'ASSISTANT:' + response
             
             data_dict = {
                 "images": image,
-                "input_ids": text
+                "instructions": instruction,
+                "responses": response
             }
-        elif self.is_lm:
-            text = 'USER: \n' + instruction + ' ASSISTANT:' + response
-            data_dict = {
-                "input_ids": text
-            }
-            
-            
+               
         return data_dict
 
 

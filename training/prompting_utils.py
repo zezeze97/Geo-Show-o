@@ -24,7 +24,8 @@ class UniversalPrompting():
         """
         self.text_tokenizer = text_tokenizer
         self.text_tokenizer.add_special_tokens({'pad_token': '[PAD]',
-                                                'bos_token': '<|sot|>'})
+                                                'bos_token': '<|sot|>',
+                                                'eos_token': '<|eot|>'})
         self.text_tokenizer.add_tokens(list(special_tokens))
         self.sptids_dict = {token: torch.tensor(self.text_tokenizer.convert_tokens_to_ids([token])) for token in
                             special_tokens}
@@ -118,43 +119,38 @@ class UniversalPrompting():
             attention_masks.append(temp_masks.unsqueeze(0))
         return torch.cat(sequence_ids, dim=0), torch.cat(attention_masks, dim=0)
 
-    def mmu_prompt(self, image_ids, text_ids):
+    def mmu_prompt(self, image_ids, instruction_ids, response_ids):
         device = image_ids.device
         sequence_ids = []
         attention_masks = []
         label_ids = []
         max_text_len = self.max_text_len - 1
-        for i in range(len(text_ids)):
+        assert image_ids.shape[0] == len(instruction_ids) == len(response_ids)
+        for i in range(len(instruction_ids)):
             # note that, llama3 tokenizer automatically add the bot token at first but without eot
             # for empty list []
 
-            if len(text_ids[i]) == 0:
-                text_ids[i] = [self.text_tokenizer.bos_token_id]
-            elif text_ids[i][0] != self.text_tokenizer.bos_token_id:
-                text_ids[i] = [self.text_tokenizer.bos_token_id] + text_ids[i]
+            # add bos
+            if len(instruction_ids[i]) == 0:
+                instruction_ids[i] = [self.text_tokenizer.bos_token_id]
+            elif instruction_ids[i][0] != self.text_tokenizer.bos_token_id:
+                instruction_ids[i] = [self.text_tokenizer.bos_token_id] + instruction_ids[i]
 
-            temp_ids = text_ids[i] + [self.text_tokenizer.eos_token_id]
+            temp_ids = instruction_ids[i] + response_ids[i] + [self.text_tokenizer.eos_token_id]
+            temp_label_ids =  [self.ignore_id] * len(instruction_ids[i]) + response_ids[i] + [self.text_tokenizer.eos_token_id]
 
             if max_text_len >= len(temp_ids):
                 # minus 1 because task token was prepended to the former image tokens
                 temp_masks = [1] * (len(temp_ids) + image_ids.shape[-1] + 3) + [0] * (max_text_len - len(temp_ids))
                 temp_ids = temp_ids + [self.pad_id] * (max_text_len - len(temp_ids))
+                temp_label_ids = temp_label_ids + [self.ignore_id] * (max_text_len - len(temp_label_ids))
                 
             else:
                 # should add the eos token
                 temp_ids = temp_ids[:max_text_len - 1] + [self.text_tokenizer.eos_token_id]
+                temp_label_ids = temp_label_ids[:max_text_len - 1] + [self.text_tokenizer.eos_token_id]
                 temp_masks = [1] * (len(temp_ids) + image_ids.shape[-1] + 3)  # +3 for three special tokens
-            # prompting -- [task token] [sot] [text tokens] [eot] [soi] [image tokens] [eoi]
-            temp_label_ids = torch.cat([
-                torch.tensor([self.ignore_id]).to(device),
-                torch.tensor([self.ignore_id]).to(device),
-                torch.ones_like(image_ids[i]) * self.ignore_id,
-                torch.tensor([self.ignore_id]).to(device),
-                torch.tensor(temp_ids).to(device),
-            ], dim=0)
-
-            temp_label_ids = torch.where(temp_label_ids == self.pad_id, self.ignore_id, temp_label_ids)
-
+            # prompting -- [task token] [soi] [image tokens] [eoi] [sot] [text tokens] [eot] 
             temp_ids = torch.cat([
                 self.sptids_dict['<|mmu|>'].to(device),  # task token
                 self.sptids_dict['<|soi|>'].to(device),
@@ -162,6 +158,18 @@ class UniversalPrompting():
                 self.sptids_dict['<|eoi|>'].to(device),
                 torch.tensor(temp_ids).to(device),
             ], dim=0)
+            
+            temp_label_ids = torch.cat([
+                torch.tensor([self.ignore_id]).to(device),
+                torch.tensor([self.ignore_id]).to(device),
+                torch.ones_like(image_ids[i]) * self.ignore_id,
+                torch.tensor([self.ignore_id]).to(device),
+                torch.tensor(temp_label_ids).to(device),
+            ], dim=0)
+
+            temp_label_ids = torch.where(temp_label_ids == self.pad_id, self.ignore_id, temp_label_ids)
+
+            
 
             temp_masks = torch.tensor(temp_masks).to(device)
             sequence_ids.append(temp_ids.unsqueeze(0))
@@ -169,7 +177,7 @@ class UniversalPrompting():
             label_ids.append(temp_label_ids.unsqueeze(0))
 
         return torch.cat(sequence_ids, dim=0), torch.cat(attention_masks, dim=0), torch.cat(label_ids, dim=0)
-    
+           
     def mix_prompt(self, text_ids, image_ids, labels):
         pass
         
@@ -191,8 +199,9 @@ class UniversalPrompting():
         
         elif task == "mmu":
             image_ids = input[0]
-            text_ids = self.text_tokenizer(input[1])['input_ids']
-            sequence_ids_with_masks = self.mmu_prompt(image_ids, text_ids)
+            instruction_ids = self.text_tokenizer(input[1])['input_ids']
+            response_ids = self.text_tokenizer(input[2])['input_ids']
+            sequence_ids_with_masks = self.mmu_prompt(image_ids, instruction_ids, response_ids)
         else:
             raise NotImplementedError
 
@@ -208,17 +217,19 @@ if __name__ == '__main__':
                                            "<|soi|>", "<|eoi|>", "<|t2i|>", "<|mmu|>", "<|mix|>"),
                                        ignore_id=-100)
     
-    text_input = ['Qwen2.5 is the latest series of Qwen large language models. For Qwen2.5, we release a number of base language models and instruction-tuned language models ranging from 0.5 to 72 billion parameters',
-                  '生成随机、']
+    instructions = ['一只小猪',
+                  '生成随机']
+    responses = ['小黑猫',
+                 '']
     image_input = torch.randint(0, 10, (2, 10))
-    input, attention_mask = uni_prompting(text_input, task='t2i_gen')
+    input, attention_mask = uni_prompting(instructions, task='t2i_gen')
     print('*'*10 + ' t2i_gen ' + '*'*10)
     print(f'input: {input}')
     print(f'input shape: {input.shape}')
     print(f'attention_mask: {attention_mask}')
     print(f'attention_mask shape: {attention_mask.shape}')
     
-    input, attention_mask, label = uni_prompting((text_input, image_input, image_input), task='t2i')
+    input, attention_mask, label = uni_prompting((instructions, image_input, image_input), task='t2i')
     print('*'*10 + ' t2i ' + '*'*10)
     print(f'input: {input}')
     print(f'input shape: {input.shape}')
@@ -228,7 +239,7 @@ if __name__ == '__main__':
     print(f'label shape: {label.shape}')
     
     
-    input, attention_mask, label = uni_prompting((image_input, text_input), task='mmu')
+    input, attention_mask, label = uni_prompting((image_input, instructions, responses), task='mmu')
     print('*'*10 + ' mmu ' + '*'*10)
     print(f'input: {input}')
     print(f'input shape: {input.shape}')
