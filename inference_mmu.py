@@ -118,9 +118,9 @@ if __name__ == '__main__':
         images.append(image)
         image_tokens = vq_model.get_code(image) + len(uni_prompting.text_tokenizer)
 
-        
-        # input_ids = uni_prompting.text_tokenizer(['USER: \n' + question + ' ASSISTANT:'])['input_ids']
-        input_ids = uni_prompting.text_tokenizer(['USER: \n'])['input_ids']
+        question = '使用自然语言解析这幅图像。'
+        input_ids = uni_prompting.text_tokenizer(['USER: \n' + question])['input_ids']
+        # input_ids = uni_prompting.text_tokenizer(['USER: \n'])['input_ids']
                             
         input_ids = torch.tensor(input_ids).to(device)
 
@@ -136,6 +136,7 @@ if __name__ == '__main__':
                                     max_new_tokens=config.max_new_tokens,
                                     temperature=temperature,
                                     pad_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('[PAD]'),
+                                    eos_token_id = uni_prompting.text_tokenizer.eos_token_id,
                                     # eot_token=uni_prompting.sptids_dict['<|eot|>'],
                                     use_cache=True)
 
