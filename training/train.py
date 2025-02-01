@@ -22,6 +22,7 @@ import shutil
 import time
 from pathlib import Path
 from typing import Union
+from tqdm import tqdm
 
 import numpy as np
 from PIL import Image
@@ -115,9 +116,9 @@ def main():
         split_batches=True,
     )
 
-    total_batch_size_per_gpu = config.training.batch_size_t2i + config.training.batch_size_mmu
+    total_batch_size_per_gpu = config.training.batch_size_t2i + config.training.batch_size_formalization + config.training.batch_size_reasoning
 
-    total_batch_size = ((config.training.batch_size_t2i + config.training.batch_size_mmu) 
+    total_batch_size = (total_batch_size_per_gpu
                         * accelerator.num_processes * config.training.gradient_accumulation_steps)
 
     if accelerator.distributed_type == DistributedType.DEEPSPEED:
@@ -180,12 +181,12 @@ def main():
     #########################
     logger.info("Loading models and optimizer")
 
-    tokenizer = AutoTokenizer.from_pretrained(config.model.geouni.llm_model_path, padding_side="left")
+    tokenizer = AutoTokenizer.from_pretrained(config.model.geouni.llm_model_path)
 
     # unified prompting for geouni
-    uni_prompting = UniversalPrompting(tokenizer, max_text_len=config.dataset.preprocessing.max_seq_length,
+    uni_prompting = UniversalPrompting(tokenizer, max_len=config.dataset.preprocessing.max_seq_length,
                                        special_tokens=(
-                                           "<|soi|>", "<|eoi|>", "<|t2i|>", "<|mmu|>", "<|mix|>"
+                                           "<|sot|>", "<|eot|>", "<|soi|>", "<|eoi|>", "<|t2i|>", "<|formalization|>", "<|reasoning|>", "<|step|>", "<|conclusion|>"
                                        ),
                                        ignore_id=-100)
 
@@ -281,58 +282,74 @@ def main():
 
     num_train_epochs = config.training.num_train_epochs
     
-    # Data for generation
-    if config.dataset.gen_type == "t2i":
-        dataset_t2i = LazySupervisedDataset(image_folder=dataset_config.t2i_image_folder,
-                                    json_path=dataset_config.t2i_json_path,
-                                    resolution=preproc_config.resolution,
-                                    is_t2i=True)
-        
-        if accelerator.num_processes > 1:
-            sampler = DistributedSampler(dataset_t2i,
-                                         num_replicas=accelerator.num_processes,
-                                         rank=accelerator.process_index,
-                                         shuffle=True,
-                                         )
-            shuffle = False
-        else:
-            sampler = None
-            shuffle = True
-        train_dataloader_t2i = DataLoader(dataset_t2i, batch_size=config.training.batch_size_t2i,
-                                          sampler=sampler, shuffle=shuffle, num_workers=dataset_config.num_workers,
-                                          pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
+    # Data for t2i
+    dataset_t2i = LazySupervisedDataset(image_folder=dataset_config.t2i_image_folder,
+                                json_path=dataset_config.t2i_json_path,
+                                resolution=preproc_config.resolution,
+                                is_t2i=True)
+    
+    if accelerator.num_processes > 1:
+        sampler = DistributedSampler(dataset_t2i,
+                                        num_replicas=accelerator.num_processes,
+                                        rank=accelerator.process_index,
+                                        shuffle=True,
+                                        )
+        shuffle = False
     else:
-        raise ValueError(f"Unsupported dataset type {config.dataset.gen_type}")
+        sampler = None
+        shuffle = True
+    train_dataloader_t2i = DataLoader(dataset_t2i, batch_size=config.training.batch_size_t2i,
+                                        sampler=sampler, shuffle=shuffle, num_workers=dataset_config.num_workers,
+                                        pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
     
     
     
-    # Data for image captioning
-    if config.dataset.und_type == "captioning":
-        dataset_mmu = LazySupervisedDataset(image_folder=dataset_config.mmu_image_folder,
-                                    json_path=dataset_config.mmu_json_path,
-                                    resolution=preproc_config.resolution,
-                                    is_mmu=True)
-        if accelerator.num_processes > 1:
-            sampler = DistributedSampler(dataset_mmu,
-                                         num_replicas=accelerator.num_processes,
-                                         rank=accelerator.process_index,
-                                         shuffle=True,
-                                         )
-            shuffle = False
-        else:
-            sampler = None
-            shuffle = True
-        
-        train_dataloader_mmu =  DataLoader(dataset_mmu, batch_size=config.training.batch_size_mmu,
-                                          sampler=sampler, shuffle=shuffle, num_workers=dataset_config.num_workers,
-                                          pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
+    # Data for image formalization
+    dataset_formalization = LazySupervisedDataset(image_folder=dataset_config.formalization_image_folder,
+                                json_path=dataset_config.formalization_json_path,
+                                resolution=preproc_config.resolution,
+                                is_formalization=True)
+    if accelerator.num_processes > 1:
+        sampler = DistributedSampler(dataset_formalization,
+                                        num_replicas=accelerator.num_processes,
+                                        rank=accelerator.process_index,
+                                        shuffle=True,
+                                        )
+        shuffle = False
     else:
-        raise NotImplementedError(f"Unsupported dataset type {config.dataset.und_type}")
+        sampler = None
+        shuffle = True
+    
+    train_dataloader_formalization =  DataLoader(dataset_formalization, batch_size=config.training.batch_size_formalization,
+                                        sampler=sampler, shuffle=shuffle, num_workers=dataset_config.num_workers,
+                                        pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
+    
+    # Data for reasoning
+    dataset_reasoning = LazySupervisedDataset(image_folder=dataset_config.reasoning_image_folder,
+                                json_path=dataset_config.reasoning_json_path,
+                                resolution=preproc_config.resolution,
+                                is_reasoning=True)
+    if accelerator.num_processes > 1:
+        sampler = DistributedSampler(dataset_reasoning,
+                                        num_replicas=accelerator.num_processes,
+                                        rank=accelerator.process_index,
+                                        shuffle=True,
+                                        )
+        shuffle = False
+    else:
+        sampler = None
+        shuffle = True
+    
+    train_dataloader_reasoning =  DataLoader(dataset_reasoning, batch_size=config.training.batch_size_reasoning,
+                                        sampler=sampler, shuffle=shuffle, num_workers=dataset_config.num_workers,
+                                        pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
+    
 
     # Combine these dataloaders into a single iterable model
     iterables = {
         "t2i_flow": train_dataloader_t2i,
-        "mmu_flow": train_dataloader_mmu,
+        "formalization_flow": train_dataloader_formalization,
+        "reasoning_flow": train_dataloader_reasoning
     }
 
     combined_dataloader = CombinedLoader(iterables, mode=config.dataset.combined_loader_mode)
@@ -350,14 +367,12 @@ def main():
         path = dirs[-1] if len(dirs) > 0 else None
         if path is not None:
             path = os.path.join(config.experiment.output_dir, path)
+            checkpoint_path = f'{path}/unwrapped_model'
 
             global_step = int(os.path.basename(path).split("-")[1])
             #first_epoch = global_step // num_update_steps_per_epoch
-
-            accelerator.print(f"Resuming from checkpoint {path}/unwrapped_model/pytorch_model.bin")
-            state_dict = torch.load(f'{path}/unwrapped_model/pytorch_model.bin', map_location="cpu")
-            model.load_state_dict(state_dict, strict=True)
-            del state_dict
+            accelerator.print(f"Resuming from checkpoint {checkpoint_path}")
+            model = model.from_pretrained(checkpoint_path, attn_implementation='sdpa').to(accelerator.device)
 
     ##################################
     #       Prepare accelerator     #
@@ -389,7 +404,8 @@ def main():
             data_time_m.update(time.time() - end)   
             # for loss calculation
             batch_size_t2i = batch["t2i_flow"]["images"].shape[0]
-            batch_size_mmu = batch["mmu_flow"]["images"].shape[0]
+            batch_size_formalization = batch["formalization_flow"]["images"].shape[0]
+            batch_size_reasoning = batch["reasoning_flow"]["images"].shape[0]
             
             # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
             # Build formatted sequences for class-conditional/text-to-image generation
@@ -401,21 +417,33 @@ def main():
             # Encode images to image tokens and create input and labels
             image_tokens_ori = vq_model.get_code(pixel_values)
             image_tokens = image_tokens_ori + len(uni_prompting.text_tokenizer)
-            input_ids, attention_mask, labels = uni_prompting((instructions, image_tokens, image_tokens), task='t2i')
+            input_ids_t2i, attention_mask_t2i, labels_t2i = uni_prompting((instructions, image_tokens, image_tokens), task='t2i')
             
             # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
-            # Build formatted sequences for captioning/multimodal understanding
+            # Build formatted sequences for formalization
             # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
-            pixel_values_mmu, instructions_mmu, responses_mmu = batch["mmu_flow"]["images"], batch["mmu_flow"]["instructions"], batch["mmu_flow"]["responses"]
-            pixel_values_mmu = pixel_values_mmu.to(accelerator.device, non_blocking=True)
-            image_tokens_mmu = vq_model.get_code(pixel_values_mmu)
-            image_tokens_mmu = image_tokens_mmu + len(uni_prompting.text_tokenizer)
-            input_ids_mmu, attention_mask_mmu, labels_mmu = uni_prompting((image_tokens_mmu, instructions_mmu, responses_mmu), 'mmu')
-            input_ids_mmu = input_ids_mmu.to(accelerator.device, non_blocking=True)
+            pixel_values_formalization, instructions_formalization, responses_formalization = batch["formalization_flow"]["images"], batch["formalization_flow"]["instructions"], batch["formalization_flow"]["responses"]
+            pixel_values_formalization = pixel_values_formalization.to(accelerator.device, non_blocking=True)
+            image_tokens_formalization = vq_model.get_code(pixel_values_formalization)
+            image_tokens_formalization = image_tokens_formalization + len(uni_prompting.text_tokenizer)
+            input_ids_formalization, attention_mask_formalization, labels_formalization = uni_prompting((image_tokens_formalization, instructions_formalization, responses_formalization), 'formalization')
+            # input_ids_formalization = input_ids_formalization.to(accelerator.device, non_blocking=True)
             
-            attention_mask = torch.cat([attention_mask, attention_mask_mmu], dim=0)
-            input_ids = torch.cat((input_ids, input_ids_mmu.to(input_ids.device)), dim=0)
-            labels = torch.cat((labels, labels_mmu.to(input_ids.device)), dim=0)
+            
+            
+            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
+            # Build formatted sequences for reasoning
+            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
+            pixel_values_reasoning, instructions_reasoning, responses_reasoning = batch["reasoning_flow"]["images"], batch["reasoning_flow"]["instructions"], batch["reasoning_flow"]["responses"]
+            pixel_values_reasoning = pixel_values_reasoning.to(accelerator.device, non_blocking=True)
+            image_tokens_reasoning = vq_model.get_code(pixel_values_reasoning)
+            image_tokens_reasoning = image_tokens_reasoning + len(uni_prompting.text_tokenizer)
+            input_ids_reasoning, attention_mask_reasoning, labels_reasoning = uni_prompting((image_tokens_reasoning, instructions_reasoning, responses_reasoning), 'reasoning')
+            # input_ids_reasoning = input_ids_reasoning.to(accelerator.device, non_blocking=True)
+            
+            attention_mask = torch.cat([attention_mask_t2i, attention_mask_formalization, attention_mask_reasoning], dim=0)
+            input_ids = torch.cat((input_ids_t2i, input_ids_formalization, input_ids_reasoning), dim=0)
+            labels = torch.cat((labels_t2i, labels_formalization, labels_reasoning), dim=0)
             
         
             
@@ -425,19 +453,22 @@ def main():
                 logger.info("Labels: {}".format(labels))
 
             with accelerator.accumulate(model):
-                logits, loss_t2i, loss_mmu = model(
+                logits, loss_t2i, loss_formalization, loss_reasoning = model(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
                     labels=labels,
                     batch_size_t2i=batch_size_t2i,
-                    batch_size_mmu=batch_size_mmu,
+                    batch_size_formalization=batch_size_formalization,
+                    batch_size_reasoning=batch_size_reasoning
                 )
 
                 avg_loss_t2i = accelerator.gather(loss_t2i.repeat(config.training.batch_size_t2i)).mean()
-                avg_loss_mmu = accelerator.gather(loss_mmu.repeat(config.training.batch_size_mmu)).mean()
+                avg_loss_formalization = accelerator.gather(loss_formalization.repeat(config.training.batch_size_formalization)).mean()
+                avg_loss_reasoning = accelerator.gather(loss_reasoning.repeat(config.training.batch_size_reasoning)).mean()
                 
                 loss = config.training.t2i_coeff * loss_t2i + \
-                    config.training.mmu_coeff * loss_mmu
+                    config.training.formalization_coeff * loss_formalization + \
+                        config.training.reasoning_coeff * loss_reasoning
                     
 
 
@@ -472,7 +503,8 @@ def main():
                     )
                     logs = {
                         "step_loss_t2i": avg_loss_t2i.item(),
-                        "step_loss_mmu": avg_loss_mmu.item(),
+                        "step_loss_formalization": avg_loss_formalization.item(),
+                        "step_loss_reasoning": avg_loss_reasoning.item(),
                         "lr": lr_scheduler.get_last_lr()[0],
                         "samples/sec/gpu": samples_per_second_per_gpu,
                         "data_time": data_time_m.val,
@@ -483,7 +515,8 @@ def main():
                     logger.info(
                         f"Step: {global_step + 1} "
                         f"Loss_t2i: {avg_loss_t2i.item():0.4f} "
-                        f"Loss_mmu: {avg_loss_mmu.item():0.4f} "
+                        f"Loss_formalization: {avg_loss_formalization.item():0.4f} "
+                        f"Loss_reasoning: {avg_loss_reasoning.item():0.4f} "
                         f"Data (t): {data_time_m.val:0.4f}, {samples_per_second_per_gpu:0.2f}/s/gpu "
                         f"Batch (t): {batch_time_m.val:0.4f} "
                         f"LR: {lr_scheduler.get_last_lr()[0]:0.6f}"
@@ -495,7 +528,7 @@ def main():
 
                 # Save model checkpoint
                 if (global_step + 1) % config.experiment.save_every == 0:
-                    save_checkpoint(model, config, accelerator, global_step + 1)
+                    save_checkpoint(model, uni_prompting.text_tokenizer, config, accelerator, global_step + 1)
 
                 if (global_step + 1) % config.experiment.generate_every == 0 and accelerator.is_main_process:
                     generate_images(
@@ -505,19 +538,6 @@ def main():
                         accelerator,
                         config,
                         global_step + 1,
-                    )
-
-                    visualize_predictions(
-                        model,
-                        vq_model,
-                        uni_prompting,
-                        config,
-                        global_step + 1,
-                        input_ids,
-                        image_tokens_ori,
-                        batch["t2i_flow"]["images"],
-                        instructions,
-                        logits,
                     )
 
                 global_step += 1
@@ -531,58 +551,16 @@ def main():
     accelerator.wait_for_everyone()
 
     # Evaluate and save checkpoint at the end of training
-    save_checkpoint(model, config, accelerator, global_step)
+    save_checkpoint(model, uni_prompting.text_tokenizer, config, accelerator, global_step)
 
     # Save the final trained checkpoint
     if accelerator.is_main_process:
         model = accelerator.unwrap_model(model)
-        model.save_pretrained(config.experiment.output_dir, safe_serialization=False)
+        model.save_pretrained(config.experiment.output_dir, safe_serialization=True)
+        uni_prompting.text_tokenizer.save_pretrained(config.experiment.output_dir)
 
     accelerator.end_training()
 
-
-@torch.no_grad()
-def visualize_predictions(
-        model,
-        vq_model,
-        uni_prompting,
-        config,
-        global_step,
-        input_ids,
-        image_tokens_ori,
-        ori_images,
-        texts,
-        logits,
-):
-    logger.info("Visualizing predictions...")
-    model.eval()
-    
-    recons_images = vq_model.decode_code(image_tokens_ori)
-    recons_images = torch.clamp((recons_images + 1.0) / 2.0, min=0.0, max=1.0)
-    recons_images *= 255.0
-    recons_images = recons_images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
-
-    images = torch.clamp((ori_images + 1.0) / 2.0, min=0.0, max=1.0)
-    images *= 255.0
-    images = images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
-
-    predictions = logits[:config.training.batch_size_t2i, -(config.model.geouni.num_vq_tokens + 1):-1:,
-                  config.model.geouni.llm_vocab_size + config.model.geouni.num_new_special_tokens:-1]
-    predictions = predictions.argmax(axis=-1)
-
-    predicted_images = vq_model.decode_code(predictions)
-    predicted_images = torch.clamp((predicted_images + 1.0) / 2.0, min=0.0, max=1.0)
-    predicted_images *= 255.0
-    predicted_images = predicted_images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
-    predicted_images = np.concatenate((images, recons_images, predicted_images), 2)
-    pil_images = [Image.fromarray(image) for image in predicted_images]
-
-    # Log images
-    wandb_images = [wandb.Image(image, caption=f'caption: {texts[i]}') for i, image in
-                    enumerate(pil_images)]
-    wandb.log({"Original images v.s. Reconstructed images v.s. Predicted images": wandb_images}, step=global_step)
-
-    model.train()
 
 #对T2I的可视化
 @torch.no_grad()
@@ -601,33 +579,38 @@ def generate_images(
     with open(config.dataset.params.validation_prompts_file, "r") as f:
         validation_prompts = f.read().splitlines()
 
-
-    
-    input_ids, attention_masks = uni_prompting(validation_prompts, 't2i_gen')
-    input_ids = input_ids.to(accelerator.device)
-    attention_masks = attention_masks.to(accelerator.device)
     if accelerator.mixed_precision == "fp16":
         weight_dtype = torch.float16
     elif accelerator.mixed_precision == "bf16":
         weight_dtype = torch.bfloat16
     else:
         weight_dtype = torch.float32
+    
+    images = []
+    for prompt in tqdm(validation_prompts):
+    
+        input_id, attention_mask = uni_prompting(prompt, 't2i_gen')
+        input_id = input_id.to(accelerator.device)
+        attention_mask = attention_mask.to(accelerator.device)
+        
 
-    with torch.autocast("cuda", dtype=weight_dtype, enabled=accelerator.mixed_precision != "no"):
-        # Generate images
-        gen_token_ids = accelerator.unwrap_model(model).t2i_generate(
-            input_ids=input_ids,
-            pad_token_id=uni_prompting.text_tokenizer.pad_token_id,
-            attention_masks=attention_masks,
-            temperature=config.training.get("generation_temperature", 1.0),
-        )
-        # print("gen_token_ids :", gen_token_ids.shape)
+        with torch.autocast("cuda", dtype=weight_dtype, enabled=accelerator.mixed_precision != "no"):
+            # Generate images
+            gen_token_id = accelerator.unwrap_model(model).t2i_generate(
+                input_ids=input_id,
+                pad_token_id=uni_prompting.text_tokenizer.pad_token_id,
+                attention_masks=attention_mask,
+                temperature=config.training.get("generation_temperature", 1.0),
+            )
+            # print("gen_token_ids :", gen_token_ids.shape)
 
-    images = vq_model.decode_code(gen_token_ids)
+        image = vq_model.decode_code(gen_token_id)
+        images.append(image)
     
     model.train()
 
     # Convert to PIL image
+    images = torch.cat(images, dim=0)
     images = torch.clamp((images + 1.0) / 2.0, min=0.0, max=1.0)
     images *= 255.0
     images = images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
@@ -638,7 +621,7 @@ def generate_images(
     wandb.log({"Generated images": wandb_images}, step=global_step)
 
 
-def save_checkpoint(model, config, accelerator, global_step):
+def save_checkpoint(model, tokenizer, config, accelerator, global_step):
     output_dir = config.experiment.output_dir
     checkpoints_total_limit = config.experiment.get("checkpoints_total_limit", None)
 
@@ -673,8 +656,9 @@ def save_checkpoint(model, config, accelerator, global_step):
             save_path / "unwrapped_model",
             save_function=accelerator.save,
             state_dict=state_dict,
-            safe_serialization=False
+            safe_serialization=True
         )
+        tokenizer.save_pretrained(save_path / "unwrapped_model")
         json.dump({"global_step": global_step}, (save_path / "metadata.json").open("w+"))
         logger.info(f"Saved state to {save_path}")
 

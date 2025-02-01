@@ -25,6 +25,7 @@ from training.utils import get_config, flatten_omega_conf
 from training.geo_data_aug import crop
 from training.custom_data import image_transform
 from transformers import AutoTokenizer
+import json
 
 def expand2square(pil_img, background_color):
     width, height = pil_img.size
@@ -76,13 +77,14 @@ if __name__ == '__main__':
     save_path = config.output_dir
     if not os.path.exists(save_path):
         os.makedirs(save_path)
+    save_file_name = config.save_file_name
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    tokenizer = AutoTokenizer.from_pretrained(config.model.geouni.llm_model_path, padding_side="left")
+    tokenizer = AutoTokenizer.from_pretrained(config.model.geouni.llm_model_path)
 
-    uni_prompting = UniversalPrompting(tokenizer, max_text_len=config.dataset.preprocessing.max_seq_length,
+    uni_prompting = UniversalPrompting(tokenizer, max_len=config.dataset.preprocessing.max_seq_length,
                                        special_tokens=(
-                                           "<|soi|>", "<|eoi|>", "<|t2i|>", "<|mmu|>", "<|mix|>"
+                                           "<|sot|>", "<|eot|>", "<|soi|>", "<|eoi|>", "<|t2i|>", "<|formalization|>", "<|reasoning|>", "<|step|>", "<|conclusion|>"
                                        ),
                                        ignore_id=-100)
 
@@ -99,48 +101,49 @@ if __name__ == '__main__':
         vq_model.requires_grad_(False)
         vq_model.eval()
 
-    model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, torch_dtype=torch.bfloat16).to(device)    
+    model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='sdpa', torch_dtype=torch.bfloat16).to(device)    
     model.eval()
     
-    temperature = 1.0
-
-    file_list = os.listdir(config.mmu_image_root)
-    responses = ['' for i in range(len(file_list))]
-    images = []
     
-    for i, file_name in enumerate(tqdm(file_list)):
-        image_path = os.path.join(config.mmu_image_root, file_name)
+   # load from users passed arguments
+    if config.get("validation_prompts_file", None) is not None:
+        config.dataset.params.validation_prompts_file = config.validation_prompts_file
+    with open(config.dataset.params.validation_prompts_file, "r") as f:
+        validation_info = json.load(f)
+    
+    temperature = 1.0
+    outputs = []
+    
+    for item in tqdm(validation_info):
+        image_path = os.path.join(config.mmu_image_root, item['image'])
         image_ori = Image.open(image_path).convert("RGB")
         image_ori = crop(image_ori)
         image_ori = expand2square(image_ori, (255, 255, 255))
-        image = image_transform(image_ori, resolution=config.dataset.params.resolution).to(device)
+        image = image_transform(image_ori, resolution=config.dataset.preprocessing.resolution).to(device)
         image = image.unsqueeze(0)
-        images.append(image)
         image_tokens = vq_model.get_code(image) + len(uni_prompting.text_tokenizer)
-
-        question = '使用自然语言解析这幅图像。'
-        input_ids = uni_prompting.text_tokenizer(['USER: \n' + question])['input_ids']
-        # input_ids = uni_prompting.text_tokenizer(['USER: \n'])['input_ids']
-                            
-        input_ids = torch.tensor(input_ids).to(device)
-
-        input_ids = torch.cat([
-            (torch.ones(input_ids.shape[0], 1) * uni_prompting.sptids_dict['<|mmu|>']).to(device),
-            (torch.ones(input_ids.shape[0], 1) * uni_prompting.sptids_dict['<|soi|>']).to(device),
-            image_tokens,
-            (torch.ones(input_ids.shape[0], 1) * uni_prompting.sptids_dict['<|eoi|>']).to(device),
-            (torch.ones(input_ids.shape[0], 1) * uni_prompting.sptids_dict['<|sot|>']).to(device),
-            input_ids
-        ], dim=1).long()
+        question = item['conversations'][0]['value']
+        gt = item['conversations'][1]['value']
+        if question.startswith('<image>\n'):
+                question = question.replace('<image>\n', '')
+        input_ids, _ = uni_prompting([image_tokens, question], 'formalization_gen')
         output_ids = model.generate(input_ids=input_ids,
                                     max_new_tokens=config.max_new_tokens,
                                     temperature=temperature,
                                     pad_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('[PAD]'),
                                     eos_token_id = uni_prompting.text_tokenizer.eos_token_id,
+                                    do_sample=False,
+                                    top_p=None,
                                     # eot_token=uni_prompting.sptids_dict['<|eot|>'],
                                     use_cache=True)
 
-        text = uni_prompting.text_tokenizer.batch_decode(output_ids[:, input_ids.shape[1]:], skip_special_tokens=True)
-        print(text)
-    # responses[i] += f'User: ' + question + f'\n Answer : ' + text[0] + '\n'
+        respone = uni_prompting.text_tokenizer.batch_decode(output_ids[:, input_ids.shape[1]:], skip_special_tokens=True)[0]
+        print(f'generate: {respone}\ngt: {gt}')
+        outputs.append({'question_id': 0,
+                        'prompt': question,
+                        'response': respone})
+
+with open(os.path.join(save_path, f'{save_file_name}.jsonl'), 'w') as f:
+    for line in outputs:
+        f.write(json.dumps(line) + '\n')
 

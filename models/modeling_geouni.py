@@ -59,7 +59,8 @@ class GeoUniForCausalLM(Qwen2ForCausalLM):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
             batch_size_t2i=0,
-            batch_size_mmu=0,
+            batch_size_formalization=0,
+            batch_size_reasoning=0
     ):
         outputs = super().forward(input_ids, attention_mask, position_ids, past_key_values, inputs_embeds, labels, use_cache, output_attentions, output_hidden_states, return_dict)
         logits = outputs.logits
@@ -68,12 +69,16 @@ class GeoUniForCausalLM(Qwen2ForCausalLM):
                 logits[:batch_size_t2i, :-1].contiguous().view(-1, self.vocab_size),
                 labels[:batch_size_t2i, 1:].contiguous().view(-1), ignore_index=-100,
             )
-            loss_mmu = F.cross_entropy(
-                logits[-batch_size_mmu:, :-1].contiguous().view(-1, self.vocab_size),
-                labels[-batch_size_mmu:, 1:].contiguous().view(-1), ignore_index=-100,
+            loss_formalization = F.cross_entropy(
+                logits[batch_size_t2i:batch_size_t2i+batch_size_formalization, :-1].contiguous().view(-1, self.vocab_size),
+                labels[batch_size_t2i:batch_size_t2i+batch_size_formalization, 1:].contiguous().view(-1), ignore_index=-100,
+            )
+            loss_reasoning = F.cross_entropy(
+                logits[-batch_size_reasoning:, :-1].contiguous().view(-1, self.vocab_size),
+                labels[-batch_size_reasoning:, 1:].contiguous().view(-1), ignore_index=-100,
             )
 
-            return logits, loss_t2i, loss_mmu
+            return logits, loss_t2i, loss_formalization, loss_reasoning
         
         return outputs
 
@@ -97,6 +102,8 @@ class GeoUniForCausalLM(Qwen2ForCausalLM):
                                             pad_token_id=pad_token_id,
                                             eos_token_id=None,
                                             temperature=temperature,
+                                            do_sample=False,
+                                            top_p=None,
                                             use_cache=True,
                                         )
 

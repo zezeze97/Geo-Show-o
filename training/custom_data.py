@@ -48,8 +48,8 @@ class LazySupervisedDataset(Dataset):
                  image_aspect_ratio: str='pad',
                  resolution: int = 256,
                  is_t2i: bool = False,
-                 is_lm: bool = False,
-                 is_mmu: bool = False
+                 is_formalization: bool = False,
+                 is_reasoning: bool = False
                  ):
         super(LazySupervisedDataset, self).__init__()
         
@@ -61,8 +61,8 @@ class LazySupervisedDataset(Dataset):
         self.resolution = resolution
         self.list_data_dict = list_data_dict
         self.is_t2i = is_t2i
-        self.is_lm = is_lm
-        self.is_mmu = is_mmu
+        self.is_formalization = is_formalization
+        self.is_reasoning = is_reasoning
     
 
     def __len__(self):
@@ -98,13 +98,11 @@ class LazySupervisedDataset(Dataset):
                 "images": image,
                 "instructions": instruction
             }
-        elif self.is_mmu:
+        elif self.is_formalization or self.is_reasoning:
             # text = 'USER: \n' + instruction + ' ASSISTANT:' + response
             
             if instruction.startswith('<image>\n'):
-                instruction = instruction.lstrip('<image>\n')
-            instruction = 'USER: \n' + instruction
-            response = 'ASSISTANT:' + response
+                instruction = instruction.replace('<image>\n', '')
             
             data_dict = {
                 "images": image,

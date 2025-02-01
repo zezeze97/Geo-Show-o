@@ -5,14 +5,14 @@ wandb:
 
 experiment:
     project: "training"
-    name: "geouni-512x512-0122-t2i-mmu"
-    output_dir: "outputs/geouni-512x512-0122-t2i-mmu"
+    name: "geouni-512x512-0130-t2i-mmu-debug"
+    output_dir: "outputs/geouni-512x512-0130-t2i-mmu-debug"
     save_every: 500
     generate_every: 500
     log_every: 50
     log_grad_norm_every: 500
     checkpoints_total_limit: 1
-    resume_from_checkpoint: null # 'latest'
+    resume_from_checkpoint: 'latest' # 'latest'
 
 model:
     vq_model:
@@ -32,31 +32,29 @@ model:
     geouni:
         load_from_geouni: false
         pretrained_model_path: null
-        vocab_size: 159865
+        vocab_size: 159867
         llm_vocab_size: 151665
-        llm_model_path: 'Qwen/Qwen2.5-Math-1.5B'
+        llm_model_path: 'deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B' # 'Qwen/Qwen2.5-Math-1.5B'
         codebook_size: 8192
         num_vq_tokens: 256
-        num_new_special_tokens: 8 # <|soi|>, <|eoi|>, <|t2i|>, <|mmu|>, <|mix|>, <|sot|>, <|eot|>, [PAD]
+        num_new_special_tokens: 10  # <|sot|> <|eot|> <|soi|> <|eoi|> <|t2i|> <|formalization|> <|reasoning|> <|step|> <|conclusion|> [PAD]
 
 dataset:
-    gen_type: "t2i"
-    und_type: "captioning"
     combined_loader_mode: "max_size_cycle"
     params:
         t2i_image_folder: data/formalgeo7k/formalgeo7k_v2
-        t2i_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/t2i/train.json
-        mmu_image_folder: data/formalgeo7k/formalgeo7k_v2
-        mmu_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/qa_structure_only/qa_structure_only_train.json
-        validation_prompts_file: "validation_prompts/geoprompts_test.txt"
-        shuffle_buffer_size: 1000
+        t2i_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/t2i_overfit/train.json
+        formalization_image_folder: data/formalgeo7k/formalgeo7k_v2
+        formalization_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/qa_structure_only/qa_structure_only_minitrain.json
+        reasoning_image_folder: data/formalgeo7k/formalgeo7k_v2
+        reasoning_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/qa_structure_only/qa_structure_only_minitrain.json
+        validation_prompts_file: "validation_prompts/geoprompts_overfit.txt"
         num_workers: 16
-        resolution: 512
         pin_memory: True
         persistent_workers: True
 
     preprocessing:
-        max_seq_length: 384 # for text tokens
+        max_seq_length: 800
         resolution: 512
 
 optimizer:
@@ -76,9 +74,10 @@ lr_scheduler:
         warmup_steps: 200
 
 training:
-    gradient_accumulation_steps: 8
-    batch_size_t2i: 4
-    batch_size_mmu: 4
+    gradient_accumulation_steps: 1
+    batch_size_t2i: 2
+    batch_size_formalization: 2
+    batch_size_reasoning: 2
     num_train_epochs: 10000000
     mixed_precision: "bf16"
     enable_tf32: True
@@ -86,4 +85,5 @@ training:
     max_train_steps: 50000 # to be determined according to the scale of high-quality dataset
     max_grad_norm: null
     t2i_coeff: 1.0
-    mmu_coeff: 1.0
+    formalization_coeff: 1.0
+    reasoning_coeff: 1.0
