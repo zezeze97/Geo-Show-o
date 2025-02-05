@@ -23,6 +23,7 @@ import time
 from pathlib import Path
 from typing import Union
 from tqdm import tqdm
+import random
 
 import numpy as np
 from PIL import Image
@@ -42,6 +43,8 @@ from training.custom_data import LazySupervisedDataset
 
 from models import MAGVITv2, VQModel, GeoUniForCausalLM, GeoUniConfig
 from training.prompting_utils import UniversalPrompting
+from training.geo_data_aug import crop
+from training.custom_data import image_transform, expand2square
 from models.lr_schedulers import get_scheduler
 from models.logging import set_verbosity_info, set_verbosity_error
 
@@ -116,7 +119,7 @@ def main():
         split_batches=True,
     )
 
-    total_batch_size_per_gpu = config.training.batch_size_t2i + config.training.batch_size_formalization + config.training.batch_size_reasoning
+    total_batch_size_per_gpu = config.training.batch_size_t2i + config.training.batch_size_formalization + config.training.batch_size_reasoning + config.training.batch_size_mixing
 
     total_batch_size = (total_batch_size_per_gpu
                         * accelerator.num_processes * config.training.gradient_accumulation_steps)
@@ -186,7 +189,7 @@ def main():
     # unified prompting for geouni
     uni_prompting = UniversalPrompting(tokenizer, max_len=config.dataset.preprocessing.max_seq_length,
                                        special_tokens=(
-                                           "<|sot|>", "<|eot|>", "<|soi|>", "<|eoi|>", "<|t2i|>", "<|formalization|>", "<|reasoning|>", "<|step|>", "<|conclusion|>"
+                                            "<|soi|>", "<|eoi|>", "<|t2i|>", "<|formalization|>", "<|reasoning|>", "<|mix|>", "<answer>", "</answer>"
                                        ),
                                        ignore_id=-100)
 
@@ -290,9 +293,9 @@ def main():
     
     if accelerator.num_processes > 1:
         sampler = DistributedSampler(dataset_t2i,
-                                        num_replicas=accelerator.num_processes,
-                                        rank=accelerator.process_index,
-                                        shuffle=True,
+                                    num_replicas=accelerator.num_processes,
+                                    rank=accelerator.process_index,
+                                    shuffle=True,
                                         )
         shuffle = False
     else:
@@ -311,9 +314,9 @@ def main():
                                 is_formalization=True)
     if accelerator.num_processes > 1:
         sampler = DistributedSampler(dataset_formalization,
-                                        num_replicas=accelerator.num_processes,
-                                        rank=accelerator.process_index,
-                                        shuffle=True,
+                                    num_replicas=accelerator.num_processes,
+                                    rank=accelerator.process_index,
+                                    shuffle=True,
                                         )
         shuffle = False
     else:
@@ -331,9 +334,9 @@ def main():
                                 is_reasoning=True)
     if accelerator.num_processes > 1:
         sampler = DistributedSampler(dataset_reasoning,
-                                        num_replicas=accelerator.num_processes,
-                                        rank=accelerator.process_index,
-                                        shuffle=True,
+                                    num_replicas=accelerator.num_processes,
+                                    rank=accelerator.process_index,
+                                    shuffle=True,
                                         )
         shuffle = False
     else:
@@ -344,12 +347,31 @@ def main():
                                         sampler=sampler, shuffle=shuffle, num_workers=dataset_config.num_workers,
                                         pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
     
+    
+    # Data for mix
+    dataset_mixing = LazySupervisedDataset(image_folder=dataset_config.mixing_image_folder,
+                                json_path=dataset_config.mixing_json_path,
+                                resolution=preproc_config.resolution,
+                                is_mixing=True)
+    if accelerator.num_precesses > 1:
+        sampler = DistributedSampler(dataset_mixing,
+                                    num_replicas=accelerator.num_processes,
+                                    rank=accelerator.process_index,
+                                    shuffle=True,)
+        shuffle = False
+    else:
+        sampler = None
+        shuffle = True
+    train_dataloader_mixing = DataLoader(dataset_mixing, batch_size=config.training.batch_size_mixing,
+                                        sampler=sampler, shuffle=shuffle, num_workers=dataset_config.num_workers,
+                                        pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
 
     # Combine these dataloaders into a single iterable model
     iterables = {
         "t2i_flow": train_dataloader_t2i,
         "formalization_flow": train_dataloader_formalization,
-        "reasoning_flow": train_dataloader_reasoning
+        "reasoning_flow": train_dataloader_reasoning,
+        "mixing_flow": train_dataloader_mixing
     }
 
     combined_dataloader = CombinedLoader(iterables, mode=config.dataset.combined_loader_mode)
@@ -406,18 +428,19 @@ def main():
             batch_size_t2i = batch["t2i_flow"]["images"].shape[0]
             batch_size_formalization = batch["formalization_flow"]["images"].shape[0]
             batch_size_reasoning = batch["reasoning_flow"]["images"].shape[0]
+            batch_size_mixing = batch["mixing_flow"]["images"].shape[0]
             
             # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
             # Build formatted sequences for class-conditional/text-to-image generation
             # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
-            pixel_values, instructions = batch["t2i_flow"]["images"], batch["t2i_flow"]["instructions"]
-            pixel_values = pixel_values.to(accelerator.device, non_blocking=True)
+            pixel_values_t2i, instructions_t2i = batch["t2i_flow"]["images"], batch["t2i_flow"]["instructions"]
+            pixel_values_t2i = pixel_values_t2i.to(accelerator.device, non_blocking=True)
             
 
             # Encode images to image tokens and create input and labels
-            image_tokens_ori = vq_model.get_code(pixel_values)
-            image_tokens = image_tokens_ori + len(uni_prompting.text_tokenizer)
-            input_ids_t2i, attention_mask_t2i, labels_t2i = uni_prompting((instructions, image_tokens, image_tokens), task='t2i')
+            image_tokens_t2i = vq_model.get_code(pixel_values_t2i)
+            image_tokens_t2i = image_tokens_t2i + len(uni_prompting.text_tokenizer)
+            input_ids_t2i, attention_mask_t2i, labels_t2i = uni_prompting((instructions_t2i, image_tokens_t2i), task='t2i')
             
             # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
             # Build formatted sequences for formalization
@@ -441,9 +464,20 @@ def main():
             input_ids_reasoning, attention_mask_reasoning, labels_reasoning = uni_prompting((image_tokens_reasoning, instructions_reasoning, responses_reasoning), 'reasoning')
             # input_ids_reasoning = input_ids_reasoning.to(accelerator.device, non_blocking=True)
             
-            attention_mask = torch.cat([attention_mask_t2i, attention_mask_formalization, attention_mask_reasoning], dim=0)
-            input_ids = torch.cat((input_ids_t2i, input_ids_formalization, input_ids_reasoning), dim=0)
-            labels = torch.cat((labels_t2i, labels_formalization, labels_reasoning), dim=0)
+            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
+            # Build formatted sequences for mixing generation
+            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
+            pixel_values_mixing, instructions_mixing, responses_mixing = batch["mixing_flow"]["images"], batch["mixing_flow"]["instructions"], batch["mixing_flow"]["responses"]
+            pixel_values_mixing = pixel_values_mixing.to(accelerator.device, non_blocking=True)
+            image_tokens_mixing = vq_model.get_code(pixel_values_mixing)
+            image_tokens_mixing = image_tokens_mixing + len(uni_prompting.text_tokenizer)
+            input_ids_mixing, attention_mask_mixing, labels_mixing = uni_prompting((image_tokens_mixing, instructions_mixing, responses_mixing), 'mix')
+            # input_ids_mixing = input_ids_mixing.to(accelerator.device, non_blocking=True)
+            
+            
+            attention_mask = torch.cat([attention_mask_t2i, attention_mask_formalization, attention_mask_reasoning, attention_mask_mixing], dim=0)
+            input_ids = torch.cat((input_ids_t2i, input_ids_formalization, input_ids_reasoning, input_ids_mixing), dim=0)
+            labels = torch.cat((labels_t2i, labels_formalization, labels_reasoning, labels_mixing), dim=0)
             
         
             
@@ -453,22 +487,26 @@ def main():
                 logger.info("Labels: {}".format(labels))
 
             with accelerator.accumulate(model):
-                logits, loss_t2i, loss_formalization, loss_reasoning = model(
+                logits, loss_t2i, loss_formalization, loss_reasoning, loss_mixing = model(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
                     labels=labels,
                     batch_size_t2i=batch_size_t2i,
                     batch_size_formalization=batch_size_formalization,
-                    batch_size_reasoning=batch_size_reasoning
+                    batch_size_reasoning=batch_size_reasoning,
+                    batch_size_mixing=batch_size_mixing,
                 )
 
                 avg_loss_t2i = accelerator.gather(loss_t2i.repeat(config.training.batch_size_t2i)).mean()
                 avg_loss_formalization = accelerator.gather(loss_formalization.repeat(config.training.batch_size_formalization)).mean()
                 avg_loss_reasoning = accelerator.gather(loss_reasoning.repeat(config.training.batch_size_reasoning)).mean()
+                avg_loss_mixing = accelerator.gather(loss_mixing.repeat(config.training.batch_size_mixing)).mean()
                 
                 loss = config.training.t2i_coeff * loss_t2i + \
                     config.training.formalization_coeff * loss_formalization + \
-                        config.training.reasoning_coeff * loss_reasoning
+                    config.training.reasoning_coeff * loss_reasoning + \
+                    config.training.mixing_coeff * loss_mixing
+                            
                     
 
 
@@ -505,6 +543,7 @@ def main():
                         "step_loss_t2i": avg_loss_t2i.item(),
                         "step_loss_formalization": avg_loss_formalization.item(),
                         "step_loss_reasoning": avg_loss_reasoning.item(),
+                        "step_loss_mixing": avg_loss_mixing.item(),
                         "lr": lr_scheduler.get_last_lr()[0],
                         "samples/sec/gpu": samples_per_second_per_gpu,
                         "data_time": data_time_m.val,
@@ -517,6 +556,7 @@ def main():
                         f"Loss_t2i: {avg_loss_t2i.item():0.4f} "
                         f"Loss_formalization: {avg_loss_formalization.item():0.4f} "
                         f"Loss_reasoning: {avg_loss_reasoning.item():0.4f} "
+                        f"Loss_mixing: {avg_loss_mixing.item():0.4f} "
                         f"Data (t): {data_time_m.val:0.4f}, {samples_per_second_per_gpu:0.2f}/s/gpu "
                         f"Batch (t): {batch_time_m.val:0.4f} "
                         f"LR: {lr_scheduler.get_last_lr()[0]:0.6f}"
@@ -539,6 +579,14 @@ def main():
                         config,
                         global_step + 1,
                     )
+                    generate_texts(
+                        model,
+                        vq_model,
+                        uni_prompting,
+                        accelerator,
+                        config,
+                        global_step + 1,   
+                    )
 
                 global_step += 1
 
@@ -550,7 +598,7 @@ def main():
 
     accelerator.wait_for_everyone()
 
-    # Evaluate and save checkpoint at the end of training
+    # Save checkpoint at the end of training
     save_checkpoint(model, uni_prompting.text_tokenizer, config, accelerator, global_step)
 
     # Save the final trained checkpoint
@@ -571,14 +619,18 @@ def generate_images(
         accelerator,
         config,
         global_step,
+        num_sample=8,
 ):
     logger.info("Generating images...")
+    resolution = config.dataset.preprocessing.resolution
     model.eval()
-
+    
     # read validation prompts from file
-    with open(config.dataset.params.validation_prompts_file, "r") as f:
-        validation_prompts = f.read().splitlines()
-
+    with open(config.dataset.params.t2i_validation_json_path, "r") as f:
+        validation_info = json.load(f)
+        
+    sampled_validation_info = random.sample(validation_info, k=num_sample)
+        
     if accelerator.mixed_precision == "fp16":
         weight_dtype = torch.float16
     elif accelerator.mixed_precision == "bf16":
@@ -587,7 +639,14 @@ def generate_images(
         weight_dtype = torch.float32
     
     images = []
-    for prompt in tqdm(validation_prompts):
+    validation_prompts = []
+    for info in tqdm(sampled_validation_info):
+        assert info['conversations'][0]['from'] == 'human'
+        prompt = info['conversations'][0]['value']
+        validation_prompts.append(prompt)
+        ori_image = Image.open(os.path.join(config.dataset.params.t2i_image_folder, info['image'])).convert("RGB")
+        ori_image = expand2square(crop(ori_image), (255, 255, 255))
+        ori_image = ori_image.resize((resolution, resolution), Image.Resampling.LANCZOS)
     
         input_id, attention_mask = uni_prompting(prompt, 't2i_gen')
         input_id = input_id.to(accelerator.device)
@@ -604,22 +663,102 @@ def generate_images(
             )
             # print("gen_token_ids :", gen_token_ids.shape)
 
-        image = vq_model.decode_code(gen_token_id)
-        images.append(image)
+        gen_image = vq_model.decode_code(gen_token_id)
+        gen_image = torch.clamp((gen_image + 1.0) / 2.0, min=0.0, max=1.0)
+        gen_image *= 255.0
+        gen_image = gen_image.permute(0, 2, 3, 1).squeeze(0).cpu().numpy().astype(np.uint8)
+        new_image = np.concatenate((ori_image, gen_image), 1)
+        
+        images.append(new_image)
     
     model.train()
 
-    # Convert to PIL image
-    images = torch.cat(images, dim=0)
-    images = torch.clamp((images + 1.0) / 2.0, min=0.0, max=1.0)
-    images *= 255.0
-    images = images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
     pil_images = [Image.fromarray(image) for image in images]
 
     # Log images
     wandb_images = [wandb.Image(image, caption=validation_prompts[i]) for i, image in enumerate(pil_images)]
     wandb.log({"Generated images": wandb_images}, step=global_step)
 
+
+
+#对mmu的可视化
+@torch.no_grad()
+def generate_texts(
+        model,
+        vq_model,
+        uni_prompting,
+        accelerator,
+        config,
+        global_step,
+        num_sample=8,
+        max_new_tokens=1024
+):
+    logger.info("Evaluating MMU...")
+    resolution = config.dataset.preprocessing.resolution
+    model.eval()
+
+    # read validation prompts from file
+    with open(config.dataset.params.mmu_validation_json_path, "r") as f:
+        validation_info = json.load(f)
+    sampled_validation_info = random.sample(validation_info, k=num_sample)
+    
+        
+    if accelerator.mixed_precision == "fp16":
+        weight_dtype = torch.float16
+    elif accelerator.mixed_precision == "bf16":
+        weight_dtype = torch.bfloat16
+    else:
+        weight_dtype = torch.float32
+    
+    responses = []
+    gt_texts = []
+    images = []
+    for info in tqdm(sampled_validation_info):
+        image_path = os.path.join(config.dataset.params.formalization_image_folder, info['image'])
+        assert info['conversations'][0]['from'] == 'human'
+        assert info['conversations'][1]['from'] == 'gpt'
+        gt_text = info['conversations'][1]['value']
+        gt_texts.append(gt_text)
+        prompt = info['conversations'][0]['value']
+        ori_image = Image.open(image_path).convert("RGB")
+        ori_image = crop(ori_image)
+        ori_image = expand2square(ori_image, (255, 255, 255))
+        image = image_transform(ori_image, resolution).to(accelerator.device)
+        image = image.unsqueeze(0)
+        image_tokens = vq_model.get_code(image) + len(uni_prompting.text_tokenizer)
+        input_ids, _ = uni_prompting([image_tokens, prompt], 'formalization_gen')
+        
+
+        with torch.autocast("cuda", dtype=weight_dtype, enabled=accelerator.mixed_precision != "no"):
+            # Generate images
+            gen_token_id = accelerator.unwrap_model(model).generate(
+                input_ids=input_ids,
+                max_new_tokens=max_new_tokens,
+                temperature=config.training.get("generation_temperature", 1.0),
+                pad_token_id=uni_prompting.text_tokenizer.pad_token_id,
+                eos_token_id = uni_prompting.text_tokenizer.eos_token_id,
+                do_sample=False,
+                top_p=None,
+                use_cache=True
+            )
+            # print("gen_token_ids :", gen_token_ids.shape)
+        respone = uni_prompting.text_tokenizer.batch_decode(gen_token_id[:, input_ids.shape[1]:], skip_special_tokens=True)[0]
+        responses.append(respone)
+        rec_image = vq_model.decode_code(image_tokens - len(uni_prompting.text_tokenizer))
+        rec_image = torch.clamp((rec_image + 1.0) / 2.0, min=0.0, max=1.0)
+        rec_image *= 255.0
+        rec_image = rec_image.permute(0, 2, 3, 1).squeeze(0).cpu().numpy().astype(np.uint8)
+        
+        ori_image = ori_image.resize((resolution, resolution), Image.Resampling.LANCZOS)
+        new_image = np.concatenate((ori_image, rec_image), 1)
+        images.append(new_image)
+    
+    model.train()
+    
+    pil_images = [Image.fromarray(image) for image in images]
+    # Log images
+    wandb_images = [wandb.Image(image, caption=f'gt: {gt_texts[i]}\nmodel prediction: {responses[i]}') for i, image in enumerate(pil_images)]
+    wandb.log({"MMU images": wandb_images}, step=global_step)
 
 def save_checkpoint(model, tokenizer, config, accelerator, global_step):
     output_dir = config.experiment.output_dir

@@ -15,13 +15,13 @@ model:
 
     geouni:
         load_from_geouni: false
-        pretrained_model_path: "outputs/geouni-512x512-0130-t2i-mmu-debug/checkpoint-500/unwrapped_model"
-        vocab_size: 159867
+        pretrained_model_path: "outputs/geouni-512x512-0130-t2i-mmu-debug/checkpoint-1000/unwrapped_model"
+        vocab_size: 159866
         llm_vocab_size: 151665
         llm_model_path: 'deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B' # 'Qwen/Qwen2.5-Math-1.5B'
         codebook_size: 8192
         num_vq_tokens: 256
-        num_new_special_tokens: 10  # <|sot|> <|eot|> <|soi|> <|eoi|> <|t2i|> <|formalization|> <|reasoning|> <|step|> <|conclusion|> [PAD]
+        num_new_special_tokens: 9  # <|soi|> <|eoi|> <|t2i|> <|formalization|> <|reasoning|> <|mix|> <answer> </answer> [PAD]
 
 dataset:   
     params:

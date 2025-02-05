@@ -17,18 +17,7 @@ print(f'pad: {tokenizer.pad_token}')
 
 prompt = "Find the value of $x$ that satisfies the equation $4x+5 = 6x+7$."
 
-# CoT
-messages = [
-    {"role": "system", "content": "Please reason step by step, and put your final answer within \\boxed{}."},
-    {"role": "user", "content": prompt}
-]
-
-text = tokenizer.apply_chat_template(
-    messages,
-    tokenize=False,
-    add_generation_prompt=True
-)
-print(f'Input is: {text}')
+text = f"A conversation between User and Assistant. The user asks a question, and the Assistant solves it. The assistant first thinks about the reasoning process in the mind and then provides the user with the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., <think> reasoning process here </think> <answer> answer here </answer>.<｜User｜>{prompt}<｜Assistant｜>"
 model_inputs = tokenizer([text], return_tensors="pt").to(device)
 
 generated_ids = model.generate(

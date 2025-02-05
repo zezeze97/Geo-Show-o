@@ -84,7 +84,7 @@ if __name__ == '__main__':
 
     uni_prompting = UniversalPrompting(tokenizer, max_len=config.dataset.preprocessing.max_seq_length,
                                        special_tokens=(
-                                           "<|sot|>", "<|eot|>", "<|soi|>", "<|eoi|>", "<|t2i|>", "<|formalization|>", "<|reasoning|>", "<|step|>", "<|conclusion|>"
+                                            "<|soi|>", "<|eoi|>", "<|t2i|>", "<|formalization|>", "<|reasoning|>", "<|mix|>", "<answer>", "</answer>"
                                        ),
                                        ignore_id=-100)
 
@@ -127,15 +127,16 @@ if __name__ == '__main__':
         if question.startswith('<image>\n'):
                 question = question.replace('<image>\n', '')
         input_ids, _ = uni_prompting([image_tokens, question], 'formalization_gen')
-        output_ids = model.generate(input_ids=input_ids,
-                                    max_new_tokens=config.max_new_tokens,
-                                    temperature=temperature,
-                                    pad_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('[PAD]'),
-                                    eos_token_id = uni_prompting.text_tokenizer.eos_token_id,
-                                    do_sample=False,
-                                    top_p=None,
-                                    # eot_token=uni_prompting.sptids_dict['<|eot|>'],
-                                    use_cache=True)
+        with torch.no_grad():
+            output_ids = model.generate(input_ids=input_ids,
+                                        max_new_tokens=config.max_new_tokens,
+                                        temperature=temperature,
+                                        pad_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('[PAD]'),
+                                        eos_token_id = uni_prompting.text_tokenizer.eos_token_id,
+                                        do_sample=False,
+                                        top_p=None,
+                                        # eot_token=uni_prompting.sptids_dict['<|eot|>'],
+                                        use_cache=True)
 
         respone = uni_prompting.text_tokenizer.batch_decode(output_ids[:, input_ids.shape[1]:], skip_special_tokens=True)[0]
         print(f'generate: {respone}\ngt: {gt}')

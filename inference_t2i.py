@@ -81,7 +81,7 @@ if __name__ == '__main__':
 
     uni_prompting = UniversalPrompting(tokenizer, max_len=config.dataset.preprocessing.max_seq_length,
                                        special_tokens=(
-                                           "<|sot|>", "<|eot|>", "<|soi|>", "<|eoi|>", "<|t2i|>", "<|formalization|>", "<|reasoning|>", "<|step|>", "<|conclusion|>"
+                                            "<|soi|>", "<|eoi|>", "<|t2i|>", "<|formalization|>", "<|reasoning|>", "<|mix|>", "<answer>", "</answer>"
                                        ),
                                        ignore_id=-100)
 
