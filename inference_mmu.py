@@ -84,7 +84,7 @@ if __name__ == '__main__':
 
     uni_prompting = UniversalPrompting(tokenizer, max_len=config.dataset.preprocessing.max_seq_length,
                                        special_tokens=(
-                                            "<|soi|>", "<|eoi|>", "<|t2i|>", "<|formalization|>", "<|reasoning|>", "<|mix|>", "<answer>", "</answer>"
+                                            "<|soi|>", "<|eoi|>", "<|t2i|>", "<|mmu|>", "<|mix|>", "<formalization>", "</formalization>", "<answer>", "</answer>"
                                        ),
                                        ignore_id=-100)
 
@@ -126,7 +126,7 @@ if __name__ == '__main__':
         gt = item['conversations'][1]['value']
         if question.startswith('<image>\n'):
                 question = question.replace('<image>\n', '')
-        input_ids, _ = uni_prompting([image_tokens, question], 'formalization_gen')
+        input_ids, _ = uni_prompting([image_tokens, question], 'mmu_gen')
         with torch.no_grad():
             output_ids = model.generate(input_ids=input_ids,
                                         max_new_tokens=config.max_new_tokens,

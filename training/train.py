@@ -189,7 +189,7 @@ def main():
     # unified prompting for geouni
     uni_prompting = UniversalPrompting(tokenizer, max_len=config.dataset.preprocessing.max_seq_length,
                                        special_tokens=(
-                                            "<|soi|>", "<|eoi|>", "<|t2i|>", "<|formalization|>", "<|reasoning|>", "<|mix|>", "<answer>", "</answer>"
+                                            "<|soi|>", "<|eoi|>", "<|t2i|>", "<|mmu|>", "<|mix|>", "<formalization>", "</formalization>", "<answer>", "</answer>"
                                        ),
                                        ignore_id=-100)
 
@@ -353,7 +353,7 @@ def main():
                                 json_path=dataset_config.mixing_json_path,
                                 resolution=preproc_config.resolution,
                                 is_mixing=True)
-    if accelerator.num_precesses > 1:
+    if accelerator.num_processes > 1:
         sampler = DistributedSampler(dataset_mixing,
                                     num_replicas=accelerator.num_processes,
                                     rank=accelerator.process_index,
@@ -449,7 +449,7 @@ def main():
             pixel_values_formalization = pixel_values_formalization.to(accelerator.device, non_blocking=True)
             image_tokens_formalization = vq_model.get_code(pixel_values_formalization)
             image_tokens_formalization = image_tokens_formalization + len(uni_prompting.text_tokenizer)
-            input_ids_formalization, attention_mask_formalization, labels_formalization = uni_prompting((image_tokens_formalization, instructions_formalization, responses_formalization), 'formalization')
+            input_ids_formalization, attention_mask_formalization, labels_formalization = uni_prompting((image_tokens_formalization, instructions_formalization, responses_formalization), 'mmu')
             # input_ids_formalization = input_ids_formalization.to(accelerator.device, non_blocking=True)
             
             
@@ -461,7 +461,7 @@ def main():
             pixel_values_reasoning = pixel_values_reasoning.to(accelerator.device, non_blocking=True)
             image_tokens_reasoning = vq_model.get_code(pixel_values_reasoning)
             image_tokens_reasoning = image_tokens_reasoning + len(uni_prompting.text_tokenizer)
-            input_ids_reasoning, attention_mask_reasoning, labels_reasoning = uni_prompting((image_tokens_reasoning, instructions_reasoning, responses_reasoning), 'reasoning')
+            input_ids_reasoning, attention_mask_reasoning, labels_reasoning = uni_prompting((image_tokens_reasoning, instructions_reasoning, responses_reasoning), 'mmu')
             # input_ids_reasoning = input_ids_reasoning.to(accelerator.device, non_blocking=True)
             
             # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
@@ -474,7 +474,7 @@ def main():
             input_ids_mixing, attention_mask_mixing, labels_mixing = uni_prompting((image_tokens_mixing, instructions_mixing, responses_mixing), 'mix')
             # input_ids_mixing = input_ids_mixing.to(accelerator.device, non_blocking=True)
             
-            
+             
             attention_mask = torch.cat([attention_mask_t2i, attention_mask_formalization, attention_mask_reasoning, attention_mask_mixing], dim=0)
             input_ids = torch.cat((input_ids_t2i, input_ids_formalization, input_ids_reasoning, input_ids_mixing), dim=0)
             labels = torch.cat((labels_t2i, labels_formalization, labels_reasoning, labels_mixing), dim=0)
@@ -626,8 +626,10 @@ def generate_images(
     model.eval()
     
     # read validation prompts from file
-    with open(config.dataset.params.t2i_validation_json_path, "r") as f:
-        validation_info = json.load(f)
+    validation_info = []
+    with open(config.dataset.params.t2i_validation_path, "r") as f:
+        for line in f:
+            validation_info.append(json.loads(line))
         
     sampled_validation_info = random.sample(validation_info, k=num_sample)
         
@@ -641,12 +643,9 @@ def generate_images(
     images = []
     validation_prompts = []
     for info in tqdm(sampled_validation_info):
-        assert info['conversations'][0]['from'] == 'human'
-        prompt = info['conversations'][0]['value']
+        
+        prompt = info['text']
         validation_prompts.append(prompt)
-        ori_image = Image.open(os.path.join(config.dataset.params.t2i_image_folder, info['image'])).convert("RGB")
-        ori_image = expand2square(crop(ori_image), (255, 255, 255))
-        ori_image = ori_image.resize((resolution, resolution), Image.Resampling.LANCZOS)
     
         input_id, attention_mask = uni_prompting(prompt, 't2i_gen')
         input_id = input_id.to(accelerator.device)
@@ -667,9 +666,8 @@ def generate_images(
         gen_image = torch.clamp((gen_image + 1.0) / 2.0, min=0.0, max=1.0)
         gen_image *= 255.0
         gen_image = gen_image.permute(0, 2, 3, 1).squeeze(0).cpu().numpy().astype(np.uint8)
-        new_image = np.concatenate((ori_image, gen_image), 1)
         
-        images.append(new_image)
+        images.append(gen_image)
     
     model.train()
 
@@ -698,8 +696,10 @@ def generate_texts(
     model.eval()
 
     # read validation prompts from file
-    with open(config.dataset.params.mmu_validation_json_path, "r") as f:
-        validation_info = json.load(f)
+    validation_info = []
+    with open(config.dataset.params.mmu_validation_path, "r") as f:
+        for line in f:
+            validation_info.append(json.loads(line))
     sampled_validation_info = random.sample(validation_info, k=num_sample)
     
         
@@ -711,22 +711,17 @@ def generate_texts(
         weight_dtype = torch.float32
     
     responses = []
-    gt_texts = []
     images = []
     for info in tqdm(sampled_validation_info):
         image_path = os.path.join(config.dataset.params.formalization_image_folder, info['image'])
-        assert info['conversations'][0]['from'] == 'human'
-        assert info['conversations'][1]['from'] == 'gpt'
-        gt_text = info['conversations'][1]['value']
-        gt_texts.append(gt_text)
-        prompt = info['conversations'][0]['value']
+        prompt = info['text']
         ori_image = Image.open(image_path).convert("RGB")
         ori_image = crop(ori_image)
         ori_image = expand2square(ori_image, (255, 255, 255))
         image = image_transform(ori_image, resolution).to(accelerator.device)
         image = image.unsqueeze(0)
         image_tokens = vq_model.get_code(image) + len(uni_prompting.text_tokenizer)
-        input_ids, _ = uni_prompting([image_tokens, prompt], 'formalization_gen')
+        input_ids, _ = uni_prompting([image_tokens, prompt], 'mmu_gen')
         
 
         with torch.autocast("cuda", dtype=weight_dtype, enabled=accelerator.mixed_precision != "no"):
@@ -757,7 +752,7 @@ def generate_texts(
     
     pil_images = [Image.fromarray(image) for image in images]
     # Log images
-    wandb_images = [wandb.Image(image, caption=f'gt: {gt_texts[i]}\nmodel prediction: {responses[i]}') for i, image in enumerate(pil_images)]
+    wandb_images = [wandb.Image(image, caption=f'model prediction: {responses[i]}') for i, image in enumerate(pil_images)]
     wandb.log({"MMU images": wandb_images}, step=global_step)
 
 def save_checkpoint(model, tokenizer, config, accelerator, global_step):

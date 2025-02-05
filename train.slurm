@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -o job.%j.out
-#SBATCH --partition=GPU80G
+#SBATCH --partition=GPU40G
 #SBATCH --qos=low
 #SBATCH -J GeoUni
 #SBATCH --nodes=1    

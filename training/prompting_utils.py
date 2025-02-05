@@ -16,7 +16,7 @@ import torch
 # TODO - SHOULD BE FURTHER IMPROVED.
 class UniversalPrompting():
     def __init__(self, text_tokenizer,
-                 special_tokens=("<|soi|>", "<|eoi|>", "<|t2i|>", "<|formalization|>", "<|reasoning|>", "<|mix|>", "<answer>", "</answer>"),
+                 special_tokens=("<|soi|>", "<|eoi|>", "<|t2i|>", "<|mmu|>", "<|mix|>", "<formalization>", "</formalization>", "<answer>", "</answer>"),
                  max_len=8000, ignore_id=-100):
         """
         :param text_tokenizer: original text tokenizer
@@ -92,7 +92,7 @@ class UniversalPrompting():
             attention_masks.append(temp_masks.unsqueeze(0))
             label_ids.append(temp_label_ids.unsqueeze(0))
 
-        return torch.cat(sequence_ids, dim=0), torch.cat(attention_masks, dim=0), torch.cat(label_ids, dim=0)
+        return torch.cat(sequence_ids, dim=0).to(torch.long), torch.cat(attention_masks, dim=0).to(torch.long), torch.cat(label_ids, dim=0).to(torch.long)
         
     
     def t2i_gen_prompt(self, text_ids):
@@ -112,9 +112,9 @@ class UniversalPrompting():
             temp_masks = torch.tensor(temp_masks)
             sequence_ids.append(temp_ids.unsqueeze(0))
             attention_masks.append(temp_masks.unsqueeze(0))
-        return torch.cat(sequence_ids, dim=0), torch.cat(attention_masks, dim=0)
+        return torch.cat(sequence_ids, dim=0).to(torch.long), torch.cat(attention_masks, dim=0).to(torch.long)
 
-    def mmu_prompt(self, task_token, image_ids, instruction_ids, response_ids):
+    def mmu_prompt(self, image_ids, instruction_ids, response_ids):
         device = image_ids.device
         sequence_ids = []
         attention_masks = []
@@ -129,7 +129,7 @@ class UniversalPrompting():
                 self.sptids_dict['<｜begin▁of▁sentence｜>'].to(device),
                 torch.tensor(self.system_ids).to(device),
                 self.sptids_dict['<｜User｜>'].to(device),
-                self.sptids_dict[task_token].to(device),
+                self.sptids_dict['<|mmu|>'].to(device),
                 self.sptids_dict['<|soi|>'].to(device),
                 image_ids[i],
                 self.sptids_dict['<|eoi|>'].to(device),
@@ -174,9 +174,9 @@ class UniversalPrompting():
             attention_masks.append(temp_masks.unsqueeze(0))
             label_ids.append(temp_label_ids.unsqueeze(0))
 
-        return torch.cat(sequence_ids, dim=0), torch.cat(attention_masks, dim=0), torch.cat(label_ids, dim=0)
+        return torch.cat(sequence_ids, dim=0).to(torch.long), torch.cat(attention_masks, dim=0).to(torch.long), torch.cat(label_ids, dim=0).to(torch.long)
     
-    def mmu_gen_prompt(self, task_token, image_ids, instruction_ids):
+    def mmu_gen_prompt(self, image_ids, instruction_ids):
         device = image_ids.device
         sequence_ids = []
         attention_masks = []
@@ -188,7 +188,7 @@ class UniversalPrompting():
                 self.sptids_dict['<｜begin▁of▁sentence｜>'].to(device),
                 torch.tensor(self.system_ids).to(device),
                 self.sptids_dict['<｜User｜>'].to(device),
-                self.sptids_dict[task_token].to(device),
+                self.sptids_dict['<|mmu|>'].to(device),
                 self.sptids_dict['<|soi|>'].to(device),
                 image_ids[i],
                 self.sptids_dict['<|eoi|>'].to(device),
@@ -199,7 +199,7 @@ class UniversalPrompting():
             temp_masks = torch.tensor(temp_masks)
             sequence_ids.append(temp_ids.unsqueeze(0))
             attention_masks.append(temp_masks.unsqueeze(0))
-        return torch.cat(sequence_ids, dim=0), torch.cat(attention_masks, dim=0)
+        return torch.cat(sequence_ids, dim=0).to(torch.long), torch.cat(attention_masks, dim=0).to(torch.long)
         
         
         
@@ -214,8 +214,7 @@ class UniversalPrompting():
         for i in range(len(instruction_ids)):
             # prompting -- <｜begin▁of▁sentence｜> [system tokens] [User] [task token] [instrution tokens] [soi] [image tokens] [eoi] [response tokens] <｜end▁of▁sentence｜> 
             instruction = torch.tensor(instruction_ids[i]).to(device)
-            response = torch.tensor(response_ids[i]).to(device),
-            
+            response = torch.tensor(response_ids[i]).to(device)
             temp_ids = torch.cat([
                 self.sptids_dict['<｜begin▁of▁sentence｜>'].to(device),
                 torch.tensor(self.system_ids).to(device),
@@ -269,7 +268,7 @@ class UniversalPrompting():
             attention_masks.append(temp_masks.unsqueeze(0))
             label_ids.append(temp_label_ids.unsqueeze(0)) 
             
-        return torch.cat(sequence_ids, dim=0), torch.cat(attention_masks, dim=0), torch.cat(label_ids, dim=0)
+        return torch.cat(sequence_ids, dim=0).to(torch.long), torch.cat(attention_masks, dim=0).to(torch.long), torch.cat(label_ids, dim=0).to(torch.long)
     
     def mix_gen_prompt(self, instruction_ids):
         sequence_ids = []
@@ -290,7 +289,7 @@ class UniversalPrompting():
             temp_masks = torch.tensor(temp_masks)
             sequence_ids.append(temp_ids.unsqueeze(0))
             attention_masks.append(temp_masks.unsqueeze(0))
-        return torch.cat(sequence_ids, dim=0), torch.cat(attention_masks, dim=0)
+        return torch.cat(sequence_ids, dim=0).to(torch.long), torch.cat(attention_masks, dim=0).to(torch.long)
 
     def __call__(self, input, task):
         """
@@ -307,25 +306,16 @@ class UniversalPrompting():
             text_ids = self.text_tokenizer([input], add_special_tokens=False)['input_ids']  # (B, max_len)
             sequence_ids_with_masks = self.t2i_gen_prompt(text_ids)
         
-        elif task == "formalization":
+        elif task == "mmu":
             image_ids = input[0]
             instruction_ids = self.text_tokenizer(input[1], add_special_tokens=False)['input_ids']
             response_ids = self.text_tokenizer(input[2], add_special_tokens=False)['input_ids']
-            sequence_ids_with_masks = self.mmu_prompt("<|formalization|>", image_ids, instruction_ids, response_ids)
+            sequence_ids_with_masks = self.mmu_prompt(image_ids, instruction_ids, response_ids)
             
-        elif task == 'reasoning':
-            image_ids = input[0]
-            instruction_ids = self.text_tokenizer(input[1], add_special_tokens=False)['input_ids']
-            response_ids = self.text_tokenizer(input[2], add_special_tokens=False)['input_ids']
-            sequence_ids_with_masks = self.mmu_prompt("<|reasoning|>", image_ids, instruction_ids, response_ids)
-        elif task == 'formalization_gen':
+        elif task == 'mmu_gen':
             image_ids = input[0]
             instruction_ids = self.text_tokenizer([input[1]], add_special_tokens=False)['input_ids']
-            sequence_ids_with_masks = self.mmu_gen_prompt("<|formalization|>", image_ids, instruction_ids)
-        elif task == 'reasoning_gen':
-            image_ids = input[0]
-            instruction_ids = self.text_tokenizer([input[1]], add_special_tokens=False)['input_ids']
-            sequence_ids_with_masks = self.mmu_gen_prompt("<|reasoning|>", image_ids, instruction_ids)      
+            sequence_ids_with_masks = self.mmu_gen_prompt(image_ids, instruction_ids)
         elif task == 'mix':
             image_ids = input[0]
             instruction_ids = self.text_tokenizer(input[1], add_special_tokens=False)['input_ids']
@@ -346,13 +336,13 @@ if __name__ == '__main__':
     
     
     tokenizer = AutoTokenizer.from_pretrained('deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B')
-    uni_prompting = UniversalPrompting(tokenizer, max_len=40,
+    uni_prompting = UniversalPrompting(tokenizer, max_len=20,
                                        ignore_id=-100)
     
     instructions = ['一只小猪',
                   '生成随机']
     responses = ['小黑猫',
-                 '']
+                 '胖胖的']
     image_input = torch.randint(0, 10, (2, 10))
     input, attention_mask = uni_prompting(instructions[0], task='t2i_gen')
     print('*'*10 + ' t2i_gen ' + '*'*10)
@@ -371,7 +361,7 @@ if __name__ == '__main__':
     print(f'label shape: {label.shape}')
     
     
-    input, attention_mask, label = uni_prompting((image_input, instructions, responses), task='formalization')
+    input, attention_mask, label = uni_prompting((image_input, instructions, responses), task='mmu')
     print('*'*10 + ' mmu ' + '*'*10)
     print(f'input: {input}')
     print(f'input shape: {input.shape}')
@@ -380,10 +370,20 @@ if __name__ == '__main__':
     print(f'label: {label}')
     print(f'label shape: {label.shape}')
     
-    input, attention_mask = uni_prompting([image_input[0, :].unsqueeze(0), instructions[0]], task='reasoning_gen')
+    input, attention_mask = uni_prompting([image_input[0, :].unsqueeze(0), instructions[0]], task='mmu_gen')
     print('*'*10 + ' mmu_gen ' + '*'*10)
     print(f'input: {input}')
     print(f'input shape: {input.shape}')
     print(f'attention_mask: {attention_mask}')
     print(f'attention_mask shape: {attention_mask.shape}')
+    
+    input, attention_mask, label = uni_prompting((image_input, instructions, responses), task='mix')
+    print('*'*10 + ' mix ' + '*'*10)
+    print(f'input: {input}')
+    print(f'input shape: {input.shape}')
+    print(f'attention_mask: {attention_mask}')
+    print(f'attention_mask shape: {attention_mask.shape}')
+    print(f'label: {label}')
+    print(f'label shape: {label.shape}')
+    
     

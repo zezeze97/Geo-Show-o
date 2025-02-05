@@ -49,7 +49,8 @@ class LazySupervisedDataset(Dataset):
                  resolution: int = 256,
                  is_t2i: bool = False,
                  is_formalization: bool = False,
-                 is_reasoning: bool = False
+                 is_reasoning: bool = False,
+                 is_mixing: bool = False,
                  ):
         super(LazySupervisedDataset, self).__init__()
         
@@ -63,6 +64,7 @@ class LazySupervisedDataset(Dataset):
         self.is_t2i = is_t2i
         self.is_formalization = is_formalization
         self.is_reasoning = is_reasoning
+        self.is_mixing = is_mixing
     
 
     def __len__(self):
@@ -98,11 +100,9 @@ class LazySupervisedDataset(Dataset):
                 "images": image,
                 "instructions": instruction
             }
-        elif self.is_formalization or self.is_reasoning:
+        elif self.is_formalization or self.is_reasoning or self.is_mixing:
             # text = 'USER: \n' + instruction + ' ASSISTANT:' + response
             
-            if instruction.startswith('<image>\n'):
-                instruction = instruction.replace('<image>\n', '')
             
             data_dict = {
                 "images": image,

@@ -1,10 +1,11 @@
 from models.modeling_qwen2 import Qwen2ForCausalLM
+from models import GeoUniForCausalLM
 from transformers import AutoTokenizer
 
 model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
 device = "cuda" # the device to load the model onto
 
-model = Qwen2ForCausalLM.from_pretrained(
+model = GeoUniForCausalLM.from_pretrained(
     model_name,
     torch_dtype="auto",
     device_map="auto"
