@@ -108,25 +108,27 @@ if __name__ == '__main__':
    # load from users passed arguments
     if config.get("validation_prompts_file", None) is not None:
         config.dataset.params.validation_prompts_file = config.validation_prompts_file
+    
+    validation_info = []
     with open(config.dataset.params.validation_prompts_file, "r") as f:
-        validation_info = json.load(f)
+        for line in f:
+            validation_info.append(json.loads(line))
     
     temperature = 1.0
     outputs = []
     
     for item in tqdm(validation_info):
         image_path = os.path.join(config.mmu_image_root, item['image'])
+        image_id = item['image'].split('/')[-1].replace('.png', '')
         image_ori = Image.open(image_path).convert("RGB")
         image_ori = crop(image_ori)
         image_ori = expand2square(image_ori, (255, 255, 255))
         image = image_transform(image_ori, resolution=config.dataset.preprocessing.resolution).to(device)
         image = image.unsqueeze(0)
         image_tokens = vq_model.get_code(image) + len(uni_prompting.text_tokenizer)
-        question = item['conversations'][0]['value']
-        gt = item['conversations'][1]['value']
-        if question.startswith('<image>\n'):
-                question = question.replace('<image>\n', '')
-        input_ids, _ = uni_prompting([image_tokens, question], 'mmu_gen')
+        question = item['text']
+        prompt = question
+        input_ids, _ = uni_prompting([image_tokens, prompt], 'mmu_gen')
         with torch.no_grad():
             output_ids = model.generate(input_ids=input_ids,
                                         max_new_tokens=config.max_new_tokens,
@@ -139,9 +141,9 @@ if __name__ == '__main__':
                                         use_cache=True)
 
         respone = uni_prompting.text_tokenizer.batch_decode(output_ids[:, input_ids.shape[1]:], skip_special_tokens=True)[0]
-        print(f'generate: {respone}\ngt: {gt}')
-        outputs.append({'question_id': 0,
-                        'prompt': question,
+        print(f'generate: {respone}')
+        outputs.append({'question_id': image_id,
+                        'prompt': prompt,
                         'response': respone})
 
 with open(os.path.join(save_path, f'{save_file_name}.jsonl'), 'w') as f:

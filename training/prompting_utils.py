@@ -237,7 +237,7 @@ class UniversalPrompting():
                 torch.ones_like(instruction).to(device) * self.ignore_id,
                 self.sptids_dict['<｜Assistant｜>'].to(device),
                 self.sptids_dict['<|soi|>'].to(device),
-                torch.ones_like(image_ids[i]) * self.ignore_id,
+                torch.ones_like(image_ids[i]),
                 self.sptids_dict['<|eoi|>'].to(device),
                 response,
                 self.sptids_dict['<｜end▁of▁sentence｜>'].to(device)
@@ -283,7 +283,7 @@ class UniversalPrompting():
                 self.sptids_dict['<｜User｜>'],
                 self.sptids_dict['<|mix|>'],
                 torch.tensor(temp_text_ids),
-                self.sptids_dict['<｜Assistant｜>',]
+                self.sptids_dict['<｜Assistant｜>'],
             ], dim=0)
             temp_masks = [1] * temp_ids.shape[0]
             temp_masks = torch.tensor(temp_masks)

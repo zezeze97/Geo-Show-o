@@ -14,23 +14,32 @@
 # limitations under the License.
 
 import os
-
-os.environ["TOKENIZERS_PARALLELISM"] = "true"
-# os.environ["WANDB_MODE"]="offline"
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 from tqdm import tqdm
 import numpy as np
 import torch
-# import wandb
-from models import VQModel, MAGVITv2, GeoUniForCausalLM
-from omegaconf import OmegaConf
+import wandb
+from models import MAGVITv2, VQModel, GeoUniForCausalLM
 from training.prompting_utils import UniversalPrompting
-from training.utils import get_config
-from transformers import AutoTokenizer
-import torch.nn.functional as F
-import json
+from training.utils import get_config, flatten_omega_conf
 from training.geo_data_aug import crop
-from training.custom_data import expand2square
+from training.custom_data import image_transform
+from transformers import AutoTokenizer
+import json
+
+def expand2square(pil_img, background_color):
+    width, height = pil_img.size
+    if width == height:
+        return pil_img
+    elif width > height:
+        result = Image.new(pil_img.mode, (width, width), background_color)
+        result.paste(pil_img, (0, (width - height) // 2))
+        return result
+    else:
+        result = Image.new(pil_img.mode, (height, height), background_color)
+        result.paste(pil_img, ((height - width) // 2, 0))
+        return result
+
 
 def get_vq_model_class(model_type):
     if model_type == "magvitv2":
@@ -62,32 +71,25 @@ def load_geo_vqgan(vq_model, config, ckpt_path=None, use_ema=True):
   
     return model.eval()
 
-
-
 if __name__ == '__main__':
-    # 原本图片的目录
-    ori_image_root_path = 'data/formalgeo7k/formalgeo7k_v2'
-    
-
 
     config = get_config()
     save_path = config.output_dir
     if not os.path.exists(save_path):
         os.makedirs(save_path)
-
+    save_file_name = config.save_file_name
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(config.model.geouni.llm_model_path)
 
     uni_prompting = UniversalPrompting(tokenizer, max_len=config.dataset.preprocessing.max_seq_length,
                                        special_tokens=(
-                                           "<|soi|>", "<|eoi|>", "<|t2i|>", "<|mmu|>", "<|mix|>", "<formalization>", "</formalization>", "<answer>", "</answer>"
+                                            "<|soi|>", "<|eoi|>", "<|t2i|>", "<|mmu|>", "<|mix|>", "<formalization>", "</formalization>", "<answer>", "</answer>"
                                        ),
                                        ignore_id=-100)
 
     vq_model = get_vq_model_class(config.model.vq_model.type)
-
-    
+   
     if config.model.vq_model.type == "geo": 
         vq_model = load_geo_vqgan(vq_model, config.model.vq_model.vq_model_config, ckpt_path=config.model.vq_model.pretrained_model_path).to(device)
         vq_model.requires_grad_(False)
@@ -101,42 +103,59 @@ if __name__ == '__main__':
 
     model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='sdpa', torch_dtype=torch.bfloat16).to(device)    
     model.eval()
-
-
-    # load from users passed arguments
+    
+    
+   # load from users passed arguments
     if config.get("validation_prompts_file", None) is not None:
         config.dataset.params.validation_prompts_file = config.validation_prompts_file
-        
+    
     validation_info = []
     with open(config.dataset.params.validation_prompts_file, "r") as f:
         for line in f:
-            validation_info.append(json.loads(line)) 
-
+            validation_info.append(json.loads(line))
+    
+    temperature = 1.0
+    outputs = []
+    
     for item in tqdm(validation_info):
-        
-        prompt = item['text']
-        input_ids, attention_masks = uni_prompting(prompt, 't2i_gen')
-        input_ids = input_ids.to(device)
-        attention_masks = attention_masks.to(device)
-        with torch.no_grad():
-            gen_token_ids = model.t2i_generate(
-                input_ids=input_ids,
-                pad_token_id=uni_prompting.text_tokenizer.pad_token_id,
-                attention_masks=attention_masks,
-                temperature=1.0,
-            )
-
-        image = vq_model.decode_code(gen_token_ids)
-
-        image = torch.clamp((image + 1.0) / 2.0, min=0.0, max=1.0)
-        image *= 255.0
-        #images = images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
-        image = image.detach().cpu().permute(0, 2, 3, 1).squeeze(0).numpy().astype(np.uint8)
-        gen_image = Image.fromarray(image)
-        
-        
+        image_path = os.path.join(config.mmu_image_root, item['image'])
         image_id = item['image'].split('/')[-1].replace('.png', '')
-        gen_image.save(os.path.join(save_path, f'geouni_{image_id}.png'))  # 保存图像为 PNG 格式
+        image_ori = Image.open(image_path).convert("RGB")
+        image_ori = crop(image_ori)
+        image_ori = expand2square(image_ori, (255, 255, 255))
+        image = image_transform(image_ori, resolution=config.dataset.preprocessing.resolution).to(device)
+        image = image.unsqueeze(0)
+        image_tokens = vq_model.get_code(image) + len(uni_prompting.text_tokenizer)
+        question = item['text']
+        if config.language == 'en':
+            if config.formalization:
+                prompt = f"Analyze the input geometry image to extract consCDL and imgCDL, then answer the question.\nQuestion: {question}"
+            else:
+                prompt = f"Answer the question based on the provided geometry image.\nQuestion: {question}"
+        elif config.language == 'cn':
+            if config.formalization:
+                prompt = f"根据输入的几何图像和问题，首先分析图像提取 consCDL 和 imgCDL，然后给出答案。\n问题：{question}"
+            else:
+                prompt = f"请根据提供的几何图像回答问题。\n问题：{question}"
+        input_ids, _ = uni_prompting([image_tokens, prompt], 'mmu_gen')
+        with torch.no_grad():
+            output_ids = model.generate(input_ids=input_ids,
+                                        max_new_tokens=config.max_new_tokens,
+                                        temperature=temperature,
+                                        pad_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('[PAD]'),
+                                        eos_token_id = uni_prompting.text_tokenizer.eos_token_id,
+                                        do_sample=False,
+                                        top_p=None,
+                                        # eot_token=uni_prompting.sptids_dict['<|eot|>'],
+                                        use_cache=True)
 
+        respone = uni_prompting.text_tokenizer.batch_decode(output_ids[:, input_ids.shape[1]:], skip_special_tokens=True)[0]
+        print(f'generate: {respone}')
+        outputs.append({'question_id': image_id,
+                        'prompt': prompt,
+                        'response': respone})
 
-        
+with open(os.path.join(save_path, f'{save_file_name}.jsonl'), 'w') as f:
+    for line in outputs:
+        f.write(json.dumps(line) + '\n')
+

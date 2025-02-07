@@ -14,23 +14,32 @@
 # limitations under the License.
 
 import os
-
-os.environ["TOKENIZERS_PARALLELISM"] = "true"
-# os.environ["WANDB_MODE"]="offline"
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 from tqdm import tqdm
 import numpy as np
 import torch
-# import wandb
-from models import VQModel, MAGVITv2, GeoUniForCausalLM
-from omegaconf import OmegaConf
+import wandb
+from models import MAGVITv2, VQModel, GeoUniForCausalLM
 from training.prompting_utils import UniversalPrompting
-from training.utils import get_config
-from transformers import AutoTokenizer
-import torch.nn.functional as F
-import json
+from training.utils import get_config, flatten_omega_conf
 from training.geo_data_aug import crop
-from training.custom_data import expand2square
+from training.custom_data import image_transform
+from transformers import AutoTokenizer
+import json
+
+def expand2square(pil_img, background_color):
+    width, height = pil_img.size
+    if width == height:
+        return pil_img
+    elif width > height:
+        result = Image.new(pil_img.mode, (width, width), background_color)
+        result.paste(pil_img, (0, (width - height) // 2))
+        return result
+    else:
+        result = Image.new(pil_img.mode, (height, height), background_color)
+        result.paste(pil_img, ((height - width) // 2, 0))
+        return result
+
 
 def get_vq_model_class(model_type):
     if model_type == "magvitv2":
@@ -62,32 +71,27 @@ def load_geo_vqgan(vq_model, config, ckpt_path=None, use_ema=True):
   
     return model.eval()
 
-
-
 if __name__ == '__main__':
-    # 原本图片的目录
-    ori_image_root_path = 'data/formalgeo7k/formalgeo7k_v2'
-    
-
 
     config = get_config()
     save_path = config.output_dir
+    save_file_name = config.save_file_name
     if not os.path.exists(save_path):
         os.makedirs(save_path)
-
+    if not os.path.exists(os.path.join(save_path, save_file_name)):
+        os.makedirs(os.path.join(save_path, save_file_name))
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(config.model.geouni.llm_model_path)
 
     uni_prompting = UniversalPrompting(tokenizer, max_len=config.dataset.preprocessing.max_seq_length,
                                        special_tokens=(
-                                           "<|soi|>", "<|eoi|>", "<|t2i|>", "<|mmu|>", "<|mix|>", "<formalization>", "</formalization>", "<answer>", "</answer>"
+                                            "<|soi|>", "<|eoi|>", "<|t2i|>", "<|mmu|>", "<|mix|>", "<formalization>", "</formalization>", "<answer>", "</answer>"
                                        ),
                                        ignore_id=-100)
 
     vq_model = get_vq_model_class(config.model.vq_model.type)
-
-    
+   
     if config.model.vq_model.type == "geo": 
         vq_model = load_geo_vqgan(vq_model, config.model.vq_model.vq_model_config, ckpt_path=config.model.vq_model.pretrained_model_path).to(device)
         vq_model.requires_grad_(False)
@@ -101,42 +105,57 @@ if __name__ == '__main__':
 
     model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='sdpa', torch_dtype=torch.bfloat16).to(device)    
     model.eval()
-
-
-    # load from users passed arguments
+    
+    
+   # load from users passed arguments
     if config.get("validation_prompts_file", None) is not None:
         config.dataset.params.validation_prompts_file = config.validation_prompts_file
-        
+    
     validation_info = []
     with open(config.dataset.params.validation_prompts_file, "r") as f:
         for line in f:
-            validation_info.append(json.loads(line)) 
-
+            validation_info.append(json.loads(line))
+    
+    temperature = 1.0
+    outputs = []
+    num_idx = 0
     for item in tqdm(validation_info):
-        
         prompt = item['text']
-        input_ids, attention_masks = uni_prompting(prompt, 't2i_gen')
+        input_ids, _ = uni_prompting(prompt, 'mix_gen')
         input_ids = input_ids.to(device)
-        attention_masks = attention_masks.to(device)
         with torch.no_grad():
-            gen_token_ids = model.t2i_generate(
-                input_ids=input_ids,
-                pad_token_id=uni_prompting.text_tokenizer.pad_token_id,
-                attention_masks=attention_masks,
-                temperature=1.0,
-            )
-
-        image = vq_model.decode_code(gen_token_ids)
-
-        image = torch.clamp((image + 1.0) / 2.0, min=0.0, max=1.0)
-        image *= 255.0
-        #images = images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
-        image = image.detach().cpu().permute(0, 2, 3, 1).squeeze(0).numpy().astype(np.uint8)
-        gen_image = Image.fromarray(image)
+            image_tokens_list, text_tokens_list = model.mix_generate(input_ids=input_ids,
+                                        max_new_tokens=config.max_new_tokens,
+                                        temperature=temperature,
+                                        pad_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('[PAD]'),
+                                        eos_token_id = uni_prompting.text_tokenizer.eos_token_id,
+                                        soi_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('<|soi|>'),
+                                        eoi_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('<|eoi|>'))
         
         
-        image_id = item['image'].split('/')[-1].replace('.png', '')
-        gen_image.save(os.path.join(save_path, f'geouni_{image_id}.png'))  # 保存图像为 PNG 格式
-
-
         
+        
+        
+        assert len(image_tokens_list) == 1
+        if image_tokens_list[0].shape == config.model.geouni.num_vq_tokens:
+            image = vq_model.decode_code(image_tokens_list[0].unsqueeze(0))
+            image = torch.clamp((image + 1.0) / 2.0, min=0.0, max=1.0)
+            image *= 255.0
+            #images = images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
+            image = image.detach().cpu().permute(0, 2, 3, 1).squeeze(0).numpy().astype(np.uint8)
+            gen_image = Image.fromarray(image)
+            gen_image.save(os.path.join(save_path, 'gen_images', f'{num_idx}.png'))
+        
+        assert len(text_tokens_list) == 1
+        respone = uni_prompting.text_tokenizer.batch_decode(text_tokens_list, skip_special_tokens=True)[0]
+        print(f'response: {respone}')
+        outputs.append({'problem_id': num_idx,
+                        'prompt': prompt,
+                        'response': respone})
+        
+        num_idx += 1
+
+with open(os.path.join(save_path, f'{save_file_name}.jsonl'), 'w') as f:
+    for line in outputs:
+        f.write(json.dumps(line) + '\n')
+

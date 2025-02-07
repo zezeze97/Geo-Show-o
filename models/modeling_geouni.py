@@ -95,10 +95,7 @@ class GeoUniForCausalLM(Qwen2ForCausalLM):
             temperature=1.0,
             attention_masks=None,
     ):
-        device = input_ids.device
-        B = input_ids.shape[0]
-        
-        
+          
         
         # 生成 num_vq_tokens 个新 token
         generated_tokens = self.generate(input_ids=input_ids,
@@ -117,6 +114,58 @@ class GeoUniForCausalLM(Qwen2ForCausalLM):
         gen_token_ids = torch.clamp(new_tokens, max=self.codebook_size - 1, min=0)
 
         return gen_token_ids
+    
+    @torch.no_grad()
+    def mix_generate(self, 
+                     input_ids,
+                     max_new_tokens,
+                     temperature,
+                     pad_token_id,
+                     eos_token_id,
+                     soi_token_id,
+                     eoi_token_id):
+        
+        output_ids = self.generate(input_ids=input_ids,
+                                    max_new_tokens=max_new_tokens,
+                                    temperature=temperature,
+                                    pad_token_id=pad_token_id,
+                                    eos_token_id=eos_token_id,
+                                    do_sample=False,
+                                    top_p=None,
+                                    use_cache=True)
+        output_ids = output_ids[:, input_ids.shape[1]:]
+        
+        # 找到 soi 和 eoi 位置
+        soi_indices = (output_ids == soi_token_id).nonzero(as_tuple=True)[1]
+        eoi_indices = (output_ids == eoi_token_id).nonzero(as_tuple=True)[1]
+        
+        image_tokens_list = []
+        text_tokens_list = []
+        
+        batch_size = output_ids.shape[0]
+        for i in range(batch_size):
+            if soi_indices.numel() > i and eoi_indices.numel() > i:
+                soi_idx = soi_indices[i].item()
+                eoi_idx = eoi_indices[i].item()
+                
+                # 提取图像 tokens
+                image_tokens = output_ids[i, soi_idx + 1 : eoi_idx] - (self.llm_vocab_size + self.num_new_special_tokens)
+                image_tokens = torch.clamp(image_tokens, max=self.codebook_size - 1, min=0)
+                
+                # 提取文本 tokens（排除 soi 到 eoi 之间的部分）
+                text_tokens = torch.cat((output_ids[i, :soi_idx], output_ids[i, eoi_idx + 1:]))
+                
+            else:
+                # 若找不到 soi 或 eoi，默认整个序列都是文本 tokens
+                image_tokens = torch.tensor([], device=output_ids.device, dtype=output_ids.dtype)
+                text_tokens = output_ids[i]
+                
+            image_tokens_list.append(image_tokens)
+            text_tokens_list.append(text_tokens)
+        
+        return image_tokens_list, text_tokens_list
+        
+        
 
 AutoConfig.register("geo-uni", GeoUniConfig)
 AutoModelForCausalLM.register(GeoUniConfig, GeoUniForCausalLM)

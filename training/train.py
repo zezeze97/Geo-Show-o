@@ -402,7 +402,6 @@ def main():
     logger.info("Preparing model, optimizer and dataloaders")
     model, optimizer, lr_scheduler = accelerator.prepare(model, optimizer, lr_scheduler)
 
-    vq_model.to(device=accelerator.device)
 
     ##################################
     #             Training          #

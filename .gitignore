@@ -6,3 +6,4 @@ data/
 ./download_llama.sh
 *.out
 *.png
+logs/
