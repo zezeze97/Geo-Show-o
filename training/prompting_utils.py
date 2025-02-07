@@ -237,7 +237,7 @@ class UniversalPrompting():
                 torch.ones_like(instruction).to(device) * self.ignore_id,
                 self.sptids_dict['<｜Assistant｜>'].to(device),
                 self.sptids_dict['<|soi|>'].to(device),
-                torch.ones_like(image_ids[i]),
+                image_ids[i],
                 self.sptids_dict['<|eoi|>'].to(device),
                 response,
                 self.sptids_dict['<｜end▁of▁sentence｜>'].to(device)
