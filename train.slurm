@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -o job.%j.out
-#SBATCH --partition=GPU40G
+#SBATCH --partition=GPU80G
 #SBATCH --qos=low
-#SBATCH -J GeoUni
+#SBATCH -J GeoUni-16Down
 #SBATCH --nodes=1    
 #SBATCH --ntasks-per-node=1          # crucial - only 1 task per dist per node!
 #SBATCH --cpus-per-task=64          # number of cores per tasks
@@ -26,4 +26,4 @@ export OMP_NUM_THREADS=16
 source activate show-o
 
 # accelerate launch --config_file accelerate_configs/1_gpu.yaml --main_process_port=8888 training/train.py config=configs/geouni_sft_512x512.yaml
-accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml --main_process_port=8888 training/train.py config=configs/geouni_sft_512x512.yaml
+accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml --main_process_port=8888 training/train.py config=configs/geouni_sft_512x512_16Down.yaml

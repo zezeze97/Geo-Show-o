@@ -714,6 +714,7 @@ def generate_texts(
     for info in tqdm(sampled_validation_info):
         image_path = os.path.join(config.dataset.params.formalization_image_folder, info['image'])
         prompt = info['text']
+        prompt = f"根据输入的几何图像和问题，首先分析图像提取 consCDL 和 imgCDL，然后给出答案。\n问题：{prompt}"
         ori_image = Image.open(image_path).convert("RGB")
         ori_image = crop(ori_image)
         ori_image = expand2square(ori_image, (255, 255, 255))

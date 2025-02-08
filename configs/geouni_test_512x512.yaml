@@ -27,5 +27,5 @@ dataset:
     params:
         validation_prompts_file: null
     preprocessing:
-        max_seq_length: 1000
+        max_seq_length: 2000
         resolution: 512

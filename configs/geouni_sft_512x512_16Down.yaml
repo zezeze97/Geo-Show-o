@@ -5,8 +5,8 @@ wandb:
 
 experiment:
     project: "training"
-    name: "geouni-512x512-0208"
-    output_dir: "outputs/geouni-512x512-0208"
+    name: "geouni-512x512-0208-16down"
+    output_dir: "outputs/geouni-512x512-0208-16down"
     save_every: 500
     generate_every: 500
     log_every: 50
@@ -24,9 +24,9 @@ model:
             in_channels: 3
             out_ch: 3
             ch: 128
-            ch_mult: [1,2,2,2,4,4]  # num_down = len(ch_mult)-1
+            ch_mult: [1,2,2,4,4]  # num_down = len(ch_mult)-1
             num_res_blocks: 4
-        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1120_mask_down32_z13/ckpt/epoch=184-step=68820.ckpt"
+        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1115_mask_z13/ckpt/epoch=245-step=91512.ckpt"
 
         
     geouni:
@@ -36,7 +36,7 @@ model:
         llm_vocab_size: 151665
         llm_model_path: 'deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B' # 'Qwen/Qwen2.5-Math-1.5B'
         codebook_size: 8192
-        num_vq_tokens: 256
+        num_vq_tokens: 1024
         num_new_special_tokens: 10  # <|soi|> <|eoi|> <|t2i|> <|mmu|> <|mix|> <formalization> </formalization> <answer> </answer> [PAD]
 
 dataset:
