@@ -140,50 +140,11 @@ class GeoUniForCausalLM(Qwen2ForCausalLM):
 
         batch_size = output_ids.size(0)
         assert batch_size == 1
-        seq = output_ids[0, :]
-        image_tokens_list = [] # 一句话中可能有多个图像，故放入一个lst中
-        # 寻找特殊标记位置
-        soi_positions = (seq == soi_token_id).nonzero().view(-1)
-        eoi_positions = (seq == eoi_token_id).nonzero().view(-1)
-
-        soi_pos = soi_positions[0] if len(soi_positions) > 0 else None
-        eoi_pos = eoi_positions[0] if len(eoi_positions) > 0 else None 
-
-
-        # 有效性检查
-        valid = (
-            soi_pos is not None and 
-            eoi_pos is not None and 
-            soi_pos < eoi_pos and
-            (eoi_pos - soi_pos) == self.num_vq_tokens + 1 and
-            len(soi_positions) == 1 and # 暂时不支持多个图像
-            len(eoi_positions) == 1
-        )
-
-        if valid:
-            # 图像tokens处理
-            image_tokens = seq[soi_pos+1:eoi_pos]
-            image_tokens = image_tokens - (self.llm_vocab_size + self.num_new_special_tokens)
-            image_tokens = torch.clamp(image_tokens, min=0, max=self.codebook_size-1)
-
-            # 文本tokens拼接
-            text_tokens = torch.cat([
-                seq[:soi_pos+1], 
-                seq[eoi_pos:]
-            ])
-            image_tokens_list.append(image_tokens)
-        else:
-            # 无效时返回空图像token
-            text_tokens = seq.clone()
-
-        
-        text_tokens = text_tokens.unsqueeze(0)
-        
-        output_image_tokens = torch.stack(image_tokens_list, dim=0) if len(image_tokens_list) > 0 else None
-
-        return output_image_tokens, text_tokens
-        
-        
-
+        image_tokens = output_ids[:, 1:1+self.num_vq_tokens]
+        image_tokens = image_tokens - (self.llm_vocab_size + self.num_new_special_tokens)
+        image_tokens = torch.clamp(image_tokens, max=self.codebook_size - 1, min=0)
+        text_tokens = output_ids[:, 2+self.num_vq_tokens:]
+        return image_tokens, text_tokens
+    
 AutoConfig.register("geo-uni", GeoUniConfig)
 AutoModelForCausalLM.register(GeoUniConfig, GeoUniForCausalLM)

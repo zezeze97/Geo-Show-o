@@ -119,9 +119,9 @@ if __name__ == '__main__':
     
     temperature = 1.0
     outputs = []
-    num_idx = 0
     for item in tqdm(validation_info):
         prompt = item['text']
+        prob_id = item['prob_id']
         input_ids, _ = uni_prompting(prompt, 'mix_gen')
         input_ids = input_ids.to(device)
         with torch.no_grad():
@@ -143,16 +143,15 @@ if __name__ == '__main__':
             images = images.detach().cpu().permute(0, 2, 3, 1).numpy().astype(np.uint8)
             for j in range(images.shape[0]):
                 gen_image = Image.fromarray(images[j, :, :, :])
-                gen_image.save(os.path.join(save_path, save_file_name, f'Prob_{num_idx}_Img_{j}.png'))
+                gen_image.save(os.path.join(save_path, save_file_name, f'Prob_{prob_id}_Img_{j}.png'))
         
         
         respone = uni_prompting.text_tokenizer.batch_decode(text_tokens, skip_special_tokens=True)[0]
         print(f'response: {respone}')
-        outputs.append({'problem_id': num_idx,
+        outputs.append({'question_id': prob_id,
                         'prompt': prompt,
                         'response': respone})
         
-        num_idx += 1
 
 with open(os.path.join(save_path, f'{save_file_name}.jsonl'), 'w') as f:
     for line in outputs:
