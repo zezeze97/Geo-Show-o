@@ -117,53 +117,71 @@ class GeoUniForCausalLM(Qwen2ForCausalLM):
     
     @torch.no_grad()
     def mix_generate(self, 
-                     input_ids,
-                     max_new_tokens,
-                     temperature,
-                     pad_token_id,
-                     eos_token_id,
-                     soi_token_id,
-                     eoi_token_id):
+                    input_ids,
+                    max_new_tokens: int,
+                    temperature: float,
+                    pad_token_id: int,
+                    eos_token_id: int,
+                    soi_token_id: int,
+                    eoi_token_id: int) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
         
-        output_ids = self.generate(input_ids=input_ids,
-                                    max_new_tokens=max_new_tokens,
-                                    temperature=temperature,
-                                    pad_token_id=pad_token_id,
-                                    eos_token_id=eos_token_id,
-                                    do_sample=False,
-                                    top_p=None,
-                                    use_cache=True)
-        output_ids = output_ids[:, input_ids.shape[1]:]
-        
-        # 找到 soi 和 eoi 位置
-        soi_indices = (output_ids == soi_token_id).nonzero(as_tuple=True)[1]
-        eoi_indices = (output_ids == eoi_token_id).nonzero(as_tuple=True)[1]
-        
-        image_tokens_list = []
-        text_tokens_list = []
-        
-        batch_size = output_ids.shape[0]
-        for i in range(batch_size):
-            if soi_indices.numel() > i and eoi_indices.numel() > i:
-                soi_idx = soi_indices[i].item()
-                eoi_idx = eoi_indices[i].item()
-                
-                # 提取图像 tokens
-                image_tokens = output_ids[i, soi_idx + 1 : eoi_idx] - (self.llm_vocab_size + self.num_new_special_tokens)
-                image_tokens = torch.clamp(image_tokens, max=self.codebook_size - 1, min=0)
-                
-                # 提取文本 tokens（排除 soi 到 eoi 之间的部分）
-                text_tokens = torch.cat((output_ids[i, :soi_idx], output_ids[i, eoi_idx + 1:]))
-                
-            else:
-                # 若找不到 soi 或 eoi，默认整个序列都是文本 tokens
-                image_tokens = torch.tensor([], device=output_ids.device, dtype=output_ids.dtype)
-                text_tokens = output_ids[i]
-                
+        # 生成完整序列
+        output_ids = self.generate(
+            input_ids=input_ids,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            pad_token_id=pad_token_id,
+            eos_token_id=eos_token_id,
+            do_sample=False,
+            top_p=None,
+            use_cache=True
+        )
+        output_ids = output_ids[:, input_ids.size(1):]  # 移除输入部分
+
+        batch_size = output_ids.size(0)
+        assert batch_size == 1
+        seq = output_ids[0, :]
+        image_tokens_list = [] # 一句话中可能有多个图像，故放入一个lst中
+        # 寻找特殊标记位置
+        soi_positions = (seq == soi_token_id).nonzero().view(-1)
+        eoi_positions = (seq == eoi_token_id).nonzero().view(-1)
+
+        soi_pos = soi_positions[0] if len(soi_positions) > 0 else None
+        eoi_pos = eoi_positions[0] if len(eoi_positions) > 0 else None 
+
+
+        # 有效性检查
+        valid = (
+            soi_pos is not None and 
+            eoi_pos is not None and 
+            soi_pos < eoi_pos and
+            (eoi_pos - soi_pos) == self.num_vq_tokens + 1 and
+            len(soi_positions) == 1 and # 暂时不支持多个图像
+            len(eoi_positions) == 1
+        )
+
+        if valid:
+            # 图像tokens处理
+            image_tokens = seq[soi_pos+1:eoi_pos]
+            image_tokens = image_tokens - (self.llm_vocab_size + self.num_new_special_tokens)
+            image_tokens = torch.clamp(image_tokens, min=0, max=self.codebook_size-1)
+
+            # 文本tokens拼接
+            text_tokens = torch.cat([
+                seq[:soi_pos+1], 
+                seq[eoi_pos:]
+            ])
             image_tokens_list.append(image_tokens)
-            text_tokens_list.append(text_tokens)
+        else:
+            # 无效时返回空图像token
+            text_tokens = seq.clone()
+
         
-        return image_tokens_list, text_tokens_list
+        text_tokens = text_tokens.unsqueeze(0)
+        
+        output_image_tokens = torch.stack(image_tokens_list, dim=0) if len(image_tokens_list) > 0 else None
+
+        return output_image_tokens, text_tokens
         
         
 

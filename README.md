@@ -3,12 +3,9 @@
 # 环境安装
 ```shell
 pip3 install -r requirements.txt
+# 安装flash-attn
+pip install xxx.whl
 ```
-可以验证一下apex是否安装成功
-```python
-import apex
-```
-有时候由于torch版本太高导致apex无法成功安装
 
 
 

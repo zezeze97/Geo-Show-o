@@ -213,10 +213,12 @@ def main():
     # Initialize GeoUni model
     if config.model.geouni.load_from_geouni:
         print(f'Load from pretrained geouni: {config.model.geouni.pretrained_model_path}')
-        model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='sdpa').to(accelerator.device)
+        # model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='sdpa').to(accelerator.device)
+        model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16, device_map={'': accelerator.device})    
     else:
         print(f'Init geouni from: {config.model.geouni.llm_model_path}')
-        model = GeoUniForCausalLM.from_pretrained(config.model.geouni.llm_model_path, attn_implementation='sdpa').to(accelerator.device)
+        # model = GeoUniForCausalLM.from_pretrained(config.model.geouni.llm_model_path, attn_implementation='sdpa').to(accelerator.device)
+        model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16, device_map={'': accelerator.device})
         model_config = GeoUniConfig.from_pretrained(config.model.geouni.llm_model_path, 
                                               vocab_size=config.model.geouni.vocab_size,
                                               num_vq_tokens=config.model.geouni.num_vq_tokens,
@@ -394,7 +396,8 @@ def main():
             global_step = int(os.path.basename(path).split("-")[1])
             #first_epoch = global_step // num_update_steps_per_epoch
             accelerator.print(f"Resuming from checkpoint {checkpoint_path}")
-            model = model.from_pretrained(checkpoint_path, attn_implementation='sdpa').to(accelerator.device)
+            # model = model.from_pretrained(checkpoint_path, attn_implementation='sdpa').to(accelerator.device)
+            model = model.from_pretrained(checkpoint_path, attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16, device_map={'': accelerator.device})
 
     ##################################
     #       Prepare accelerator     #

@@ -103,7 +103,8 @@ if __name__ == '__main__':
         vq_model.requires_grad_(False)
         vq_model.eval()
 
-    model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='sdpa', torch_dtype=torch.bfloat16).to(device)    
+    # model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='sdpa', torch_dtype=torch.bfloat16).to(device) 
+    model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16, device_map={'': device})       
     model.eval()
     
     
@@ -124,7 +125,7 @@ if __name__ == '__main__':
         input_ids, _ = uni_prompting(prompt, 'mix_gen')
         input_ids = input_ids.to(device)
         with torch.no_grad():
-            image_tokens_list, text_tokens_list = model.mix_generate(input_ids=input_ids,
+            image_tokens, text_tokens = model.mix_generate(input_ids=input_ids,
                                         max_new_tokens=config.max_new_tokens,
                                         temperature=temperature,
                                         pad_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('[PAD]'),
@@ -134,20 +135,18 @@ if __name__ == '__main__':
         
         
         
-        
-        
-        assert len(image_tokens_list) == 1
-        if image_tokens_list[0].shape == config.model.geouni.num_vq_tokens:
-            image = vq_model.decode_code(image_tokens_list[0].unsqueeze(0))
-            image = torch.clamp((image + 1.0) / 2.0, min=0.0, max=1.0)
-            image *= 255.0
+        if image_tokens is not None:
+            images = vq_model.decode_code(image_tokens)
+            images = torch.clamp((images + 1.0) / 2.0, min=0.0, max=1.0)
+            images *= 255.0
             #images = images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
-            image = image.detach().cpu().permute(0, 2, 3, 1).squeeze(0).numpy().astype(np.uint8)
-            gen_image = Image.fromarray(image)
-            gen_image.save(os.path.join(save_path, 'gen_images', f'{num_idx}.png'))
+            images = images.detach().cpu().permute(0, 2, 3, 1).numpy().astype(np.uint8)
+            for j in range(images.shape[0]):
+                gen_image = Image.fromarray(images[j, :, :, :])
+                gen_image.save(os.path.join(save_path, save_file_name, f'Prob_{num_idx}_Img_{j}.png'))
         
-        assert len(text_tokens_list) == 1
-        respone = uni_prompting.text_tokenizer.batch_decode(text_tokens_list, skip_special_tokens=True)[0]
+        
+        respone = uni_prompting.text_tokenizer.batch_decode(text_tokens, skip_special_tokens=True)[0]
         print(f'response: {respone}')
         outputs.append({'problem_id': num_idx,
                         'prompt': prompt,

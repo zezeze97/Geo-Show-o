@@ -1,20 +1,16 @@
 from models.modeling_qwen2 import Qwen2ForCausalLM
 from models import GeoUniForCausalLM
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
 device = "cuda" # the device to load the model onto
 
-model = GeoUniForCausalLM.from_pretrained(
+model = AutoModelForCausalLM.from_pretrained(
     model_name,
     torch_dtype="auto",
     device_map="auto"
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-print(f'num of llm_vocab is: {len(tokenizer)}')
-print(f'bos: {tokenizer.bos_token}')
-print(f'eos: {tokenizer.eos_token}')
-print(f'pad: {tokenizer.pad_token}')
 
 prompt = "Find the value of $x$ that satisfies the equation $4x+5 = 6x+7$."
 

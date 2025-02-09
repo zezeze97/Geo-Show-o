@@ -101,7 +101,8 @@ if __name__ == '__main__':
         vq_model.requires_grad_(False)
         vq_model.eval()
 
-    model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='sdpa', torch_dtype=torch.bfloat16).to(device)    
+    # model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='sdpa', torch_dtype=torch.bfloat16).to(device)    
+    model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16, device_map={'': device})    
     model.eval()
     
     
@@ -109,10 +110,15 @@ if __name__ == '__main__':
     if config.get("validation_prompts_file", None) is not None:
         config.dataset.params.validation_prompts_file = config.validation_prompts_file
     
-    validation_info = []
-    with open(config.dataset.params.validation_prompts_file, "r") as f:
-        for line in f:
-            validation_info.append(json.loads(line))
+    overfit_train_mode = config.get("overfit_train_mode", False)
+    if overfit_train_mode:
+        with open(config.dataset.params.validation_prompts_file, "r") as f:
+            validation_info = json.load(f)
+    else:
+        validation_info = []
+        with open(config.dataset.params.validation_prompts_file, "r") as f:
+            for line in f:
+                validation_info.append(json.loads(line))
     
     temperature = 1.0
     outputs = []
@@ -126,7 +132,13 @@ if __name__ == '__main__':
         image = image_transform(image_ori, resolution=config.dataset.preprocessing.resolution).to(device)
         image = image.unsqueeze(0)
         image_tokens = vq_model.get_code(image) + len(uni_prompting.text_tokenizer)
-        question = item['text']
+        if overfit_train_mode:
+            assert item['conversations'][0]['from'] == 'human'
+            assert item['conversations'][1]['from'] == 'gpt'
+            question = item['conversations'][0]['value']
+            gt = item['conversations'][1]['value']
+        else:
+            question = item['text']
         prompt = question
         input_ids, _ = uni_prompting([image_tokens, prompt], 'mmu_gen')
         with torch.no_grad():
@@ -141,7 +153,9 @@ if __name__ == '__main__':
                                         use_cache=True)
 
         respone = uni_prompting.text_tokenizer.batch_decode(output_ids[:, input_ids.shape[1]:], skip_special_tokens=True)[0]
-        print(f'generate: {respone}')
+        if overfit_train_mode:
+            print(f'gt: {gt}')
+            print(f'generate: {respone}')
         outputs.append({'question_id': image_id,
                         'prompt': prompt,
                         'response': respone})

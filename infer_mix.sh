@@ -20,5 +20,5 @@ source activate show-o
 CUDA_VISIBLE_DEVICES=0 python3 inference_mix.py config=configs/geouni_test_512x512.yaml \
 max_new_tokens=600 \
 validation_prompts_file=data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/mixing/test_mixing_cn_problem_ans.jsonl \
-output_dir=outputs/model_predict/geouni-512x512-0206/ \
+output_dir=outputs/model_predict/geouni-512x512-0208/ \
 save_file_name='test_mixing_cn_problem_ans' > logs/test_mixing_cn_problem_ans.log 2>&1 &
