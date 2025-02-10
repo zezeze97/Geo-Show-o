@@ -72,12 +72,12 @@ class UniversalPrompting():
             
             current_len = temp_ids.shape[0]       
             if self.max_len >= current_len:
-                temp_masks =  [1] * current_len + [0] * (self.max_len - current_len)
-                temp_ids = torch.cat([temp_ids,
-                                      torch.tensor([self.pad_id] * (self.max_len - current_len)).to(device)
+                temp_masks =  [0] * (self.max_len - current_len) + [1] * current_len 
+                temp_ids = torch.cat([torch.tensor([self.pad_id] * (self.max_len - current_len)).to(device),
+                                      temp_ids                 
                     ], dim=0)
-                temp_label_ids = torch.cat([temp_label_ids,
-                                            torch.tensor([self.ignore_id] * (self.max_len - current_len)).to(device)])
+                temp_label_ids = torch.cat([torch.tensor([self.ignore_id] * (self.max_len - current_len)).to(device),
+                                            temp_label_ids])
                 
             else:
                 # should add the eos token
@@ -154,12 +154,11 @@ class UniversalPrompting():
             current_len = temp_ids.shape[0]     
             
             if self.max_len >= current_len:
-                temp_masks =  [1] * current_len + [0] * (self.max_len - current_len)
-                temp_ids = torch.cat([temp_ids,
-                                      torch.tensor([self.pad_id] * (self.max_len - current_len)).to(device)
-                    ], dim=0)
-                temp_label_ids = torch.cat([temp_label_ids,
-                                            torch.tensor([self.ignore_id] * (self.max_len - current_len)).to(device)])
+                temp_masks =  [0] * (self.max_len - current_len) + [1] * current_len 
+                temp_ids = torch.cat([torch.tensor([self.pad_id] * (self.max_len - current_len)).to(device),
+                                      temp_ids], dim=0)
+                temp_label_ids = torch.cat([torch.tensor([self.ignore_id] * (self.max_len - current_len)).to(device),
+                                            temp_label_ids])
                 
             else:
                 # should add the eos token
@@ -248,12 +247,11 @@ class UniversalPrompting():
             current_len = temp_ids.shape[0]    
             
             if self.max_len >= current_len:
-                temp_masks =  [1] * current_len + [0] * (self.max_len - current_len)
-                temp_ids = torch.cat([temp_ids,
-                                      torch.tensor([self.pad_id] * (self.max_len - current_len)).to(device)
-                    ], dim=0)
-                temp_label_ids = torch.cat([temp_label_ids,
-                                            torch.tensor([self.ignore_id] * (self.max_len - current_len)).to(device)])
+                temp_masks =  [0] * (self.max_len - current_len) + [1] * current_len 
+                temp_ids = torch.cat([torch.tensor([self.pad_id] * (self.max_len - current_len)).to(device),
+                                      temp_ids], dim=0)
+                temp_label_ids = torch.cat([torch.tensor([self.ignore_id] * (self.max_len - current_len)).to(device),
+                                            temp_label_ids])
                 
             else:
                 # should add the eos token

@@ -5,8 +5,8 @@ wandb:
 
 experiment:
     project: "training"
-    name: "geouni-512x512-0208"
-    output_dir: "outputs/geouni-512x512-0208"
+    name: "geouni-512x512-0210"
+    output_dir: "outputs/geouni-512x512-0210"
     save_every: 500
     generate_every: 500
     log_every: 50
@@ -44,8 +44,6 @@ dataset:
     params:
         t2i_image_folder: data/formalgeo7k/formalgeo7k_v2
         t2i_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/t2i/train.json
-        formalization_image_folder: data/formalgeo7k/formalgeo7k_v2
-        formalization_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/formalization/train.json
         reasoning_image_folder: data/formalgeo7k/formalgeo7k_v2
         reasoning_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/reasoning/train.json
         mixing_image_folder: data/formalgeo7k/formalgeo7k_v2
@@ -57,7 +55,7 @@ dataset:
         persistent_workers: True
 
     preprocessing:
-        max_seq_length: 2000
+        max_seq_length: 4096
         resolution: 512
 
 optimizer:
@@ -79,16 +77,14 @@ lr_scheduler:
 training:
     gradient_accumulation_steps: 8
     batch_size_t2i: 1
-    batch_size_formalization: 1
     batch_size_reasoning: 1
     batch_size_mixing: 1
     num_train_epochs: 10000000
     mixed_precision: "bf16"
     enable_tf32: True
     seed: 10086
-    max_train_steps: 50000 # to be determined according to the scale of high-quality dataset
+    max_train_steps: 25000 # to be determined according to the scale of high-quality dataset
     max_grad_norm: null
     t2i_coeff: 1.0
-    formalization_coeff: 1.0
     reasoning_coeff: 1.0
     mixing_coeff: 1.0

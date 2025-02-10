@@ -35,8 +35,8 @@ def parse_cdl(input_string):
     
     if consCDL_matches and imgCDL_matches:
         # 获取最后一个 consCDL 和 imgCDL 内容，不包括前缀
-        results['construction_cdl'] = consCDL_matches[-1].strip()
-        results['image_cdl'] = imgCDL_matches[-1].strip()
+        results['construction_cdl'] = consCDL_matches[-1].strip().replace(', ', ',')
+        results['image_cdl'] = imgCDL_matches[-1].strip().replace(', ', ',')
 
     return results
 
@@ -56,13 +56,13 @@ def getScore(predict_file, gt_path):
         if 'construction_cdl' not in result.keys():
             p_construction_cdl = ''
         else:
-            p_construction_cdl = result['construction_cdl'].replace(', ', ',')
+            p_construction_cdl = result['construction_cdl']
             
             
         if 'image_cdl' not in result.keys():
             p_image_cdl = ''
         else:
-            p_image_cdl = result['image_cdl'].replace(', ', ',')
+            p_image_cdl = result['image_cdl']
             
             
         
@@ -74,8 +74,8 @@ def getScore(predict_file, gt_path):
         gt_image_cdl = ','.join(gt_info['image_cdl'])
         
         
-        print(f'p_construction_cdl:{p_construction_cdl}\ngt_construction_cdl:{gt_construction_cdl}')
-        print(f'p_image_cdl:{p_image_cdl}\ngt_image_cdl:{gt_image_cdl}')
+        # print(f'p_construction_cdl:{p_construction_cdl}\ngt_construction_cdl:{gt_construction_cdl}')
+        # print(f'p_image_cdl:{p_image_cdl}\ngt_image_cdl:{gt_image_cdl}')
         
         
         

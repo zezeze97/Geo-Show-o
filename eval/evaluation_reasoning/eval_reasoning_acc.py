@@ -3,11 +3,16 @@ import json
 import re
 import os
 
-def extract_choice(q, answer, i):
-    match = re.search(r'<answer>\\boxed\{([^}]+)\}</answer>', answer)
+def extract_ans(q, answer, i):
+    # 第一步: 提取 <answer> 和 </answer> 标签之间的内容
+    match = re.search(r'<answer>(.*?)</answer>', answer, re.DOTALL)  # re.DOTALL 让 "." 匹配换行符
     if match:
-        result = match.group(1)
-        return result
+        answer_content = match.group(1)  # 提取出 <answer> 中的内容
+        # 第二步: 提取 \boxed{...} 中的内容
+        boxed_match = re.search(r'\\boxed\{(.*?)\}', answer_content, re.DOTALL)
+        if boxed_match:
+            raw_answer = boxed_match.group(1)  # 返回 \boxed{...} 中的内容
+            return raw_answer
     
     print(f"not found {i}")
     print("#"*10)
@@ -55,7 +60,7 @@ def calculate_accuracy(args):
             origin_source_dict.update({int(grd["problem_id"]) : grd["source"]})
         sources = [origin_source_dict[i] for i in predictions_ids]
         # Extract choices from predictions
-        predicted_ans = [extract_choice(q, a, i) for i, (q, a) in enumerate(zip(questions, predictions))]
+        predicted_ans = [extract_ans(q, a, i) for i, (q, a) in enumerate(zip(questions, predictions))]
         none_num = len([x for x in predicted_ans if x is None])
         print(f"nones : {none_num}")
 
@@ -64,6 +69,7 @@ def calculate_accuracy(args):
         correct = 0
         correct_list, wrong_list = [], []
         for prob_id, source, q, gt, pred_a, pred in zip(predictions_ids, sources, questions, ground_truth, predicted_ans, predictions):
+            # print(f'pred_a: {pred_a}')
             if pred_a == gt:
                 correct+=1
                 correct_list.append({"probID": prob_id, "source": source, "question": q, "pred": pred, "gt": gt})

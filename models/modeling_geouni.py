@@ -59,7 +59,6 @@ class GeoUniForCausalLM(Qwen2ForCausalLM):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
             batch_size_t2i=0,
-            batch_size_formalization=0,
             batch_size_reasoning=0,
             batch_size_mixing=0,
     ):
@@ -70,20 +69,16 @@ class GeoUniForCausalLM(Qwen2ForCausalLM):
                 logits[:batch_size_t2i, :-1].contiguous().view(-1, self.vocab_size),
                 labels[:batch_size_t2i, 1:].contiguous().view(-1), ignore_index=-100,
             )
-            loss_formalization = F.cross_entropy(
-                logits[batch_size_t2i:batch_size_t2i+batch_size_formalization, :-1].contiguous().view(-1, self.vocab_size),
-                labels[batch_size_t2i:batch_size_t2i+batch_size_formalization, 1:].contiguous().view(-1), ignore_index=-100,
-            )
             loss_reasoning = F.cross_entropy(
-                logits[batch_size_t2i+batch_size_formalization:batch_size_t2i+batch_size_formalization+batch_size_reasoning, :-1].contiguous().view(-1, self.vocab_size),
-                labels[batch_size_t2i+batch_size_formalization:batch_size_t2i+batch_size_formalization+batch_size_reasoning, 1:].contiguous().view(-1), ignore_index=-100,
+                logits[batch_size_t2i:batch_size_t2i+batch_size_reasoning, :-1].contiguous().view(-1, self.vocab_size),
+                labels[batch_size_t2i:batch_size_t2i+batch_size_reasoning, 1:].contiguous().view(-1), ignore_index=-100,
             )
             loss_mixing = F.cross_entropy(
                 logits[-batch_size_mixing:, :-1].contiguous().view(-1, self.vocab_size),
                 labels[-batch_size_mixing:, 1:].contiguous().view(-1), ignore_index=-100,
             )
 
-            return logits, loss_t2i, loss_formalization, loss_reasoning, loss_mixing
+            return logits, loss_t2i, loss_reasoning, loss_mixing
         
         return outputs
 

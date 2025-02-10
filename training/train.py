@@ -119,7 +119,7 @@ def main():
         split_batches=True,
     )
 
-    total_batch_size_per_gpu = config.training.batch_size_t2i + config.training.batch_size_formalization + config.training.batch_size_reasoning + config.training.batch_size_mixing
+    total_batch_size_per_gpu = config.training.batch_size_t2i  + config.training.batch_size_reasoning + config.training.batch_size_mixing
 
     total_batch_size = (total_batch_size_per_gpu
                         * accelerator.num_processes * config.training.gradient_accumulation_steps)
@@ -218,7 +218,7 @@ def main():
     else:
         print(f'Init geouni from: {config.model.geouni.llm_model_path}')
         # model = GeoUniForCausalLM.from_pretrained(config.model.geouni.llm_model_path, attn_implementation='sdpa').to(accelerator.device)
-        model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16, device_map={'': accelerator.device})
+        model = GeoUniForCausalLM.from_pretrained(config.model.geouni.llm_model_path, attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16, device_map={'': accelerator.device})
         model_config = GeoUniConfig.from_pretrained(config.model.geouni.llm_model_path, 
                                               vocab_size=config.model.geouni.vocab_size,
                                               num_vq_tokens=config.model.geouni.num_vq_tokens,
@@ -309,26 +309,6 @@ def main():
     
     
     
-    # Data for image formalization
-    dataset_formalization = LazySupervisedDataset(image_folder=dataset_config.formalization_image_folder,
-                                json_path=dataset_config.formalization_json_path,
-                                resolution=preproc_config.resolution,
-                                is_formalization=True)
-    if accelerator.num_processes > 1:
-        sampler = DistributedSampler(dataset_formalization,
-                                    num_replicas=accelerator.num_processes,
-                                    rank=accelerator.process_index,
-                                    shuffle=True,
-                                        )
-        shuffle = False
-    else:
-        sampler = None
-        shuffle = True
-    
-    train_dataloader_formalization =  DataLoader(dataset_formalization, batch_size=config.training.batch_size_formalization,
-                                        sampler=sampler, shuffle=shuffle, num_workers=dataset_config.num_workers,
-                                        pin_memory=dataset_config.pin_memory, persistent_workers=dataset_config.persistent_workers)
-    
     # Data for reasoning
     dataset_reasoning = LazySupervisedDataset(image_folder=dataset_config.reasoning_image_folder,
                                 json_path=dataset_config.reasoning_json_path,
@@ -371,7 +351,6 @@ def main():
     # Combine these dataloaders into a single iterable model
     iterables = {
         "t2i_flow": train_dataloader_t2i,
-        "formalization_flow": train_dataloader_formalization,
         "reasoning_flow": train_dataloader_reasoning,
         "mixing_flow": train_dataloader_mixing
     }
@@ -428,7 +407,6 @@ def main():
             data_time_m.update(time.time() - end)   
             # for loss calculation
             batch_size_t2i = batch["t2i_flow"]["images"].shape[0]
-            batch_size_formalization = batch["formalization_flow"]["images"].shape[0]
             batch_size_reasoning = batch["reasoning_flow"]["images"].shape[0]
             batch_size_mixing = batch["mixing_flow"]["images"].shape[0]
             
@@ -444,15 +422,6 @@ def main():
             image_tokens_t2i = image_tokens_t2i + len(uni_prompting.text_tokenizer)
             input_ids_t2i, attention_mask_t2i, labels_t2i = uni_prompting((instructions_t2i, image_tokens_t2i), task='t2i')
             
-            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
-            # Build formatted sequences for formalization
-            # *-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*-------*
-            pixel_values_formalization, instructions_formalization, responses_formalization = batch["formalization_flow"]["images"], batch["formalization_flow"]["instructions"], batch["formalization_flow"]["responses"]
-            pixel_values_formalization = pixel_values_formalization.to(accelerator.device, non_blocking=True)
-            image_tokens_formalization = vq_model.get_code(pixel_values_formalization)
-            image_tokens_formalization = image_tokens_formalization + len(uni_prompting.text_tokenizer)
-            input_ids_formalization, attention_mask_formalization, labels_formalization = uni_prompting((image_tokens_formalization, instructions_formalization, responses_formalization), 'mmu')
-            # input_ids_formalization = input_ids_formalization.to(accelerator.device, non_blocking=True)
             
             
             
@@ -477,9 +446,9 @@ def main():
             # input_ids_mixing = input_ids_mixing.to(accelerator.device, non_blocking=True)
             
              
-            attention_mask = torch.cat([attention_mask_t2i, attention_mask_formalization, attention_mask_reasoning, attention_mask_mixing], dim=0)
-            input_ids = torch.cat((input_ids_t2i, input_ids_formalization, input_ids_reasoning, input_ids_mixing), dim=0)
-            labels = torch.cat((labels_t2i, labels_formalization, labels_reasoning, labels_mixing), dim=0)
+            attention_mask = torch.cat([attention_mask_t2i, attention_mask_reasoning, attention_mask_mixing], dim=0)
+            input_ids = torch.cat((input_ids_t2i, input_ids_reasoning, input_ids_mixing), dim=0)
+            labels = torch.cat((labels_t2i, labels_reasoning, labels_mixing), dim=0)
             
         
             
@@ -489,23 +458,20 @@ def main():
                 logger.info("Labels: {}".format(labels))
 
             with accelerator.accumulate(model):
-                logits, loss_t2i, loss_formalization, loss_reasoning, loss_mixing = model(
+                logits, loss_t2i, loss_reasoning, loss_mixing = model(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
                     labels=labels,
                     batch_size_t2i=batch_size_t2i,
-                    batch_size_formalization=batch_size_formalization,
                     batch_size_reasoning=batch_size_reasoning,
                     batch_size_mixing=batch_size_mixing,
                 )
 
                 avg_loss_t2i = accelerator.gather(loss_t2i.repeat(config.training.batch_size_t2i)).mean()
-                avg_loss_formalization = accelerator.gather(loss_formalization.repeat(config.training.batch_size_formalization)).mean()
                 avg_loss_reasoning = accelerator.gather(loss_reasoning.repeat(config.training.batch_size_reasoning)).mean()
                 avg_loss_mixing = accelerator.gather(loss_mixing.repeat(config.training.batch_size_mixing)).mean()
                 
                 loss = config.training.t2i_coeff * loss_t2i + \
-                    config.training.formalization_coeff * loss_formalization + \
                     config.training.reasoning_coeff * loss_reasoning + \
                     config.training.mixing_coeff * loss_mixing
                             
@@ -543,7 +509,6 @@ def main():
                     )
                     logs = {
                         "step_loss_t2i": avg_loss_t2i.item(),
-                        "step_loss_formalization": avg_loss_formalization.item(),
                         "step_loss_reasoning": avg_loss_reasoning.item(),
                         "step_loss_mixing": avg_loss_mixing.item(),
                         "lr": lr_scheduler.get_last_lr()[0],
@@ -556,7 +521,6 @@ def main():
                     logger.info(
                         f"Step: {global_step + 1} "
                         f"Loss_t2i: {avg_loss_t2i.item():0.4f} "
-                        f"Loss_formalization: {avg_loss_formalization.item():0.4f} "
                         f"Loss_reasoning: {avg_loss_reasoning.item():0.4f} "
                         f"Loss_mixing: {avg_loss_mixing.item():0.4f} "
                         f"Data (t): {data_time_m.val:0.4f}, {samples_per_second_per_gpu:0.2f}/s/gpu "
@@ -715,7 +679,7 @@ def generate_texts(
     responses = []
     images = []
     for info in tqdm(sampled_validation_info):
-        image_path = os.path.join(config.dataset.params.formalization_image_folder, info['image'])
+        image_path = os.path.join(config.dataset.params.reasoning_image_folder, info['image'])
         prompt = info['text']
         prompt = f"根据输入的几何图像和问题，首先分析图像提取 consCDL 和 imgCDL，然后给出答案。\n问题：{prompt}"
         ori_image = Image.open(image_path).convert("RGB")
