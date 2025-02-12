@@ -4,14 +4,22 @@ import re
 import os
 
 def extract_ans(q, answer, i):
+    # print(f'raw ans: {answer}')
     # 第一步: 提取 <answer> 和 </answer> 标签之间的内容
     match = re.search(r'<answer>(.*?)</answer>', answer, re.DOTALL)  # re.DOTALL 让 "." 匹配换行符
     if match:
         answer_content = match.group(1)  # 提取出 <answer> 中的内容
         # 第二步: 提取 \boxed{...} 中的内容
-        boxed_match = re.search(r'\\boxed\{(.*?)\}', answer_content, re.DOTALL)
+        boxed_match = re.search(r'The final answer is:\\boxed\{(.*?)\}', answer_content, re.DOTALL)
         if boxed_match:
             raw_answer = boxed_match.group(1)  # 返回 \boxed{...} 中的内容
+            # print(f"extract answer: {raw_answer}")
+            return raw_answer
+        
+        boxed_match = re.search(r'最终这个题的答案是：\\boxed\{(.*?)\}', answer_content, re.DOTALL)
+        if boxed_match:
+            raw_answer = boxed_match.group(1)  # 返回 \boxed{...} 中的内容
+            # print(f"extract answer: {raw_answer}")
             return raw_answer
     
     print(f"not found {i}")
@@ -69,7 +77,7 @@ def calculate_accuracy(args):
         correct = 0
         correct_list, wrong_list = [], []
         for prob_id, source, q, gt, pred_a, pred in zip(predictions_ids, sources, questions, ground_truth, predicted_ans, predictions):
-            # print(f'pred_a: {pred_a}')
+            # print(f'pred_a: {pred_a} gt: {gt}')
             if pred_a == gt:
                 correct+=1
                 correct_list.append({"probID": prob_id, "source": source, "question": q, "pred": pred, "gt": gt})

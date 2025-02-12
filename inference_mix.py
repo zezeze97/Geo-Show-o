@@ -135,15 +135,14 @@ if __name__ == '__main__':
         
         
         
-        if image_tokens is not None:
-            images = vq_model.decode_code(image_tokens)
-            images = torch.clamp((images + 1.0) / 2.0, min=0.0, max=1.0)
-            images *= 255.0
-            #images = images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
-            images = images.detach().cpu().permute(0, 2, 3, 1).numpy().astype(np.uint8)
-            for j in range(images.shape[0]):
-                gen_image = Image.fromarray(images[j, :, :, :])
-                gen_image.save(os.path.join(save_path, save_file_name, f'Prob_{prob_id}_Img_{j}.png'))
+        
+        image = vq_model.decode_code(image_tokens)
+        image = torch.clamp((image + 1.0) / 2.0, min=0.0, max=1.0)
+        image *= 255.0
+        #images = images.permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
+        image = image.detach().cpu().permute(0, 2, 3, 1).squeeze(0).numpy().astype(np.uint8)
+        gen_image = Image.fromarray(image)
+        gen_image.save(os.path.join(save_path, save_file_name, f'Prob_{prob_id}.png'))
         
         
         respone = uni_prompting.text_tokenizer.batch_decode(text_tokens, skip_special_tokens=True)[0]

@@ -50,6 +50,7 @@ dataset:
         mixing_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/mixing/train.json
         t2i_validation_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/t2i/test_gpt_caption2i_en.jsonl
         mmu_validation_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/reasoning/test_reasoning_cn.jsonl
+        mix_validation_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/mixing/test_mixing_cn_problem_ans_choice.jsonl
         num_workers: 16
         pin_memory: True
         persistent_workers: True
