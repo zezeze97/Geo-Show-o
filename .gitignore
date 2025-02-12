@@ -1,0 +1,9 @@
+*.out
+
+# 忽略特定文件夹
+R1-Distill-Qwen-1.5B/
+geouni/
+wandb/
+data/
+checkpoints/
+transformers/

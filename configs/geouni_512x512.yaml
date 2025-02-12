@@ -1,0 +1,94 @@
+wandb:
+  entity: null
+#  run_id: askkz9i2
+  resume: 'auto'
+
+experiment:
+    project: "training"
+    name: "geouni-512x512-0206"
+    output_dir: "outputs/geouni-512x512-0206"
+    save_every: 500
+    generate_every: 500
+    log_every: 50
+    log_grad_norm_every: 500
+    checkpoints_total_limit: 1
+    resume_from_checkpoint: null # 'latest'
+
+model:
+    vq_model:
+        type: "geo"
+        vq_model_config: 
+            double_z: False
+            z_channels: 13
+            resolution: 512
+            in_channels: 3
+            out_ch: 3
+            ch: 128
+            ch_mult: [1,2,2,2,4,4]  # num_down = len(ch_mult)-1
+            num_res_blocks: 4
+        pretrained_model_path: "/lustre/home/2201210053/geo-grpo/geouni/OpenMagVit-CKPT/expr_1120_mask_down32_z13/ckpt/epoch=184-step=68820.ckpt"
+
+        
+    geouni:
+        load_from_geouni: false
+        pretrained_model_path: /lustre/home/2201210053/geo-grpo/geouni/geouni-512x512-0211
+        vocab_size: 159867
+        llm_vocab_size: 151665
+        llm_model_path: /lustre/home/2201210053/geo-grpo/R1-Distill-Qwen-1.5B # 'Qwen/Qwen2.5-Math-1.5B'
+        codebook_size: 8192
+        num_vq_tokens: 256
+        num_new_special_tokens: 10  # <|soi|> <|eoi|> <|t2i|> <|mmu|> <|mix|> <formalization> </formalization> <answer> </answer> [PAD]
+
+dataset:
+    combined_loader_mode: "max_size_cycle"
+    params:
+        t2i_image_folder: data/formalgeo7k/formalgeo7k_v2
+        t2i_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/t2i/train.json
+        formalization_image_folder: data/formalgeo7k/formalgeo7k_v2
+        formalization_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/formalization/train.json
+        reasoning_image_folder: data/formalgeo7k/formalgeo7k_v2
+        reasoning_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/reasoning/train.json
+        mixing_image_folder: data/formalgeo7k/formalgeo7k_v2
+        mixing_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/mixing/train.json
+        t2i_validation_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/t2i/test_cdl2i.jsonl
+        mmu_validation_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/reasoning/test_reasoning_cn.jsonl
+        num_workers: 16
+        pin_memory: True
+        persistent_workers: True
+
+    preprocessing:
+        max_seq_length: 1000
+        resolution: 512
+
+optimizer:
+    name: adamw
+    params: # default adamw params
+        learning_rate: 5e-5
+        scale_lr: False # scale learning rate by total batch size
+        beta1: 0.9
+        beta2: 0.999
+        weight_decay: 0.01
+        epsilon: 1e-8
+
+lr_scheduler:
+    scheduler: "cosine"
+    params:
+        learning_rate: ${optimizer.params.learning_rate}
+        warmup_steps: 200
+
+training:
+    gradient_accumulation_steps: 8
+    batch_size_t2i: 1
+    batch_size_formalization: 1
+    batch_size_reasoning: 1
+    batch_size_mixing: 1
+    num_train_epochs: 10000000
+    mixed_precision: "bf16"
+    enable_tf32: True
+    seed: 10086
+    max_train_steps: 50000 # to be determined according to the scale of high-quality dataset
+    max_grad_norm: null
+    t2i_coeff: 1.0
+    formalization_coeff: 1.0
+    reasoning_coeff: 1.0
+    mixing_coeff: 1.0
