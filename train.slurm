@@ -2,13 +2,13 @@
 #SBATCH -o job.%j.out
 #SBATCH --partition=GPU80G
 #SBATCH --qos=low
-#SBATCH -J GeoGRPO_0212
+#SBATCH -J GeoGRPO14
 #SBATCH --nodes=1    
 #SBATCH --ntasks-per-node=1  
-#SBATCH --cpus-per-task=16
-#SBATCH --gres=gpu:1  
+#SBATCH --cpus-per-task=64
+#SBATCH --gres=gpu:4  
 #SBATCH --time=5-00:00:00
-#SBATCH --exclude=l12gpu28
+#SBATCH --exclude=l12gpu26
 
 module load cuda/12.1
 module load gcc/12.2.0
@@ -49,19 +49,18 @@ source /lustre/home/2201210053/software/miniconda3/bin/activate openr1
 export DS_ACCELERATOR=cuda
 TORCH_CPP_LOG_LEVEL=INFO TORCH_DISTRIBUTED_DEBUG=INFO TORCH_SHOW_CPP_STACKTRACES=1
 
-torchrun --nproc_per_node=1 \
+torchrun --nproc_per_node=4 \
     --nnodes=1 \
     --node_rank=0 \
-    --master_addr="${MASTER_ADDR}" \
-    --master_port="${MASTER_PORT}" \
     src/open_r1/grpo.py \
     --deepspeed scripts/zero2.json \
-    --output_dir checkpoints/geo-grpo0212_1 \
+    --output_dir checkpoints/geo-grpo-0214 \
     --model_name_or_path GeoUni \
-    --dataset_name data/2formalgeo7k \
-    --max_prompt_length 8192 \
-    --per_device_train_batch_size 1 \
-    --gradient_accumulation_steps 1 \
+    --dataset_name data/newformalgeo7k \
+    --max_prompt_length 4196 \
+    --max_completion_length 2048 \
+    --per_device_train_batch_size 24 \
+    --gradient_accumulation_steps 2 \
     --logging_steps 1 \
     --bf16 \
     --report_to wandb \
@@ -70,4 +69,4 @@ torchrun --nproc_per_node=1 \
     --max_pixels 2359296 \
     --save_total_limit 8 \
     --num_train_epochs 1 \
-    --run_name GeoUni_GRPO_0212_1
+    --run_name GeoUni_GRPO_0214

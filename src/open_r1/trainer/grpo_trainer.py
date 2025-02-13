@@ -58,6 +58,9 @@ if is_peft_available():
 
 if is_wandb_available():
     import wandb
+    
+from torch.optim import AdamW
+from torch.optim.lr_scheduler import LambdaLR
 
 # -----------------------------------------------------------------------
 # 1. VQ 模型加载模块
@@ -112,13 +115,9 @@ class GeoUniGRPOTrainer(Trainer):
         attn_implementation: str = "flash_attention_2",
         geo_config: Optional[DictConfig] = None,
     ):
-        # 如果未传入 args，则根据 model_name 自动生成一个 GRPOConfig
-        if args is None:
-            model_name = model if isinstance(model, str) else model.config._name_or_path
-            model_name = model_name.split("/")[-1]
-            args = GRPOConfig(f"{model_name}-GRPO")
-        self.args = args
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # 数据整理函数（GRPO 内部无需额外拼接）
+        def data_collator(features):
+            return features
         
         # 解析 geo_config（支持传入文件路径或 DictConfig 对象）
         if isinstance(geo_config, str):
@@ -127,80 +126,9 @@ class GeoUniGRPOTrainer(Trainer):
             self.geo_config = geo_config
         print("Loaded geo_config:", self.geo_config)
         
-        # 初始化 VQ 模型（如果配置中有预训练路径）
-        self.vq_model = None
-        if self.geo_config is not None and self.geo_config.model.vq_model.get("pretrained_model_path", None):
-            vq_class = get_vq_model_class(self.geo_config.model.vq_model.type)
-            if self.geo_config.model.vq_model.type == 'geo':
-                self.vq_model = load_geo_vqgan(
-                    vq_class,
-                    self.geo_config.model.vq_model.vq_model_config,
-                    ckpt_path=self.geo_config.model.vq_model.pretrained_model_path
-                )
-            self.vq_model.to(device)
-            self.vq_model.eval()
-            self.vq_model.requires_grad_(False)
-            print("Loaded VQ model from", self.geo_config.model.vq_model.pretrained_model_path)
-        
-        # 模型初始化
-        model_init_kwargs = args.model_init_kwargs or {}
-        model_init_kwargs["attn_implementation"] = attn_implementation
-        if isinstance(model, str):
-            model_id = model
-            torch_dtype = model_init_kwargs.get("torch_dtype")
-            if isinstance(torch_dtype, torch.dtype) or torch_dtype == "auto" or torch_dtype is None:
-                pass
-            elif isinstance(torch_dtype, str):
-                torch_dtype = getattr(torch, torch_dtype)
-                model_init_kwargs["torch_dtype"] = torch_dtype
-            else:
-                raise ValueError("Invalid `torch_dtype` passed to `GRPOConfig`.")
-            model_init_kwargs["use_cache"] = False if args.gradient_checkpointing else model_init_kwargs.get("use_cache")
-            if "GeoUni" in model_id:
-                print(f'Loading pretrained GeoUni model from {self.geo_config.model.geouni.pretrained_model_path}')
-                model = GeoUniForCausalLM.from_pretrained(
-                    self.geo_config.model.geouni.pretrained_model_path,
-                    attn_implementation='sdpa'
-                ).to(device)
-            elif "Qwen2-VL" in model_id:
-                model = Qwen2VLForConditionalGeneration.from_pretrained(model, **model_init_kwargs)
-            elif "Aria" in model_id:
-                model_init_kwargs.pop("use_cache")
-                model = AriaForConditionalGeneration.from_pretrained(model, **model_init_kwargs)
-            else:
-                model = AutoModelForCausalLM.from_pretrained(model, **model_init_kwargs)
-        else:
-            model_id = model.config._name_or_path
-            if args.model_init_kwargs is not None:
-                raise ValueError("`model_init_kwargs` can only be used when `model` is a string.")
-        
-        if peft_config is not None:
-            model = get_peft_model(model, peft_config)
-        
-         # Reference model
-        
-        if is_deepspeed_zero3_enabled():
-            if "Qwen2-VL" in model_id:
-                self.ref_model = Qwen2VLForConditionalGeneration.from_pretrained(model_id, **model_init_kwargs)
-            elif "Aria" in model_id:
-                self.ref_model = AriaForConditionalGeneration.from_pretrained(model_id, **model_init_kwargs)
-            else:
-                self.ref_model = AutoModelForCausalLM.from_pretrained(model_id, **model_init_kwargs)
-        elif peft_config is None:
-            # If PEFT configuration is not provided, create a reference model based on the initial model.
-            self.ref_model = create_reference_model(model)
-        else:
-            # If PEFT is used, the reference model is not needed since the adapter can be disabled
-            # to revert to the initial model.
-            self.ref_model = None
-        
-        if "GeoUni" in model_id:
-            self.ref_model  = GeoUniForCausalLM.from_pretrained(
-                    self.geo_config.model.geouni.pretrained_model_path,
-                    attn_implementation='sdpa').to(device)
-            print("Loaded GeoUni reference model from", self.geo_config.model.geouni.pretrained_model_path)
-        
         # 处理器初始化
+        model_id = "GeoUni"
+        
         if processing_class is None:
             if "Qwen2-VL" in model_id or "Aria" in model_id:
                 processing_class = AutoProcessor.from_pretrained(model_id)
@@ -229,6 +157,103 @@ class GeoUniGRPOTrainer(Trainer):
                 processing_class = AutoTokenizer.from_pretrained(model.config._name_or_path, padding_side="left")
         self.processing_class = processing_class
         
+        # 如果未传入 args，则根据 model_name 自动生成一个 GRPOConfig
+        if args is None:
+            model_name = model if isinstance(model, str) else model.config._name_or_path
+            model_name = model_name.split("/")[-1]
+            args = GRPOConfig(f"{model_name}-GRPO")
+        self.args = args
+        
+        # 模型初始化
+        model_init_kwargs = args.model_init_kwargs or {}
+        model_init_kwargs["attn_implementation"] = attn_implementation
+        if isinstance(model, str):
+            model_id = model
+            torch_dtype = model_init_kwargs.get("torch_dtype")
+            if isinstance(torch_dtype, torch.dtype) or torch_dtype == "auto" or torch_dtype is None:
+                pass
+            elif isinstance(torch_dtype, str):
+                torch_dtype = getattr(torch, torch_dtype)
+                model_init_kwargs["torch_dtype"] = torch_dtype
+            else:
+                raise ValueError("Invalid `torch_dtype` passed to `GRPOConfig`.")
+            model_init_kwargs["use_cache"] = False if args.gradient_checkpointing else model_init_kwargs.get("use_cache")
+            if "GeoUni" in model_id:
+                print(f'Loading pretrained GeoUni model from {self.geo_config.model.geouni.pretrained_model_path}')
+                model = GeoUniForCausalLM.from_pretrained(
+                    self.geo_config.model.geouni.pretrained_model_path,
+                    **model_init_kwargs)
+            elif "Qwen2-VL" in model_id:
+                model = Qwen2VLForConditionalGeneration.from_pretrained(model, **model_init_kwargs)
+            elif "Aria" in model_id:
+                model_init_kwargs.pop("use_cache")
+                model = AriaForConditionalGeneration.from_pretrained(model, **model_init_kwargs)
+            else:
+                model = AutoModelForCausalLM.from_pretrained(model, **model_init_kwargs)
+        else:
+            model_id = model.config._name_or_path
+            if args.model_init_kwargs is not None:
+                raise ValueError("`model_init_kwargs` can only be used when `model` is a string.")
+        
+        if peft_config is not None:
+            model = get_peft_model(model, peft_config)
+            
+        super().__init__(
+            model=model,
+            args=args,
+            data_collator=data_collator,
+            train_dataset=train_dataset,
+            eval_dataset=eval_dataset,
+            processing_class=self.processing_class,
+            callbacks=callbacks,
+            optimizers= optimizers,
+        )
+        
+        device = self.accelerator.device if hasattr(self, 'accelerator') else torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Device being used: {device}")
+        self.device = device
+        
+        model.to(device)
+        
+        # 初始化 VQ 模型（如果配置中有预训练路径）
+        self.vq_model = None
+        if self.geo_config is not None and self.geo_config.model.vq_model.get("pretrained_model_path", None):
+            vq_class = get_vq_model_class(self.geo_config.model.vq_model.type)
+            if self.geo_config.model.vq_model.type == 'geo':
+                self.vq_model = load_geo_vqgan(
+                    vq_class,
+                    self.geo_config.model.vq_model.vq_model_config,
+                    ckpt_path=self.geo_config.model.vq_model.pretrained_model_path
+                )
+            self.vq_model.to(device)
+            self.vq_model.eval()
+            self.vq_model.requires_grad_(False)
+            print("Loaded VQ model from", self.geo_config.model.vq_model.pretrained_model_path)
+    
+         # Reference model
+        
+        if is_deepspeed_zero3_enabled():
+            if "Qwen2-VL" in model_id:
+                self.ref_model = Qwen2VLForConditionalGeneration.from_pretrained(model_id, **model_init_kwargs)
+            elif "Aria" in model_id:
+                self.ref_model = AriaForConditionalGeneration.from_pretrained(model_id, **model_init_kwargs)
+            else:
+                self.ref_model = AutoModelForCausalLM.from_pretrained(model_id, **model_init_kwargs)
+        elif peft_config is None:
+            # If PEFT configuration is not provided, create a reference model based on the initial model.
+            self.ref_model = create_reference_model(model)
+        else:
+            # If PEFT is used, the reference model is not needed since the adapter can be disabled
+            # to revert to the initial model.
+            self.ref_model = None
+        
+        if "GeoUni" in model_id:
+            self.ref_model = GeoUniForCausalLM.from_pretrained(
+                 self.geo_config.model.geouni.pretrained_model_path,
+                 **model_init_kwargs
+            ).to(device)
+            print("Loaded GeoUni reference model from", self.geo_config.model.geouni.pretrained_model_path)
+        
         # 处理奖励函数及其处理器
         if not isinstance(reward_funcs, list):
             reward_funcs = [reward_funcs]
@@ -256,9 +281,6 @@ class GeoUniGRPOTrainer(Trainer):
                 reward_processing_classes[i] = reward_processing_class
         self.reward_processing_classes = reward_processing_classes
         
-        # 数据整理函数（GRPO 内部无需额外拼接）
-        def data_collator(features):
-            return features
         
         self.max_prompt_length = args.max_prompt_length
         self.max_completion_length = args.max_completion_length
@@ -278,16 +300,12 @@ class GeoUniGRPOTrainer(Trainer):
         
         self._metrics = defaultdict(list)
         
-        super().__init__(
-            model=model,
-            args=args,
-            data_collator=data_collator,
-            train_dataset=train_dataset,
-            eval_dataset=eval_dataset,
-            processing_class=self.processing_class,
-            callbacks=callbacks,
-            optimizers=optimizers,
-        )
+        if optimizers == (None, None):
+            optimizer = AdamW(model.parameters(), lr=5e-5)
+            scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: 0.95 ** epoch)
+        else:
+            optimizer, scheduler = optimizers
+        optimizers = (optimizer, scheduler)
         
         self.model_accepts_loss_kwargs = False
         
@@ -313,54 +331,91 @@ class GeoUniGRPOTrainer(Trainer):
             raise ValueError("GRPOTrainer does not support returning outputs")
         
         # -------------------------------------------------------------------
-        # 1. 从输入中提取 "prompt"、"image" 与 "ground_truth"（如果存在）
+        # 1. 从输入中提取 "prompt"、"image" 与 "ground_truth"
         # -------------------------------------------------------------------
-        prompts = [x["prompt"] for x in inputs][0]
-        
-        #print("prompts:", prompts)
+        prompts = [x["prompt"] for x in inputs]
         images = [x["image"] for x in inputs]
-        ground_truths = [x.get("ground_truth", None) for x in inputs] 
+        ground_truths = [x["ground_truth"] for x in inputs] 
         
         # -------------------------------------------------------------------
         # 2. 利用 GeoUni 专用处理器进行输入编码
         #    若存在 self.uni_prompting，则先对图像用 VQ 模型（如配置）离散化，再与文本拼接
         # -------------------------------------------------------------------
-        if hasattr(self, "uni_prompting"):
-            image_tokens_list = []
-            if self.vq_model is not None:
-                for img in images:
+        input_ids = []
+        attention_masks = []
+        
+        if self.vq_model is not None:
+            for i in range(len(images)):
                 # 如果图像为文件路径，则先加载并预处理
-                    if isinstance(img, str):
-                        img = os.path.join("/lustre/home/2201210053/geo-grpo/data", img)
-                        img = Image.open(img).convert("RGB")
-                        img = enhance_image(img)
-                        img = expand2square(img, (255, 255, 255))
-                        resolution =   self.geo_config.model.vq_model.vq_model_config.resolution
-                        img = image_transform(img, resolution)
-                    # 如果图像已经是 Tensor 且 shape 为 (C, H, W)，则增加 batch 维度
+                img = images[i]
+                if isinstance(img, str):
+                    img = os.path.join("/lustre/home/2201210053/geo-grpo/data", img)
+                    img = Image.open(img).convert("RGB")
+                    img = enhance_image(img)
+                    img = expand2square(img, (255, 255, 255))
+                    resolution =  self.geo_config.model.vq_model.vq_model_config.resolution
+                    img = image_transform(img, resolution)
+                    
                     if len(img.shape) == 3:
                         img = img.unsqueeze(0)
                         
-                    img = img.to(self.accelerator.device)
+                    img = img.to(self.accelerator.device)        
+                    img_tokens =  self.vq_model.get_code(img) + len(self.uni_prompting.text_tokenizer)
+                    input_id, attention_mask = self.uni_prompting([img_tokens, prompts[i]], task='mmu_gen')
                     
-                    tokens = self.vq_model.get_code(img)
+                    # Instead of using torch.tensor(), use .clone().detach() if necessary
+                    input_id = input_id.clone().detach().to(torch.long)
+                    attention_mask = attention_mask.clone().detach().to(torch.long)
                     
-                    tokens = tokens + len(self.uni_prompting.text_tokenizer)
-                    image_tokens_list.append(tokens)
-            else:
-                image_tokens_list = images
-            image_tokens_tensor = torch.cat(image_tokens_list, dim=0)
-            # 使用 uni_prompting 生成联合输入
-            input_ids, attention_mask = self.uni_prompting([image_tokens_tensor, prompts], task='mmu_gen')
-            prompt_inputs = {"input_ids": input_ids, "attention_mask": attention_mask}
-        else:
-            prompt_inputs = self.processing_class(
-                    text=prompts,
-                    return_tensors="pt",
-                    padding=True,
-                    padding_side="left",
-                    add_special_tokens=False,
-                )
+                    input_ids.append(input_id)
+                    attention_masks.append(attention_mask)
+            
+            # Retrieve the padding token ID as a scalar integer
+            padding_token_id = self.uni_prompting.sptids_dict['<|pad|>'].item()
+            # Find the maximum length of the input sequences
+            max_len = max([input_id.size(1) for input_id in input_ids])
+            
+            padded_input_ids = []
+            for input_id in input_ids:
+                padding_size = max_len - input_id.size(1)
+                if padding_size > 0:
+                    # Pad the tensor (pad_token_id is typically 0 or a specific value)
+                    padding = torch.full((input_id.size(0), padding_size), padding_token_id, dtype=torch.long)
+                    padding = padding.to(input_id.device)
+                    padded_input_id = torch.cat([padding, input_id], dim=1)
+                    
+                else:
+                    padded_input_id = input_id
+                
+                padded_input_ids.append(padded_input_id)
+                
+            # Now concatenate the padded tensors
+            input_ids = torch.cat(padded_input_ids, dim=0)
+            
+            # Find the maximum length of the attention masks
+            max_length = max(attention_mask.size(1) for attention_mask in attention_masks)
+            
+            # Pad the attention masks to the maximum length
+            padded_attention_masks = []
+            for attention_mask in attention_masks:
+                padding_size = max_length - attention_mask.size(1)
+                if padding_size > 0:
+                    # Pad the tensor (pad_token_id is typically 0 or a specific value)
+                    padding = torch.full((attention_mask.size(0), padding_size), 0, dtype=torch.long, device=attention_mask.device)  # pad_token_id is 0
+                    padded_attention_mask = torch.cat([padding, attention_mask], dim=1)
+                else:
+                    padded_attention_mask = attention_mask
+                padded_attention_masks.append(padded_attention_mask)
+            
+            # Now concatenate the padded attention masks
+            # 
+            attention_masks = torch.cat(padded_attention_masks, dim=0)
+
+            prompt_inputs = {
+                "input_ids": input_ids,
+                "attention_mask": attention_masks
+                }
+            prompt_inputs = super()._prepare_inputs(prompt_inputs)
         
         if self.max_prompt_length is not None:
             prompt_inputs["input_ids"] = prompt_inputs["input_ids"][:, -self.max_prompt_length:]
@@ -370,15 +425,19 @@ class GeoUniGRPOTrainer(Trainer):
         # 3. 生成多个候选回答（completions）
         # -------------------------------------------------------------------
         with unwrap_model_for_generation(model, self.accelerator) as unwrapped_model:
+            
             num_generations = self.generation_config.num_return_sequences
             temp_generation_config = copy.deepcopy(self.generation_config)
             temp_generation_config.num_return_sequences = 1
+            
             all_completions = []
             for i in range(num_generations):
                 completion = unwrapped_model.generate(**prompt_inputs, generation_config=temp_generation_config)
                 all_completions.append(completion)
+                
             max_length = max(completion.size(1) for completion in all_completions)
             padded_completions = []
+            
             for completion in all_completions:
                 if completion.size(1) < max_length:
                     padding = torch.full((completion.size(0), max_length - completion.size(1)),
@@ -390,7 +449,7 @@ class GeoUniGRPOTrainer(Trainer):
                     padded_completion = completion
                 padded_completions.append(padded_completion)
             prompt_completion_ids = torch.cat(padded_completions, dim=0)
-        print("prompt_completion_ids:", prompt_completion_ids)
+            
         prompt_length = prompt_inputs["input_ids"].size(1)
         completion_ids = prompt_completion_ids[:, prompt_length:]
         
@@ -443,9 +502,8 @@ class GeoUniGRPOTrainer(Trainer):
         # -------------------------------------------------------------------
         # 6. 计算奖励、归一化优势并构造最终损失
         # -------------------------------------------------------------------
-        rewards_per_func = torch.zeros(len(completions), len(self.reward_funcs), device=device)
-        # 重复 prompt（每个样本重复 num_generations 次）
-        prompts_repeated = [p for p in prompts for _ in range(self.num_generations)]
+        rewards_per_func = torch.zeros(len(prompts_repeated), len(self.reward_funcs), device=device)
+        
         # 如果 ground_truths 存在，则对其也重复，保证数量与 completions 一致
         if ground_truths[0] is not None:
             ground_truths_repeated = [gt for gt in ground_truths for _ in range(self.num_generations)]

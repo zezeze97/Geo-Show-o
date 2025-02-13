@@ -51,6 +51,7 @@ class GRPOScriptArguments(ScriptArguments):
 
 def accuracy_reward(completions, ground_truth, **kwargs):
     # Regular expression to capture content inside \boxed{}
+    print("completions:", completions)
     matches = [re.search(r"\\boxed\{(.*?)\}", completion) for completion in completions]
     contents = [match.group(1) if match else "" for match in matches]
     rewards = [1.0 if c == gt else 0.0 for c, gt in zip(contents, ground_truth)]
@@ -64,7 +65,7 @@ def format_reward(completions, ground_truth=None, **kwargs):
     matches = [re.match(pattern, content) for content in completion_contents]
     extracted_contents = [match.groups() if match else ("", "") for match in matches]  # Extract think and answer content
     rewards = [1.0 if think == answer else 0.0 for think, answer in extracted_contents]
-    print("format_rewards:", rewards)
+    #print("format_rewards:", rewards)
     return rewards
 
 import math
@@ -84,7 +85,7 @@ def length_reward(completions, ground_truth=None, **kwargs):
     """
     # 计算所有 completion 的长度
     lengths = [len(c) for c in completions]
-    print("lengths:", lengths)
+    #print("lengths:", lengths)
     if not lengths:
         return []
     
@@ -101,9 +102,9 @@ def length_reward(completions, ground_truth=None, **kwargs):
             rewards.append(1.0)
         else:
             # 超过平均长度后，使用指数衰减计算奖励
-            reward = math.exp(-(l - mean_length) / scale)
+            reward = math.exp(-(l - mean_length) / scale) / 2
             rewards.append(reward)
-    print("length_rewards:", rewards)
+    #print("length_rewards:", rewards)
     return rewards
 
 
@@ -120,7 +121,7 @@ SYSTEM_PROMPT = (
 
 def main(script_args, training_args, model_args):
 
-    Geo_config_path = "/lustre/home/2201210053/geo-grpo/configs/geouni_512x512.yaml"
+    Geo_config_path = "/lustre/home/2201210053/geo-grpo/configs/geouni_512x512_0212_1.yaml"
     # Get reward functions
     reward_funcs = [reward_funcs_registry[func] for func in script_args.reward_funcs]
     print("reward_funcs:", reward_funcs)
