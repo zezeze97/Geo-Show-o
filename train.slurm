@@ -27,4 +27,4 @@ export OMP_NUM_THREADS=16
 source activate show-o
 
 # accelerate launch --config_file accelerate_configs/1_gpu.yaml --main_process_port=8888 training/train.py config=configs/geouni_sft_512x512.yaml
-accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml --main_process_port=8888 training/train.py config=configs/geouni_sft_512x512.yaml
+accelerate launch --config_file accelerate_configs/4_gpus_deepspeed_zero2.yaml --main_process_port=8888 training/train.py config=configs/geouni_sft_512x512_16Down.yaml

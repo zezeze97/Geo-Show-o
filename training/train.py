@@ -621,17 +621,17 @@ def generate_images(
         prompt = info['text']
         validation_prompts.append(prompt)
     
-        input_id, attention_mask = uni_prompting(prompt, 't2i_gen')
-        input_id = input_id.to(accelerator.device)
-        attention_mask = attention_mask.to(accelerator.device)
+        input_ids, attention_masks = uni_prompting(prompt, 't2i_gen')
+        input_ids = input_ids.to(accelerator.device)
+        attention_masks = attention_masks.to(accelerator.device)
         
 
         with torch.autocast("cuda", dtype=weight_dtype, enabled=accelerator.mixed_precision != "no"):
             # Generate images
             gen_token_id = accelerator.unwrap_model(model).t2i_generate(
-                input_ids=input_id,
+                input_ids=input_ids,
                 pad_token_id=uni_prompting.text_tokenizer.pad_token_id,
-                attention_masks=attention_mask,
+                attention_masks=attention_masks,
                 temperature=config.training.get("generation_temperature", 1.0),
             )
             # print("gen_token_ids :", gen_token_ids.shape)
@@ -740,7 +740,7 @@ def generate_mixing(model,
         global_step,
         num_sample=8,
         max_new_tokens=1024):
-    logger.info("Evaluating MMU...")
+    logger.info("Evaluating MIX...")
     resolution = config.dataset.preprocessing.resolution
     model.eval()
 
@@ -764,12 +764,16 @@ def generate_mixing(model,
     for info in tqdm(sampled_validation_info):
         prompt = info['text']
         input_ids, _ = uni_prompting(prompt, 'mix_gen')
+        input_ids = input_ids.to(accelerator.device)
+        
         with torch.autocast("cuda", dtype=weight_dtype, enabled=accelerator.mixed_precision != "no"):
             image_tokens, text_tokens = accelerator.unwrap_model(model).mix_generate(input_ids=input_ids,
                                                                                     max_new_tokens=max_new_tokens,
                                                                                     temperature=config.training.get("generation_temperature", 1.0),
                                                                                     pad_token_id=uni_prompting.text_tokenizer.pad_token_id,
                                                                                     eos_token_id = uni_prompting.text_tokenizer.eos_token_id,
+                                                                                    soi_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('<|soi|>'),
+                                                                                    eoi_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('<|eoi|>')
                                                                                 )
         respone = uni_prompting.text_tokenizer.batch_decode(text_tokens, skip_special_tokens=True)[0]
         responses.append(respone)
