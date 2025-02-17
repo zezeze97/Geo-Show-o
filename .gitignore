@@ -8,3 +8,4 @@ wandb/
 data/
 checkpoints/
 transformers/
+src/open_r1.egg-info

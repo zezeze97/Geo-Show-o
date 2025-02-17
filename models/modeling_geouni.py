@@ -59,7 +59,6 @@ class GeoUniForCausalLM(Qwen2ForCausalLM):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
             batch_size_t2i=0,
-            batch_size_formalization=0,
             batch_size_reasoning=0,
             batch_size_mixing=0,
     ):
@@ -70,20 +69,16 @@ class GeoUniForCausalLM(Qwen2ForCausalLM):
                 logits[:batch_size_t2i, :-1].contiguous().view(-1, self.vocab_size),
                 labels[:batch_size_t2i, 1:].contiguous().view(-1), ignore_index=-100,
             )
-            loss_formalization = F.cross_entropy(
-                logits[batch_size_t2i:batch_size_t2i+batch_size_formalization, :-1].contiguous().view(-1, self.vocab_size),
-                labels[batch_size_t2i:batch_size_t2i+batch_size_formalization, 1:].contiguous().view(-1), ignore_index=-100,
-            )
             loss_reasoning = F.cross_entropy(
-                logits[batch_size_t2i+batch_size_formalization:batch_size_t2i+batch_size_formalization+batch_size_reasoning, :-1].contiguous().view(-1, self.vocab_size),
-                labels[batch_size_t2i+batch_size_formalization:batch_size_t2i+batch_size_formalization+batch_size_reasoning, 1:].contiguous().view(-1), ignore_index=-100,
+                logits[batch_size_t2i:batch_size_t2i+batch_size_reasoning, :-1].contiguous().view(-1, self.vocab_size),
+                labels[batch_size_t2i:batch_size_t2i+batch_size_reasoning, 1:].contiguous().view(-1), ignore_index=-100,
             )
             loss_mixing = F.cross_entropy(
                 logits[-batch_size_mixing:, :-1].contiguous().view(-1, self.vocab_size),
                 labels[-batch_size_mixing:, 1:].contiguous().view(-1), ignore_index=-100,
             )
 
-            return logits, loss_t2i, loss_formalization, loss_reasoning, loss_mixing
+            return logits, loss_t2i, loss_reasoning, loss_mixing
         
         return outputs
 
@@ -95,10 +90,7 @@ class GeoUniForCausalLM(Qwen2ForCausalLM):
             temperature=1.0,
             attention_masks=None,
     ):
-        device = input_ids.device
-        B = input_ids.shape[0]
-        
-        
+          
         
         # 生成 num_vq_tokens 个新 token
         generated_tokens = self.generate(input_ids=input_ids,
@@ -117,6 +109,37 @@ class GeoUniForCausalLM(Qwen2ForCausalLM):
         gen_token_ids = torch.clamp(new_tokens, max=self.codebook_size - 1, min=0)
 
         return gen_token_ids
+    
+    @torch.no_grad()
+    def mix_generate(self, 
+                    input_ids,
+                    max_new_tokens: int,
+                    temperature: float,
+                    pad_token_id: int,
+                    eos_token_id: int,
+                    soi_token_id: int,
+                    eoi_token_id: int) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
+        
+        # 生成完整序列
+        output_ids = self.generate(
+            input_ids=input_ids,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            pad_token_id=pad_token_id,
+            eos_token_id=eos_token_id,
+            do_sample=False,
+            top_p=None,
+            use_cache=True
+        )
+        output_ids = output_ids[:, input_ids.size(1):]  # 移除输入部分
 
+        batch_size = output_ids.size(0)
+        assert batch_size == 1
+        image_tokens = output_ids[:, 1:1+self.num_vq_tokens]
+        image_tokens = image_tokens - (self.llm_vocab_size + self.num_new_special_tokens)
+        image_tokens = torch.clamp(image_tokens, max=self.codebook_size - 1, min=0)
+        text_tokens = output_ids[:, 2+self.num_vq_tokens:]
+        return image_tokens, text_tokens
+    
 AutoConfig.register("geo-uni", GeoUniConfig)
 AutoModelForCausalLM.register(GeoUniConfig, GeoUniForCausalLM)
