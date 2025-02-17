@@ -1,0 +1,31 @@
+output_dir: null
+model:
+    vq_model:
+        type: "geo"
+        vq_model_config: 
+            double_z: False
+            z_channels: 13
+            resolution: 512
+            in_channels: 3
+            out_ch: 3
+            ch: 128
+            ch_mult: [1,2,2,4,4]   # num_down = len(ch_mult)-1
+            num_res_blocks: 4
+        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1115_mask_z13/ckpt/epoch=245-step=91512.ckpt"
+
+    geouni:
+        load_from_geouni: false
+        pretrained_model_path: "outputs/geouni-512x512-0213-16down"
+        vocab_size: 159867
+        llm_vocab_size: 151665
+        llm_model_path: 'deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B' # 'Qwen/Qwen2.5-Math-1.5B'
+        codebook_size: 8192
+        num_vq_tokens: 1024
+        num_new_special_tokens: 10  # <|soi|> <|eoi|> <|t2i|> <|mmu|> <|mix|> <formalization> </formalization> <answer> </answer> [PAD]
+
+dataset:   
+    params:
+        validation_prompts_file: null
+    preprocessing:
+        max_seq_length: 4096
+        resolution: 512

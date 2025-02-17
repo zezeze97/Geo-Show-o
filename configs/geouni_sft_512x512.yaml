@@ -5,8 +5,8 @@ wandb:
 
 experiment:
     project: "training"
-    name: "geouni-512x512-0210"
-    output_dir: "outputs/geouni-512x512-0210"
+    name: "geouni-512x512-0217"
+    output_dir: "outputs/geouni-512x512-0217"
     save_every: 500
     generate_every: 500
     log_every: 50

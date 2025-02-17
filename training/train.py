@@ -553,14 +553,6 @@ def main():
                         config,
                         global_step + 1,   
                     )
-                    generate_mixing(
-                        model,
-                        vq_model,
-                        uni_prompting,
-                        accelerator,
-                        config,
-                        global_step + 1,   
-                    )
 
                 global_step += 1
 
@@ -663,7 +655,7 @@ def generate_texts(
         config,
         global_step,
         num_sample=8,
-        max_new_tokens=1024
+        max_new_tokens=3000
 ):
     logger.info("Evaluating MMU...")
     resolution = config.dataset.preprocessing.resolution
@@ -729,67 +721,6 @@ def generate_texts(
     # Log images
     wandb_images = [wandb.Image(image, caption=f'model prediction: {responses[i]}') for i, image in enumerate(pil_images)]
     wandb.log({"MMU images": wandb_images}, step=global_step)
-
-# 对Mixing可视化
-@torch.no_grad()
-def generate_mixing(model,
-        vq_model,
-        uni_prompting,
-        accelerator,
-        config,
-        global_step,
-        num_sample=8,
-        max_new_tokens=1024):
-    logger.info("Evaluating MIX...")
-    resolution = config.dataset.preprocessing.resolution
-    model.eval()
-
-    # read validation prompts from file
-    validation_info = []
-    with open(config.dataset.params.mix_validation_path, "r") as f:
-        for line in f:
-            validation_info.append(json.loads(line))
-    sampled_validation_info = random.sample(validation_info, k=num_sample)
-    
-        
-    if accelerator.mixed_precision == "fp16":
-        weight_dtype = torch.float16
-    elif accelerator.mixed_precision == "bf16":
-        weight_dtype = torch.bfloat16
-    else:
-        weight_dtype = torch.float32
-    
-    responses = []
-    images = []
-    for info in tqdm(sampled_validation_info):
-        prompt = info['text']
-        input_ids, _ = uni_prompting(prompt, 'mix_gen')
-        input_ids = input_ids.to(accelerator.device)
-        
-        with torch.autocast("cuda", dtype=weight_dtype, enabled=accelerator.mixed_precision != "no"):
-            image_tokens, text_tokens = accelerator.unwrap_model(model).mix_generate(input_ids=input_ids,
-                                                                                    max_new_tokens=max_new_tokens,
-                                                                                    temperature=config.training.get("generation_temperature", 1.0),
-                                                                                    pad_token_id=uni_prompting.text_tokenizer.pad_token_id,
-                                                                                    eos_token_id = uni_prompting.text_tokenizer.eos_token_id,
-                                                                                    soi_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('<|soi|>'),
-                                                                                    eoi_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('<|eoi|>')
-                                                                                )
-        respone = uni_prompting.text_tokenizer.batch_decode(text_tokens, skip_special_tokens=True)[0]
-        responses.append(respone)
-        gen_image = vq_model.decode_code(image_tokens)
-        gen_image = torch.clamp((gen_image + 1.0) / 2.0, min=0.0, max=1.0)
-        gen_image *= 255.0
-        gen_image = gen_image.permute(0, 2, 3, 1).squeeze(0).cpu().numpy().astype(np.uint8)
-        images.append(gen_image)
-    
-    model.train()
-    
-    pil_images = [Image.fromarray(image) for image in images]
-
-    # Log images
-    wandb_images = [wandb.Image(image, caption=responses[i]) for i, image in enumerate(pil_images)]
-    wandb.log({"Mixing generated": wandb_images}, step=global_step)
         
 def save_checkpoint(model, tokenizer, config, accelerator, global_step):
     output_dir = config.experiment.output_dir
