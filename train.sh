@@ -10,7 +10,6 @@ export NCCL_DEBUG=WARN
 export NCCL_DEBUG_SUBSYS=DEFAULT
 export NCCL_SOCKET_IFNAME=eno3np0
 
-export CUDA_VISIBLE_DEVICES=0,1,2,3
 export OMP_NUM_THREADS=16
 export TOKENIZERS_PARALLELISM=false
 
@@ -33,25 +32,26 @@ export TORCH_DISTRIBUTED_DEBUG=INFO
 export TORCH_SHOW_CPP_STACKTRACES=1
 
 # 运行任务
-torchrun --nproc_per_node=4 \
+torchrun --nproc_per_node=1 \
     --nnodes=1 \
     --node_rank=0 \
     src/open_r1/grpo.py \
     --deepspeed scripts/zero2.json \
-    --output_dir checkpoints/geo-grpo-0213-1 \
+    --output_dir checkpoints/geo-grpo-0217-test1 \
     --model_name_or_path GeoUni \
-    --dataset_name data/2formalgeo7k \
-    --max_prompt_length 4196 \
-    --max_completion_length 2048 \
-    --per_device_train_batch_size 2 \
-    --gradient_accumulation_steps 2 \
+    --dataset_name data/smalltest \
+    --max_prompt_length 512 \
+    --max_completion_length 1024 \
+    --per_device_train_batch_size 1 \
+    --gradient_accumulation_steps 1 \
     --logging_steps 1 \
     --bf16 \
     --report_to wandb \
     --gradient_checkpointing true \
     --attn_implementation flash_attention_2 \
     --max_pixels 2359296 \
-    --save_total_limit 8 \
-    --num_train_epochs 1 \
+    --save_total_limit 100 \
+    --num_train_epochs 10 \
     --num_generations 8 \
-    --run_name GeoUni_GRPO_0213_1
+    --run_name GeoUni_GRPO_0217-test1 \
+    --save_steps 50

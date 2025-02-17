@@ -18,6 +18,7 @@ from collections import defaultdict
 from typing import Any, Callable, Optional, Union
 import copy
 
+import numpy as np
 import torch
 import torch.utils.data
 import transformers
@@ -209,6 +210,11 @@ class GeoUniGRPOTrainer(Trainer):
             optimizers= optimizers,
         )
         
+        if is_wandb_available():
+            wandb.init(project="Geo-Show-O", name="grpo")
+            
+        self.step_count = 0
+        
         device = self.accelerator.device if hasattr(self, 'accelerator') else torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Device being used: {device}")
         self.device = device
@@ -241,18 +247,16 @@ class GeoUniGRPOTrainer(Trainer):
                 self.ref_model = AutoModelForCausalLM.from_pretrained(model_id, **model_init_kwargs)
         elif peft_config is None:
             # If PEFT configuration is not provided, create a reference model based on the initial model.
-            self.ref_model = create_reference_model(model)
+            if "GeoUni" in model_id:
+                self.ref_model = GeoUniForCausalLM.from_pretrained(
+                 self.geo_config.model.geouni.pretrained_model_path,
+                 **model_init_kwargs)
+            print("Loaded GeoUni reference model from", self.geo_config.model.geouni.pretrained_model_path)
         else:
             # If PEFT is used, the reference model is not needed since the adapter can be disabled
             # to revert to the initial model.
             self.ref_model = None
         
-        if "GeoUni" in model_id:
-            self.ref_model = GeoUniForCausalLM.from_pretrained(
-                 self.geo_config.model.geouni.pretrained_model_path,
-                 **model_init_kwargs
-            ).to(device)
-            print("Loaded GeoUni reference model from", self.geo_config.model.geouni.pretrained_model_path)
         
         # 处理奖励函数及其处理器
         if not isinstance(reward_funcs, list):
@@ -289,7 +293,7 @@ class GeoUniGRPOTrainer(Trainer):
         self.generation_config = GenerationConfig(
             max_new_tokens=self.max_completion_length,
             do_sample=True,
-            temperature=1,
+            temperature=0.4,
             num_return_sequences=self.num_generations,
             pad_token_id=pad_token_id,
         )
@@ -337,6 +341,21 @@ class GeoUniGRPOTrainer(Trainer):
         images = [x["image"] for x in inputs]
         ground_truths = [x["ground_truth"] for x in inputs] 
         
+        # Check if images are file paths and load them
+        pil_images = []
+        for image_path in images:
+            if isinstance(image_path, str):  # Check if the image is a file path
+                try:
+                    image_path = os.path.join("/lustre/home/2201210053/geo-grpo/data", image_path)
+                    img = Image.open(image_path).convert("RGB")  # Open image from path and convert to RGB
+                except Exception as e:
+                        raise ValueError(f"Error opening image at {image_path}: {str(e)}")
+            elif isinstance(image_path, np.ndarray):  # If the image is already a NumPy array
+                img = Image.fromarray(image_path)
+            else:
+                raise ValueError(f"Unsupported image format: {type(image_path)}")
+        pil_images.append(img)
+        
         # -------------------------------------------------------------------
         # 2. 利用 GeoUni 专用处理器进行输入编码
         #    若存在 self.uni_prompting，则先对图像用 VQ 模型（如配置）离散化，再与文本拼接
@@ -372,20 +391,20 @@ class GeoUniGRPOTrainer(Trainer):
             
             # Retrieve the padding token ID as a scalar integer
             padding_token_id = self.uni_prompting.sptids_dict['<|pad|>'].item()
-            # Find the maximum length of the input sequences
-            max_len = max([input_id.size(1) for input_id in input_ids])
             
+            # Find the maximum length of the input sequences
+            max_len = self.args.max_prompt_length
             padded_input_ids = []
+            
             for input_id in input_ids:
                 padding_size = max_len - input_id.size(1)
-                if padding_size > 0:
+                if padding_size >= 0:
                     # Pad the tensor (pad_token_id is typically 0 or a specific value)
                     padding = torch.full((input_id.size(0), padding_size), padding_token_id, dtype=torch.long)
                     padding = padding.to(input_id.device)
                     padded_input_id = torch.cat([padding, input_id], dim=1)
-                    
                 else:
-                    padded_input_id = input_id
+                    padded_input_id = input_id[:max_len-1]
                 
                 padded_input_ids.append(padded_input_id)
                 
@@ -393,22 +412,18 @@ class GeoUniGRPOTrainer(Trainer):
             input_ids = torch.cat(padded_input_ids, dim=0)
             
             # Find the maximum length of the attention masks
-            max_length = max(attention_mask.size(1) for attention_mask in attention_masks)
-            
-            # Pad the attention masks to the maximum length
             padded_attention_masks = []
             for attention_mask in attention_masks:
-                padding_size = max_length - attention_mask.size(1)
-                if padding_size > 0:
-                    # Pad the tensor (pad_token_id is typically 0 or a specific value)
-                    padding = torch.full((attention_mask.size(0), padding_size), 0, dtype=torch.long, device=attention_mask.device)  # pad_token_id is 0
+                padding_size = max_len - attention_mask.size(1)
+                if padding_size >= 0:
+                    padding = torch.full((attention_mask.size(0), padding_size), 0, dtype=torch.long, device=attention_mask.device) 
                     padded_attention_mask = torch.cat([padding, attention_mask], dim=1)
                 else:
-                    padded_attention_mask = attention_mask
+                    padded_attention_mask = attention_mask[:, :max_len]
+                
                 padded_attention_masks.append(padded_attention_mask)
             
             # Now concatenate the padded attention masks
-            # 
             attention_masks = torch.cat(padded_attention_masks, dim=0)
 
             prompt_inputs = {
@@ -425,39 +440,41 @@ class GeoUniGRPOTrainer(Trainer):
         # 3. 生成多个候选回答（completions）
         # -------------------------------------------------------------------
         with unwrap_model_for_generation(model, self.accelerator) as unwrapped_model:
+            with torch.no_grad():
+                num_generations = self.generation_config.num_return_sequences
+                temp_generation_config = copy.deepcopy(self.generation_config)
+                temp_generation_config.num_return_sequences = 1
             
-            num_generations = self.generation_config.num_return_sequences
-            temp_generation_config = copy.deepcopy(self.generation_config)
-            temp_generation_config.num_return_sequences = 1
-            
-            all_completions = []
-            for i in range(num_generations):
-                completion = unwrapped_model.generate(**prompt_inputs, generation_config=temp_generation_config)
-                all_completions.append(completion)
+                all_completions = []
+                for i in range(num_generations):
+                    completion = unwrapped_model.generate(**prompt_inputs, generation_config=temp_generation_config)
+                    all_completions.append(completion)
                 
-            max_length = max(completion.size(1) for completion in all_completions)
-            padded_completions = []
+                max_length = max(completion.size(1) for completion in all_completions)
+                
+                padded_completions = []
             
-            for completion in all_completions:
-                if completion.size(1) < max_length:
-                    padding = torch.full((completion.size(0), max_length - completion.size(1)),
-                                         self.processing_class.pad_token_id,
+                for completion in all_completions:
+                    if completion.size(1) <= max_length:
+                        padding = torch.full((completion.size(0), max_length - completion.size(1)),
+                                           padding_token_id,
                                          dtype=completion.dtype,
                                          device=completion.device)
-                    padded_completion = torch.cat([completion, padding], dim=1)
-                else:
-                    padded_completion = completion
-                padded_completions.append(padded_completion)
-            prompt_completion_ids = torch.cat(padded_completions, dim=0)
+                        padded_completion = torch.cat([completion, padding], dim=1)
+                    else:
+                        padded_completion = completion
+                    padded_completions.append(padded_completion)
             
-        prompt_length = prompt_inputs["input_ids"].size(1)
-        completion_ids = prompt_completion_ids[:, prompt_length:]
+                prompt_completion_ids = torch.cat(padded_completions, dim=0)
+            
+            prompt_length = prompt_inputs["input_ids"].size(1)
+            completion_ids = prompt_completion_ids[:, prompt_length:]
         
         # -------------------------------------------------------------------
         # 4. 计算每个 token 的对数概率与 KL 散度
         # -------------------------------------------------------------------
         def get_per_token_logps(model, input_ids):
-            logits = model(input_ids).logits  # (B, L, V)
+            logits = model(input_ids).logitsmax_length = max(completion.size(1) for completion in all_completions)  # (B, L, V)
             logits = logits[:, :-1, :]  # (B, L-1, V), exclude the last logit: it corresponds to the next token pred
             input_ids = input_ids[:, 1:]  # (B, L-1), exclude the first input ID since we don't have logits for it
             # Compute the log probabilities for the input tokens. Use a loop to reduce memory peak.
@@ -468,7 +485,7 @@ class GeoUniGRPOTrainer(Trainer):
                 per_token_logps.append(token_log_prob)
             return torch.stack(per_token_logps)
         
-        per_token_logps = get_per_token_logps(model, prompt_completion_ids)
+        per_token_logps = get_per_token_logps(unwrapped_model, prompt_completion_ids)
         per_token_logps = per_token_logps[:, prompt_length - 1:]
         
         with torch.inference_mode():
@@ -488,6 +505,7 @@ class GeoUniGRPOTrainer(Trainer):
         device = self.accelerator.device
         eos_idx = torch.full((is_eos.size(0),), is_eos.size(1), dtype=torch.long, device=device)
         eos_idx[is_eos.any(dim=1)] = is_eos.int().argmax(dim=1)[is_eos.any(dim=1)]
+        
         sequence_indices = torch.arange(is_eos.size(1), device=device).expand(is_eos.size(0), -1)
         completion_mask = (sequence_indices <= eos_idx.unsqueeze(1)).int()
         
@@ -495,7 +513,6 @@ class GeoUniGRPOTrainer(Trainer):
         if is_conversational(inputs[0]):
             completions = [[{"role": "assistant", "content": completion}] for completion in completions]
         
-        #print("completions:", completions)
         # 重复 prompt（每个样本重复 num_generations 次）
         prompts_repeated = [p for p in prompts for _ in range(self.num_generations)]
         
@@ -528,6 +545,7 @@ class GeoUniGRPOTrainer(Trainer):
                 reward_inputs = super()._prepare_inputs(reward_inputs)
                 with torch.inference_mode():
                     rewards_per_func[:, i] = reward_func(**reward_inputs).logits[:, 0]
+                print("pretrain reward")
             else:
                 # 处理自定义的奖励函数
                 # 如果存在 ground_truths，则传入 ground_truths_repeated，否则只传入 completions
@@ -549,11 +567,13 @@ class GeoUniGRPOTrainer(Trainer):
         mean_grouped_rewards = mean_grouped_rewards.repeat_interleave(self.num_generations, dim=0)
         std_grouped_rewards = std_grouped_rewards.repeat_interleave(self.num_generations, dim=0)
         advantages = (rewards - mean_grouped_rewards) / (std_grouped_rewards + 1e-4)
-        
+        #print("advantage: ", advantages)
         # x - x.detach() allows for preserving gradients from x
         per_token_loss = torch.exp(per_token_logps - per_token_logps.detach()) * advantages.unsqueeze(1)
         per_token_loss = -(per_token_loss - self.beta * per_token_kl)
         loss = ((per_token_loss * completion_mask).sum(dim=1) / completion_mask.sum(dim=1)).mean()
+        
+        self._metrics["loss"].append(np.float64(loss.item()))
         
         completion_length = self.accelerator.gather_for_metrics(completion_mask.sum(1)).float().mean().item()
         self._metrics["completion_length"].append(completion_length)
@@ -571,6 +591,15 @@ class GeoUniGRPOTrainer(Trainer):
         
         mean_kl = ((per_token_kl * completion_mask).sum(dim=1) / completion_mask.sum(dim=1)).mean()
         self._metrics["kl"].append(self.accelerator.gather_for_metrics(mean_kl).mean().item())
+        
+        self.step_count += 1
+        
+        # Log images, prompts, and completions to wandb
+        if self.step_count % 1 == 0:
+            wandb_images = [wandb.Image(image, caption=f"Prompts: {prompts[i]}, Completion: {completions[i]}") for i, image in enumerate(pil_images)]
+            wandb.log({
+                "images": wandb_images  # Log images with captions
+            }, step=self.step_count)
         
         return loss
     

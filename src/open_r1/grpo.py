@@ -14,6 +14,7 @@
 
 import os
 import re
+import random
 from datetime import datetime
 from dataclasses import dataclass, field
 from typing import Optional
@@ -37,7 +38,7 @@ class GRPOScriptArguments(ScriptArguments):
     """
 
     reward_funcs: list[str] = field(
-        default_factory=lambda: ["accuracy", "format", "length"],
+        default_factory=lambda: ["accuracy", "length"],
         metadata={"help": "List of reward functions. Possible values: 'accuracy', 'format'"},
     )
     max_pixels: Optional[int] = field(
@@ -51,11 +52,13 @@ class GRPOScriptArguments(ScriptArguments):
 
 def accuracy_reward(completions, ground_truth, **kwargs):
     # Regular expression to capture content inside \boxed{}
-    print("completions:", completions)
+    print(completions)
+    if random.randint(1, 50) == 1:  # 以 1/50 的概率打印
+        print("completions:", completions)
     matches = [re.search(r"\\boxed\{(.*?)\}", completion) for completion in completions]
     contents = [match.group(1) if match else "" for match in matches]
     rewards = [1.0 if c == gt else 0.0 for c, gt in zip(contents, ground_truth)]
-    print("accuracy_rewards:", rewards)
+    #print("accuracy_rewards:", rewards)
     return rewards
 
 def format_reward(completions, ground_truth=None, **kwargs):
@@ -108,10 +111,8 @@ def length_reward(completions, ground_truth=None, **kwargs):
     return rewards
 
 
-
 reward_funcs_registry = {
     "accuracy": accuracy_reward,
-    "format": format_reward,
     "length": length_reward,
 }
 
@@ -121,7 +122,7 @@ SYSTEM_PROMPT = (
 
 def main(script_args, training_args, model_args):
 
-    Geo_config_path = "/lustre/home/2201210053/geo-grpo/configs/geouni_512x512_0212_1.yaml"
+    Geo_config_path = "/lustre/home/2201210053/geo-grpo/configs/geouni_512x512_0217.yaml"
     # Get reward functions
     reward_funcs = [reward_funcs_registry[func] for func in script_args.reward_funcs]
     print("reward_funcs:", reward_funcs)
@@ -161,7 +162,7 @@ def main(script_args, training_args, model_args):
     dataset = dataset.map(format_conversation)
     
     trainer_cls = GeoUniGRPOTrainer
-    print("trainer_cls:", trainer_cls)
+    
     # Initialize the GRPO trainer
     trainer = trainer_cls(
         model=model_args.model_name_or_path,
