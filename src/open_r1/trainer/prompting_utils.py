@@ -72,12 +72,12 @@ class UniversalPrompting():
             
             current_len = temp_ids.shape[0]       
             if self.max_len >= current_len:
-                temp_masks =  [1] * current_len + [0] * (self.max_len - current_len)
-                temp_ids = torch.cat([temp_ids,
-                                      torch.tensor([self.pad_id] * (self.max_len - current_len)).to(device)
+                temp_masks =  [0] * (self.max_len - current_len) + [1] * current_len 
+                temp_ids = torch.cat([torch.tensor([self.pad_id] * (self.max_len - current_len)).to(device),
+                                      temp_ids                 
                     ], dim=0)
-                temp_label_ids = torch.cat([temp_label_ids,
-                                            torch.tensor([self.ignore_id] * (self.max_len - current_len)).to(device)])
+                temp_label_ids = torch.cat([torch.tensor([self.ignore_id] * (self.max_len - current_len)).to(device),
+                                            temp_label_ids])
                 
             else:
                 # should add the eos token
@@ -154,12 +154,11 @@ class UniversalPrompting():
             current_len = temp_ids.shape[0]     
             
             if self.max_len >= current_len:
-                temp_masks =  [1] * current_len + [0] * (self.max_len - current_len)
-                temp_ids = torch.cat([temp_ids,
-                                      torch.tensor([self.pad_id] * (self.max_len - current_len)).to(device)
-                    ], dim=0)
-                temp_label_ids = torch.cat([temp_label_ids,
-                                            torch.tensor([self.ignore_id] * (self.max_len - current_len)).to(device)])
+                temp_masks =  [0] * (self.max_len - current_len) + [1] * current_len 
+                temp_ids = torch.cat([torch.tensor([self.pad_id] * (self.max_len - current_len)).to(device),
+                                      temp_ids], dim=0)
+                temp_label_ids = torch.cat([torch.tensor([self.ignore_id] * (self.max_len - current_len)).to(device),
+                                            temp_label_ids])
                 
             else:
                 # should add the eos token
@@ -237,7 +236,7 @@ class UniversalPrompting():
                 torch.ones_like(instruction).to(device) * self.ignore_id,
                 self.sptids_dict['<｜Assistant｜>'].to(device),
                 self.sptids_dict['<|soi|>'].to(device),
-                torch.ones_like(image_ids[i]) * self.ignore_id,
+                image_ids[i],
                 self.sptids_dict['<|eoi|>'].to(device),
                 response,
                 self.sptids_dict['<｜end▁of▁sentence｜>'].to(device)
@@ -248,12 +247,11 @@ class UniversalPrompting():
             current_len = temp_ids.shape[0]    
             
             if self.max_len >= current_len:
-                temp_masks =  [1] * current_len + [0] * (self.max_len - current_len)
-                temp_ids = torch.cat([temp_ids,
-                                      torch.tensor([self.pad_id] * (self.max_len - current_len)).to(device)
-                    ], dim=0)
-                temp_label_ids = torch.cat([temp_label_ids,
-                                            torch.tensor([self.ignore_id] * (self.max_len - current_len)).to(device)])
+                temp_masks =  [0] * (self.max_len - current_len) + [1] * current_len 
+                temp_ids = torch.cat([torch.tensor([self.pad_id] * (self.max_len - current_len)).to(device),
+                                      temp_ids], dim=0)
+                temp_label_ids = torch.cat([torch.tensor([self.ignore_id] * (self.max_len - current_len)).to(device),
+                                            temp_label_ids])
                 
             else:
                 # should add the eos token
@@ -283,7 +281,7 @@ class UniversalPrompting():
                 self.sptids_dict['<｜User｜>'],
                 self.sptids_dict['<|mix|>'],
                 torch.tensor(temp_text_ids),
-                self.sptids_dict['<｜Assistant｜>',]
+                self.sptids_dict['<｜Assistant｜>'],
             ], dim=0)
             temp_masks = [1] * temp_ids.shape[0]
             temp_masks = torch.tensor(temp_masks)
@@ -308,8 +306,6 @@ class UniversalPrompting():
         
         elif task == "mmu":
             image_ids = input[0]
-            print(f"input[1] type: {type(input[1])}, value: {input[1]}")
-
             instruction_ids = self.text_tokenizer(input[1], add_special_tokens=False)['input_ids']
             response_ids = self.text_tokenizer(input[2], add_special_tokens=False)['input_ids']
             sequence_ids_with_masks = self.mmu_prompt(image_ids, instruction_ids, response_ids)

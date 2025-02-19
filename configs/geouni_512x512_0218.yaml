@@ -1,0 +1,23 @@
+vq_model:
+    type: "geo"
+    vq_model_config: 
+        double_z: False
+        z_channels: 13
+        resolution: 512
+        in_channels: 3
+        out_ch: 3
+        ch: 128
+        ch_mult: [1,2,2,2,4,4]  # num_down = len(ch_mult)-1
+        num_res_blocks: 4
+    pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1120_mask_down32_z13/ckpt/epoch=184-step=68820.ckpt"
+
+    
+geouni:
+    load_from_geouni: false
+    pretrained_model_path: /lustre/home/2001110054/Geo-Show-o/outputs/geouni-512x512-0217
+    vocab_size: 159867
+    llm_vocab_size: 151665
+    llm_model_path: /lustre/home/2001110054/Geo-Show-o/outputs/geouni-512x512-0217 # 'Qwen/Qwen2.5-Math-1.5B'
+    codebook_size: 8192
+    num_vq_tokens: 256
+    num_new_special_tokens: 10  # <|soi|> <|eoi|> <|t2i|> <|mmu|> <|mix|> <formalization> </formalization> <answer> </answer> [PAD]

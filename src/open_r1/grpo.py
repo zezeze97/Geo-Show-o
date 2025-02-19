@@ -21,10 +21,16 @@ from typing import Optional
 
 from datasets import load_dataset
 
-from omegaconf import DictConfig, ListConfig, OmegaConf
+# from omegaconf import DictConfig, ListConfig, OmegaConf
 from open_r1.trainer import GeoUniGRPOTrainer
 from trl import GRPOConfig, GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
-from utils import get_config, flatten_omega_conf, AverageMeter
+# from utils import get_config, flatten_omega_conf, AverageMeter
+
+
+@dataclass
+class GeoUniModelConfig(ModelConfig):
+    geo_config_path: Optional[str] = None
+
 
 
 @dataclass
@@ -38,23 +44,14 @@ class GRPOScriptArguments(ScriptArguments):
     """
 
     reward_funcs: list[str] = field(
-        default_factory=lambda: ["accuracy", "length"],
+        default_factory=lambda: ["accuracy", "format"],
         metadata={"help": "List of reward functions. Possible values: 'accuracy', 'format'"},
     )
-    max_pixels: Optional[int] = field(
-        default=12845056,
-        metadata={"help": "Maximum number of pixels for the image"},
-    )
-    min_pixels: Optional[int] = field(
-        default=3136,
-        metadata={"help": "Minimum number of pixels for the image"},
-    )
+    image_root_path: Optional[str] = None
+    
 
 def accuracy_reward(completions, ground_truth, **kwargs):
     # Regular expression to capture content inside \boxed{}
-    print(completions)
-    if random.randint(1, 50) == 1:  # 以 1/50 的概率打印
-        print("completions:", completions)
     matches = [re.search(r"\\boxed\{(.*?)\}", completion) for completion in completions]
     contents = [match.group(1) if match else "" for match in matches]
     rewards = [1.0 if c == gt else 0.0 for c, gt in zip(contents, ground_truth)]
@@ -75,7 +72,7 @@ import math
 
 def length_reward(completions, ground_truth=None, **kwargs):
     """
-    软性奖励函数：当 completion 的长度低于或等于所有样本的平均长度时，奖励为 1；
+    软性奖励函数：当 completion 的长度低于或等于所有样本的平均长度时，奖励为 1
     当长度超过平均长度时，采用指数衰减给予惩罚，使得奖励值在 0 到 1 之间。
     
     Args:
@@ -114,15 +111,11 @@ def length_reward(completions, ground_truth=None, **kwargs):
 reward_funcs_registry = {
     "accuracy": accuracy_reward,
     "length": length_reward,
+    "format": format_reward,
 }
 
-SYSTEM_PROMPT = (
-    "A conversation between User and Assistant. The user asks a question, and the Assistant solves it. The assistant first thinks about the reasoning process in the mind and then provides the user with the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., <think> reasoning process here </think> <answer> answer here </answer>."
-)
 
 def main(script_args, training_args, model_args):
-
-    Geo_config_path = "/lustre/home/2201210053/geo-grpo/configs/geouni_512x512_0217.yaml"
     # Get reward functions
     reward_funcs = [reward_funcs_registry[func] for func in script_args.reward_funcs]
     print("reward_funcs:", reward_funcs)
@@ -130,34 +123,13 @@ def main(script_args, training_args, model_args):
     # Load the dataset
     dataset = load_dataset(script_args.dataset_name)
     
-    # Format into conversation
-    def make_conversation(example):
-        return {
-            "prompt": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": example["problem"]},
-            ],
-        }
-
-    QUESTION_TEMPLATE = "{Question}  Output the thinking process in <think> </think> and final answer (number) in <answer> </answer> tags."
-    def make_conversation_image(example):
-        return {
-            "prompt": [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "image"},
-                        {"type": "text", "text": QUESTION_TEMPLATE.format(Question=example["problem"])},
-                    ],
-                },
-            ],
-        }
+    
     def format_conversation(example):
         # 此处直接保留原有 prompt，与 image 和 ground_truth 一同传入 Trainer
         return {
             "prompt": example["prompt"],
             "ground_truth": example["ground_truth"],
-            "image": example["image"],
+            "image": os.path.join(script_args.image_root_path, example["image"]),
         }
     dataset = dataset.map(format_conversation)
     
@@ -172,9 +144,7 @@ def main(script_args, training_args, model_args):
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
         peft_config=get_peft_config(model_args),
         attn_implementation=model_args.attn_implementation,
-        max_pixels=script_args.max_pixels,
-        min_pixels=script_args.min_pixels,
-        geo_config=Geo_config_path,
+        geo_config=model_args.geo_config_path,
     )
 
     # Train and push the model to the Hub
@@ -185,6 +155,6 @@ def main(script_args, training_args, model_args):
 
 
 if __name__ == "__main__":
-    parser = TrlParser((GRPOScriptArguments, GRPOConfig, ModelConfig))
+    parser = TrlParser((GRPOScriptArguments, GRPOConfig, GeoUniModelConfig))
     script_args, training_args, model_args = parser.parse_args_and_config()
     main(script_args, training_args, model_args)
