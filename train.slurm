@@ -10,7 +10,7 @@
 #SBATCH --time=5-00:00:00
 #SBATCH --exclude=l12gpu25   # 添加这一行排除节点
 
-module load cuda/11.8
+module load cuda/12.1
 module load gcc/12.2.0
 module load openmpi
 

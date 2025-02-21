@@ -5,8 +5,9 @@ from torchvision import transforms
 import os
 import random
 from omegaconf import OmegaConf
+from glob import glob
 import sys
-sys.path.append('/lustre/home/2001110054/Show-o')  # 项目根目录
+sys.path.append('/lustre/home/2001110054/Geo-Show-o')  # 项目根目录
 from training.geo_data_aug import crop
 from models import VQModel, MAGVITv2
 
@@ -95,9 +96,11 @@ if __name__ == '__main__':
     
     # 图片文件夹路径
     img_folder = '/lustre/home/2001110054/GEO-Open-MAGVIT2/geo_data/val'  # 记得修改文件夹路径
+    # img_folder = '/lustre/home/2001110054/01_backup/data/self-reasoning-data'
     
     # 获取文件夹中的所有图片文件
     img_files = [f for f in os.listdir(img_folder) if f.endswith('.png')]  # 你可以根据需要更改扩展名
+    # img_files = glob(f"{img_folder}/*/*.png")
     
     # 随机选择8张图片
     selected_imgs = random.sample(img_files, 8)
@@ -108,6 +111,7 @@ if __name__ == '__main__':
     
     for img_file in selected_imgs:
         img_path = os.path.join(img_folder, img_file)
+        # img_path = img_file
         # 打开图像, 图像预处理
         img = crop(Image.open(img_path).convert("RGB"))  # 确保图像是RGB格式
         img = expand2square(img, (255, 255, 255))
