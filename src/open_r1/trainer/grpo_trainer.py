@@ -172,7 +172,7 @@ class GeoUniGRPOTrainer(Trainer):
                 tokenizer = AutoTokenizer.from_pretrained(self.geo_config.geouni.llm_model_path)
                 self.uni_prompting = UniversalPrompting(
                     tokenizer,
-                    max_len=args.max_prompt_length,
+                    # max_len=args.max_prompt_length,
                     special_tokens=(
                         "<|soi|>", "<|eoi|>", "<|t2i|>", "<|mmu|>", "<|mix|>",
                         "<formalization>", "</formalization>", "<answer>", "</answer>"
@@ -417,9 +417,11 @@ class GeoUniGRPOTrainer(Trainer):
             # Now concatenate the tensors
             input_ids = torch.cat(padded_input_ids, dim=0)
             attention_masks = torch.cat(padded_attention_masks, dim=0)
+            # print(f'input_ids shape: {input_ids.shape}')
             if input_ids.shape[1] > self.max_prompt_length:
-                input_ids = input_ids[:, :self.max_prompt_length - 1]
-                attention_masks = attention_masks[:, :self.max_prompt_length - 1]
+                # print(f'current input_ids truncated!!!!')
+                input_ids = input_ids[:, -self.max_prompt_length:]
+                attention_masks = attention_masks[:, -self.max_prompt_length:]
             
             
 
@@ -435,10 +437,14 @@ class GeoUniGRPOTrainer(Trainer):
         # -------------------------------------------------------------------
         # 3. 生成多个候选回答（completions）
         # -------------------------------------------------------------------
+        # print(f'generation config: {self.generation_config}')
         with unwrap_model_for_generation(model, self.accelerator) as unwrapped_model:
-            prompt_completion_ids = unwrapped_model.generate(**prompt_inputs, generation_config=self.generation_config)
+            prompt_completion_ids = unwrapped_model.generate(**prompt_inputs, generation_config=self.generation_config, use_cache=True)
+            # print(f"prompt_completion_ids: {prompt_completion_ids.shape}")
             prompt_length = prompt_inputs["input_ids"].size(1)
+            # print(f"prompt_length: {prompt_length}")
             completion_ids = prompt_completion_ids[:, prompt_length:]
+            # print(f"completion_ids: {completion_ids.shape}")
             prompt_mask = prompt_mask.repeat_interleave(self.num_generations, dim=0)
             
         # Mask everything after the first EOS token
@@ -455,6 +461,7 @@ class GeoUniGRPOTrainer(Trainer):
         per_token_logps = self._get_per_token_logps(model, prompt_completion_ids, attention_mask)
         # Get rid of the prompt (-1 because of the shift done in get_per_token_logps)
         per_token_logps = per_token_logps[:, prompt_length - 1:]
+        # print(f"per_token_logps: {per_token_logps.shape}")
         
         with torch.inference_mode():
             if self.ref_model is not None:
