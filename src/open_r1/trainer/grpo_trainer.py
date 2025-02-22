@@ -227,7 +227,7 @@ class GeoUniGRPOTrainer(Trainer):
             max_new_tokens=self.max_completion_length,
             do_sample=True,
             temperature=1.0, # HACK
-            num_return_sequences=self.num_generations,
+            # num_return_sequences=self.num_generations,
             pad_token_id=pad_token_id,
         )
         self.beta = args.beta
@@ -403,7 +403,6 @@ class GeoUniGRPOTrainer(Trainer):
                     padded_input_id = torch.cat([padding, input_id], dim=1)
                     
                     padding_mask = torch.full((1, padding_size), 0, dtype=torch.long, device=attention_mask.device)  # pad_token_id is 0
-                    padding_mask = padding_mask.to(attention_mask.device)
                     padded_attention_mask = torch.cat([padding_mask, attention_mask], dim=1)
                     
                 else:
@@ -425,12 +424,12 @@ class GeoUniGRPOTrainer(Trainer):
             
 
             prompt_inputs = {
-                "input_ids": input_ids.to(self.device),
-                "attention_mask": attention_masks.to(self.device)
+                "input_ids": input_ids.repeat_interleave(self.num_generations, dim=0).to(self.device),
+                "attention_mask": attention_masks.repeat_interleave(self.num_generations, dim=0).to(self.device)
                 }
             
             prompt_mask = prompt_inputs["attention_mask"]
-            # prompt_inputs = super()._prepare_inputs(prompt_inputs)
+            
         
         
         # -------------------------------------------------------------------
@@ -439,11 +438,11 @@ class GeoUniGRPOTrainer(Trainer):
         # print(f'generation config: {self.generation_config}')
         with unwrap_model_for_generation(model, self.accelerator) as unwrapped_model:
             # 左padding生成有bug, 因此限制bs==1
-            assert prompt_inputs['input_ids'].size(0) == 1
-            prompt_completion_ids = unwrapped_model.generate(**prompt_inputs, generation_config=self.generation_config)         
+            # assert prompt_inputs['input_ids'].size(0) == 1
+            prompt_completion_ids = unwrapped_model.generate(**prompt_inputs, generation_config=self.generation_config, use_cache=False)         
             prompt_length = prompt_inputs["input_ids"].size(1) 
             completion_ids = prompt_completion_ids[:, prompt_length:]
-            prompt_mask = prompt_mask.repeat_interleave(self.num_generations, dim=0)
+            print(f'completion_ids shape: {completion_ids.shape}')
                     
         # Mask everything after the first EOS token
         is_eos = completion_ids == self.processing_class.eos_token_id
