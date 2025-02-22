@@ -281,8 +281,7 @@ class GeoUniGRPOTrainer(Trainer):
                 self.reward_funcs[i] = self.accelerator.prepare_model(reward_func, evaluation_mode=True)
         
         
-            
-        if is_wandb_available():
+        if self.accelerator.is_main_process and is_wandb_available():
             wandb.init(project="Geo-Show-O", name=args.run_name)
             
         
@@ -300,8 +299,8 @@ class GeoUniGRPOTrainer(Trainer):
                     ckpt_path=self.geo_config.vq_model.pretrained_model_path
                 )
             self.vq_model.to(self.device)
-            self.vq_model.eval()
             self.vq_model.requires_grad_(False)
+            self.vq_model.eval()
             print("Loaded VQ model from", self.geo_config.vq_model.pretrained_model_path)
     
     def _set_signature_columns_if_needed(self):
@@ -357,7 +356,7 @@ class GeoUniGRPOTrainer(Trainer):
                     img = Image.fromarray(image_path)
                 else:
                     raise ValueError(f"Unsupported image format: {type(image_path)}")
-            pil_images.append(img)
+                pil_images.append(img)
         
         # -------------------------------------------------------------------
         # 2. 利用 GeoUni 专用处理器进行输入编码
@@ -439,14 +438,13 @@ class GeoUniGRPOTrainer(Trainer):
         # -------------------------------------------------------------------
         # print(f'generation config: {self.generation_config}')
         with unwrap_model_for_generation(model, self.accelerator) as unwrapped_model:
-            prompt_completion_ids = unwrapped_model.generate(**prompt_inputs, generation_config=self.generation_config, use_cache=True)
-            # print(f"prompt_completion_ids: {prompt_completion_ids.shape}")
-            prompt_length = prompt_inputs["input_ids"].size(1)
-            # print(f"prompt_length: {prompt_length}")
+            # 左padding生成有bug, 因此限制bs==1
+            assert prompt_inputs['input_ids'].size(0) == 1
+            prompt_completion_ids = unwrapped_model.generate(**prompt_inputs, generation_config=self.generation_config)         
+            prompt_length = prompt_inputs["input_ids"].size(1) 
             completion_ids = prompt_completion_ids[:, prompt_length:]
-            # print(f"completion_ids: {completion_ids.shape}")
             prompt_mask = prompt_mask.repeat_interleave(self.num_generations, dim=0)
-            
+                    
         # Mask everything after the first EOS token
         is_eos = completion_ids == self.processing_class.eos_token_id
         eos_idx = torch.full((is_eos.size(0),), is_eos.size(1), dtype=torch.long, device=self.device)

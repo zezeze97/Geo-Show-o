@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -o job.%j.out
 #SBATCH --partition=GPU80G
-#SBATCH --qos=normal
+#SBATCH --qos=high
 #SBATCH -J GeoUni-GRPO-Test
 #SBATCH --nodes=1    
 #SBATCH --ntasks-per-node=1          # crucial - only 1 task per dist per node!
@@ -32,12 +32,12 @@ torchrun --nproc_per_node=4 \
     --dataset_name data/2formalgeo7k \
     --image_root_path data/ \
     --deepspeed scripts/zero3.json \
-    --output_dir checkpoints/geo-grpo-0221 \
+    --output_dir checkpoints/geo-grpo-0222 \
     --model_name_or_path GeoUni \
     --max_prompt_length 1024 \
     --max_completion_length 1024 \
-    --per_device_train_batch_size 2 \
-    --gradient_accumulation_steps 1 \
+    --per_device_train_batch_size 1 \
+    --gradient_accumulation_steps 2 \
     --logging_steps 1 \
     --bf16 \
     --report_to wandb \
@@ -46,7 +46,7 @@ torchrun --nproc_per_node=4 \
     --save_total_limit 1 \
     --num_train_epochs 2 \
     --num_generations 8 \
-    --run_name GeoUni_GRPO_0221 \
+    --run_name GeoUni_GRPO_0222 \
     --save_steps 10 \
     --learning_rate 5e-5 \
 

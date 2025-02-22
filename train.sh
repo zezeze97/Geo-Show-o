@@ -9,14 +9,14 @@ export PYTHONPATH=$PYTHONPATH:/lustre/home/2001110054/GeoUni-GRPO
 export OMP_NUM_THREADS=16
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 # 运行任务
-torchrun --nproc_per_node=1 \
+torchrun --nproc_per_node=4 \
     --nnodes=1 \
     --node_rank=0 \
     --master_addr=$MASTER_ADDR \
     --master_port=$MASTER_PORT \
     src/open_r1/grpo.py \
     --geo_config_path configs/geouni_512x512_0221.yaml \
-    --dataset_name data/smalltest \
+    --dataset_name data/2formalgeo7k \
     --image_root_path data/ \
     --deepspeed scripts/zero3.json \
     --output_dir checkpoints/geo-grpo-0221-debug \
@@ -24,7 +24,7 @@ torchrun --nproc_per_node=1 \
     --max_prompt_length 1024 \
     --max_completion_length 1024 \
     --per_device_train_batch_size 1 \
-    --gradient_accumulation_steps 8 \
+    --gradient_accumulation_steps 2 \
     --logging_steps 1 \
     --bf16 \
     --report_to wandb \
