@@ -5,7 +5,7 @@
 #SBATCH -J GeoUni-GRPO-Test
 #SBATCH --nodes=1    
 #SBATCH --ntasks-per-node=1          # crucial - only 1 task per dist per node!
-#SBATCH --cpus-per-task=64          # number of cores per tasks
+#SBATCH --cpus-per-task=4          # number of cores per tasks
 #SBATCH --gres=gpu:4
 #SBATCH --time=5-00:00:00
 #SBATCH --exclude=l12gpu25   # 添加这一行排除节点
@@ -18,7 +18,7 @@ export MASTER_ADDR=localhost
 export MASTER_PORT=9909
 export PYTHONPATH=$PYTHONPATH:/lustre/home/2001110054/GeoUni-GRPO
 # export CUDA_HOME=/usr/local/cuda-12.1
-export OMP_NUM_THREADS=16
+export OMP_NUM_THREADS=4
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 source activate GRPO
 # 运行任务
@@ -32,21 +32,21 @@ torchrun --nproc_per_node=4 \
     --dataset_name data/2formalgeo7k \
     --image_root_path data/ \
     --deepspeed scripts/zero3.json \
-    --output_dir checkpoints/geo-grpo-0222 \
+    --output_dir checkpoints/geo-grpo-0226 \
     --model_name_or_path GeoUni \
     --max_prompt_length 1024 \
     --max_completion_length 1024 \
-    --per_device_train_batch_size 2 \
-    --gradient_accumulation_steps 2 \
+    --per_device_train_batch_size 1 \
+    --gradient_accumulation_steps 4 \
     --logging_steps 1 \
     --bf16 \
     --report_to wandb \
-    --gradient_checkpointing true \
-    --attn_implementation flash_attention_2 \
+    --gradient_checkpointing false \
+    --attn_implementation sdpa \
     --save_total_limit 1 \
     --num_train_epochs 2 \
     --num_generations 8 \
-    --run_name GeoUni_GRPO_0222 \
+    --run_name GeoUni_GRPO_0226 \
     --save_steps 10 \
     --learning_rate 5e-5 \
 

@@ -137,7 +137,7 @@ class GeoUniGRPOTrainer(Trainer):
                 )
             # Disable caching if gradient checkpointing is enabled (not supported)
             model_init_kwargs["use_cache"] = (
-                False if args.gradient_checkpointing else model_init_kwargs.get("use_cache")
+                False if args.gradient_checkpointing else True
             )
             if "GeoUni" in model_id:
                 print(f'Loading pretrained GeoUni model from {self.geo_config.geouni.pretrained_model_path}')
@@ -229,6 +229,10 @@ class GeoUniGRPOTrainer(Trainer):
             temperature=1.0, # HACK
             # num_return_sequences=self.num_generations,
             pad_token_id=pad_token_id,
+            bos_token_id = self.uni_prompting.text_tokenizer.bos_token_id,
+            eos_token_id = self.uni_prompting.text_tokenizer.eos_token_id,
+            use_cache=False if args.gradient_checkpointing else True,
+            # use_cache=False
         )
         self.beta = args.beta
         
@@ -437,12 +441,13 @@ class GeoUniGRPOTrainer(Trainer):
         # -------------------------------------------------------------------
         # print(f'generation config: {self.generation_config}')
         with unwrap_model_for_generation(model, self.accelerator) as unwrapped_model:
-            # 左padding生成有bug, 因此限制bs==1
-            # assert prompt_inputs['input_ids'].size(0) == 1
-            prompt_completion_ids = unwrapped_model.generate(**prompt_inputs, generation_config=self.generation_config, use_cache=False)         
+            # 左padding生成有bug, 因此限制bs==self.num_generations
+            assert prompt_inputs['input_ids'].size(0) == self.num_generations
+            # print(prompt_inputs['input_ids'].shape)
+            prompt_completion_ids = unwrapped_model.generate(**prompt_inputs, generation_config=self.generation_config)         
             prompt_length = prompt_inputs["input_ids"].size(1) 
             completion_ids = prompt_completion_ids[:, prompt_length:]
-            print(f'completion_ids shape: {completion_ids.shape}')
+            # print(f'completion_ids shape: {completion_ids.shape}')
                     
         # Mask everything after the first EOS token
         is_eos = completion_ids == self.processing_class.eos_token_id
@@ -561,7 +566,7 @@ class GeoUniGRPOTrainer(Trainer):
             wandb_images = []
             for i, image in enumerate(pil_images):
                 formated_completion = ''
-                for j, comp in enumerate(completions[i:(i+1)*self.num_generations]):
+                for j, comp in enumerate(completions[i*self.num_generations:(i+1)*self.num_generations]):
                     formated_completion += f'Completion {j}: {comp}\n' + '*' * 10 + '\n'
                 # print(f"Prompt: {prompts[i]}\nCompletions: {formated_completion}")
                 wandb_images.append(wandb.Image(image, caption=f"Prompts: {prompts[i]}\nCompletion: {formated_completion}"))
