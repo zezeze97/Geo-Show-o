@@ -19,7 +19,7 @@ torchrun --nproc_per_node=2 \
     --dataset_name data/2formalgeo7k \
     --image_root_path data/ \
     --deepspeed scripts/zero3.json \
-    --output_dir checkpoints/geo-grpo-0226 \
+    --output_dir checkpoints/geo-grpo-0226-2GPU \
     --model_name_or_path GeoUni \
     --max_prompt_length 1024 \
     --max_completion_length 1024 \
@@ -33,6 +33,6 @@ torchrun --nproc_per_node=2 \
     --save_total_limit 1 \
     --num_train_epochs 2 \
     --num_generations 8 \
-    --run_name GeoUni_GRPO_0226 \
+    --run_name GeoUni_GRPO_0226-2GPU \
     --save_steps 10 \
     --learning_rate 5e-5 \
