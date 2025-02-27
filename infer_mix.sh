@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -o job.%j.out
 #SBATCH --partition=GPU80G
-#SBATCH --qos=low
+#SBATCH --qos=normal
 #SBATCH -J Infer-mix
 #SBATCH --nodes=1    
 #SBATCH --ntasks-per-node=1          # crucial - only 1 task per dist per node!
