@@ -232,6 +232,8 @@ class GeoUniGRPOTrainer(Trainer):
             bos_token_id = self.uni_prompting.text_tokenizer.bos_token_id,
             eos_token_id = self.uni_prompting.text_tokenizer.eos_token_id,
             use_cache=False if args.gradient_checkpointing else True,
+            top_p=0.9,
+            # top_k=50
             # use_cache=False
         )
         self.beta = args.beta
@@ -562,7 +564,7 @@ class GeoUniGRPOTrainer(Trainer):
         
         
         # Log images, prompts, and completions to wandb
-        if self.state.global_step % self.args.logging_steps == 0 and self.accelerator.is_main_process and self.accelerator.sync_gradients:
+        if self.state.global_step % self.args.logging_steps == 0 and self.accelerator.is_main_process and self.accelerator.sync_gradients and is_wandb_available():
             wandb_images = []
             for i, image in enumerate(pil_images):
                 formated_completion = ''

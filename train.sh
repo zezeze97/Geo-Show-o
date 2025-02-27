@@ -9,7 +9,7 @@ export PYTHONPATH=$PYTHONPATH:/lustre/home/2001110054/GeoUni-GRPO
 export OMP_NUM_THREADS=16
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 # 运行任务
-torchrun --nproc_per_node=2 \
+torchrun --nproc_per_node=3 \
     --nnodes=1 \
     --node_rank=0 \
     --master_addr=$MASTER_ADDR \
@@ -19,12 +19,12 @@ torchrun --nproc_per_node=2 \
     --dataset_name data/2formalgeo7k \
     --image_root_path data/ \
     --deepspeed scripts/zero3.json \
-    --output_dir checkpoints/geo-grpo-0226-2GPU \
+    --output_dir checkpoints/geo-grpo-0227-3GPU-Overfit \
     --model_name_or_path GeoUni \
     --max_prompt_length 1024 \
     --max_completion_length 1024 \
     --per_device_train_batch_size 1 \
-    --gradient_accumulation_steps 8 \
+    --gradient_accumulation_steps 6 \
     --logging_steps 1 \
     --bf16 \
     --report_to wandb \
@@ -33,6 +33,6 @@ torchrun --nproc_per_node=2 \
     --save_total_limit 1 \
     --num_train_epochs 2 \
     --num_generations 8 \
-    --run_name GeoUni_GRPO_0226-2GPU \
+    --run_name GeoUni_GRPO_0227--3GPU-Overfit \
     --save_steps 10 \
-    --learning_rate 5e-5 \
+    --learning_rate 5e-6 \
