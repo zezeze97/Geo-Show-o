@@ -16,23 +16,23 @@ torchrun --nproc_per_node=3 \
     --master_port=$MASTER_PORT \
     src/open_r1/grpo.py \
     --geo_config_path configs/geouni_512x512_0221.yaml \
-    --dataset_name data/2formalgeo7k \
+    --dataset_name data/smalltest \
     --image_root_path data/ \
     --deepspeed scripts/zero3.json \
-    --output_dir checkpoints/geo-grpo-0227-3GPU-Overfit \
+    --output_dir checkpoints/geo-grpo-0228-3GPU-Overfit \
     --model_name_or_path GeoUni \
     --max_prompt_length 1024 \
     --max_completion_length 1024 \
     --per_device_train_batch_size 1 \
-    --gradient_accumulation_steps 6 \
+    --gradient_accumulation_steps 1 \
     --logging_steps 1 \
     --bf16 \
     --report_to wandb \
     --gradient_checkpointing false \
     --attn_implementation sdpa \
     --save_total_limit 1 \
-    --num_train_epochs 2 \
+    --num_train_epochs 100 \
     --num_generations 8 \
-    --run_name GeoUni_GRPO_0227--3GPU-Overfit \
+    --run_name GeoUni_GRPO_0228--3GPU-Overfit \
     --save_steps 10 \
     --learning_rate 5e-6 \

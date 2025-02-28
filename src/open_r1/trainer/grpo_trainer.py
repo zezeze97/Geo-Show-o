@@ -232,7 +232,7 @@ class GeoUniGRPOTrainer(Trainer):
             bos_token_id = self.uni_prompting.text_tokenizer.bos_token_id,
             eos_token_id = self.uni_prompting.text_tokenizer.eos_token_id,
             use_cache=False if args.gradient_checkpointing else True,
-            top_p=0.9,
+            # top_p=0.9,
             # top_k=50
             # use_cache=False
         )
@@ -543,7 +543,7 @@ class GeoUniGRPOTrainer(Trainer):
         per_token_loss = -(per_token_loss - self.beta * per_token_kl)
         loss = ((per_token_loss * completion_mask).sum(dim=1) / completion_mask.sum(dim=1)).mean()
         
-        self._metrics["loss"].append(np.float64(loss.item()))
+        self._metrics["loss"].append(self.accelerator.gather_for_metrics(loss).mean().item())
         
         completion_length = self.accelerator.gather_for_metrics(completion_mask.sum(1)).float().mean().item()
         self._metrics["completion_length"].append(completion_length)
