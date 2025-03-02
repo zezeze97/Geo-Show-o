@@ -28,11 +28,11 @@ torchrun --nproc_per_node=4 \
     --master_addr=$MASTER_ADDR \
     --master_port=$MASTER_PORT \
     src/open_r1/grpo.py \
-    --geo_config_path configs/geouni_512x512_0221.yaml \
+    --geo_config_path configs/geouni_512x512_0301.yaml \
     --dataset_name data/choice_formalgeo \
     --image_root_path data/ \
     --deepspeed scripts/zero3.json \
-    --output_dir checkpoints/geo-grpo-0228-4GPU \
+    --output_dir checkpoints/geo-grpo-0301-NoPretrain \
     --model_name_or_path GeoUni \
     --max_prompt_length 1024 \
     --max_completion_length 1024 \
@@ -46,7 +46,7 @@ torchrun --nproc_per_node=4 \
     --save_total_limit 1 \
     --num_train_epochs 10 \
     --num_generations 8 \
-    --run_name GeoUni_GRPO_0228-4GPU \
+    --run_name GeoUni_GRPO_0301-NoPretrain \
     --save_steps 10 \
     --learning_rate 5e-6 \
 

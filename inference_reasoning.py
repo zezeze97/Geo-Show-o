@@ -101,11 +101,12 @@ if __name__ == '__main__':
         vq_model = load_geo_vqgan(vq_model, config.vq_model.vq_model_config, ckpt_path=config.vq_model.pretrained_model_path).to(device)
         vq_model.requires_grad_(False)
         vq_model.eval()
-        print(f'Load from pretrained vq_model: {config.vq_model.pretrained_model_path}')
+        print(f'Loaded from pretrained vq_model: {config.vq_model.pretrained_model_path}')
 
 
     # model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='sdpa', torch_dtype=torch.bfloat16).to(device)    
-    model = GeoUniForCausalLM.from_pretrained(config.geouni.pretrained_model_path, attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16, device_map={'': device})    
+    model = GeoUniForCausalLM.from_pretrained(config.pretrained_geouni_model_path, attn_implementation='sdpa', torch_dtype=torch.bfloat16, device_map={'': device})   
+    print(f'Loaded GeoUni from: {config.pretrained_geouni_model_path}') 
     model.eval()
     
     
@@ -142,14 +143,6 @@ if __name__ == '__main__':
         input_ids = input_ids.to(device)
         attention_mask = attention_mask.to(device)
         
-        padding_size = 10
-        padding = torch.full((1, padding_size), uni_prompting.text_tokenizer.pad_token_id, dtype=torch.long, device=input_ids.device)
-        padded_input_ids = torch.cat([padding, input_ids], dim=1)
-        
-        padding_mask = torch.full((1, padding_size), 0, dtype=torch.long, device=attention_mask.device)  # pad_token_id is 0
-        padding_mask = padding_mask.to(device)
-        padded_attention_mask = torch.cat([padding_mask, attention_mask], dim=1)
-        
         
         with torch.no_grad():
             output_ids = model.generate(input_ids=input_ids,
@@ -161,22 +154,10 @@ if __name__ == '__main__':
                                         do_sample=False,
                                         top_p=None,
                                         use_cache=False)
-            output_ids_padded = model.generate(input_ids=padded_input_ids,
-                                        attention_mask=padded_attention_mask,
-                                        max_new_tokens=config.max_new_tokens,
-                                        temperature=temperature,
-                                        pad_token_id=uni_prompting.text_tokenizer.pad_token_id,
-                                        eos_token_id = uni_prompting.text_tokenizer.eos_token_id,
-                                        do_sample=False,
-                                        top_p=None,
-                                        use_cache=False)
+
 
         response = uni_prompting.text_tokenizer.batch_decode(output_ids[:, input_ids.shape[1]:], skip_special_tokens=True)[0]
-        response_padded = uni_prompting.text_tokenizer.batch_decode(output_ids_padded[:, padded_input_ids.shape[1]:], skip_special_tokens=True)[0]
-        print(f'generate: {response}')
-        print(f'padded generate: {response_padded}')
-        
-        
+        print(f'generate: {response}')   
         
         
         outputs.append({'question_id': image_id,

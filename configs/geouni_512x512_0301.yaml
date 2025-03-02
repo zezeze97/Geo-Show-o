@@ -13,7 +13,7 @@ vq_model:
 
     
 geouni:
-    load_from_geouni: true
+    load_from_geouni: false
     pretrained_model_path: /lustre/home/2001110054/Geo-Show-o/outputs/geouni-512x512-0217
     vocab_size: 159867
     llm_vocab_size: 151665

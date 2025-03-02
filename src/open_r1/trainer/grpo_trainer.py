@@ -37,7 +37,7 @@ from transformers import (
 )
 
 from omegaconf import DictConfig, OmegaConf
-from models import MAGVITv2, VQModel, GeoUniForCausalLM
+from models import MAGVITv2, VQModel, GeoUniForCausalLM, GeoUniConfig
 from .prompting_utils import UniversalPrompting
 from .custom_data import enhance_image, expand2square, image_transform
 from PIL import Image
@@ -140,11 +140,31 @@ class GeoUniGRPOTrainer(Trainer):
                 False if args.gradient_checkpointing else True
             )
             if "GeoUni" in model_id:
-                print(f'Loading pretrained GeoUni model from {self.geo_config.geouni.pretrained_model_path}')
                 print(f"model_init_kwargs: {model_init_kwargs}")
-                model = GeoUniForCausalLM.from_pretrained(
-                    self.geo_config.geouni.pretrained_model_path,
-                    **model_init_kwargs)
+                if self.geo_config.geouni.load_from_geouni:
+                    print(f'Loading pretrained GeoUni model from {self.geo_config.geouni.pretrained_model_path}')
+                    model = GeoUniForCausalLM.from_pretrained(
+                        self.geo_config.geouni.pretrained_model_path,
+                        **model_init_kwargs)
+                else:
+                    print(f'Loading GeoUni model from {self.geo_config.geouni.llm_model_path}')
+                    model = GeoUniForCausalLM.from_pretrained(
+                        self.geo_config.geouni.llm_model_path,
+                        **model_init_kwargs)
+                    model_config = GeoUniConfig.from_pretrained(self.geo_config.geouni.llm_model_path, 
+                                              vocab_size=self.geo_config.geouni.vocab_size,
+                                              num_vq_tokens=self.geo_config.geouni.num_vq_tokens,
+                                              num_new_special_tokens=self.geo_config.geouni.num_new_special_tokens,
+                                              llm_vocab_size=self.geo_config.geouni.llm_vocab_size,
+                                              codebook_size=self.geo_config.geouni.codebook_size)
+                    model.resize_token_embeddings(model_config.vocab_size)
+                    model.config = model_config
+                    model.vocab_size = self.geo_config.geouni.vocab_size
+                    model.num_vq_tokens = self.geo_config.geouni.num_vq_tokens
+                    model.num_new_special_tokens = self.geo_config.geouni.num_new_special_tokens
+                    model.llm_vocab_size = self.geo_config.geouni.llm_vocab_size
+                    model.codebook_size = self.geo_config.geouni.codebook_size
+                    
         print(f'peft_config: {peft_config}')
         if peft_config is not None:
             model = get_peft_model(model, peft_config)
@@ -152,10 +172,31 @@ class GeoUniGRPOTrainer(Trainer):
         # Reference model
         if is_deepspeed_zero3_enabled():
             if "GeoUni" in model_id:
-                self.ref_model = GeoUniForCausalLM.from_pretrained(self.geo_config.geouni.pretrained_model_path, **model_init_kwargs)
+                if self.geo_config.geouni.load_from_geouni:
+                    print(f"Loaded GeoUni reference model from {self.geo_config.geouni.pretrained_model_path}")
+                    self.ref_model = GeoUniForCausalLM.from_pretrained(self.geo_config.geouni.pretrained_model_path, **model_init_kwargs)
+                else:
+                    print(f"Loaded GeoUni reference model from {self.geo_config.geouni.llm_model_path}")
+                    self.ref_model = GeoUniForCausalLM.from_pretrained(
+                        self.geo_config.geouni.llm_model_path,
+                        **model_init_kwargs)
+                    model_config = GeoUniConfig.from_pretrained(self.geo_config.geouni.llm_model_path, 
+                                              vocab_size=self.geo_config.geouni.vocab_size,
+                                              num_vq_tokens=self.geo_config.geouni.num_vq_tokens,
+                                              num_new_special_tokens=self.geo_config.geouni.num_new_special_tokens,
+                                              llm_vocab_size=self.geo_config.geouni.llm_vocab_size,
+                                              codebook_size=self.geo_config.geouni.codebook_size)
+                    self.ref_model.resize_token_embeddings(model_config.vocab_size)
+                    self.ref_model.config = model_config
+                    self.ref_model.vocab_size = self.geo_config.geouni.vocab_size
+                    self.ref_model.num_vq_tokens = self.geo_config.geouni.num_vq_tokens
+                    self.ref_model.num_new_special_tokens = self.geo_config.geouni.num_new_special_tokens
+                    self.ref_model.llm_vocab_size = self.geo_config.geouni.llm_vocab_size
+                    self.ref_model.codebook_size = self.geo_config.geouni.codebook_size
+                    
                 self.ref_model.requires_grad_(False)
                 self.ref_model.eval()
-                print("Loaded GeoUni reference model from", self.geo_config.geouni.pretrained_model_path)
+                
         elif peft_config is None:
             # If PEFT configuration is not provided, create a reference model based on the initial model.
             self.ref_model = create_reference_model(model)
@@ -234,7 +275,6 @@ class GeoUniGRPOTrainer(Trainer):
             use_cache=False if args.gradient_checkpointing else True,
             # top_p=0.9,
             # top_k=50
-            # use_cache=False
         )
         self.beta = args.beta
         
