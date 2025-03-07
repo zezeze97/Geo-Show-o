@@ -26,6 +26,7 @@ from datasets import Dataset, IterableDataset
 from packaging import version
 from transformers import (
     AutoModelForSequenceClassification,
+    AutoModelForCausalLM,
     AutoProcessor,
     AutoTokenizer,
     GenerationConfig,
@@ -51,13 +52,14 @@ from trl.trainer.grpo_config import GRPOConfig
 from trl.trainer.utils import generate_model_card, get_comet_experiment_url
 
 if is_peft_available():
-    from peft import PeftConfig, get_peft_model
+    from peft import PeftConfig, get_peft_model, PeftModel
 
 if is_wandb_available():
     import wandb
     
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LambdaLR
+from accelerate.utils import is_peft_model
 
 # -----------------------------------------------------------------------
 # 1. VQ 模型加载模块
@@ -165,41 +167,56 @@ class GeoUniGRPOTrainer(Trainer):
                     model.llm_vocab_size = self.geo_config.geouni.llm_vocab_size
                     model.codebook_size = self.geo_config.geouni.codebook_size
                     
-        print(f'peft_config: {peft_config}')
         if peft_config is not None:
             model = get_peft_model(model, peft_config)
+            # 计算总参数量
+            # total_params = sum(p.numel() for p in model.parameters())
+
+            # 计算可训练参数量
+            # trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+            # 打印结果
+            # print(f"Total parameters: {total_params}")
+            # print(f"Trainable parameters: {trainable_params}")
+            # print(f"Trainable parameters ratio: {trainable_params / total_params * 100:.2f}%")
+            
+            
+        # Enable gradient checkpointing if requested
+        if args.gradient_checkpointing:
+            model = self._enable_gradient_checkpointing(model, args)
         
         # Reference model
-        if is_deepspeed_zero3_enabled():
-            if "GeoUni" in model_id:
-                if self.geo_config.geouni.load_from_geouni:
-                    print(f"Loaded GeoUni reference model from {self.geo_config.geouni.pretrained_model_path}")
-                    self.ref_model = GeoUniForCausalLM.from_pretrained(self.geo_config.geouni.pretrained_model_path, **model_init_kwargs)
-                else:
-                    print(f"Loaded GeoUni reference model from {self.geo_config.geouni.llm_model_path}")
-                    self.ref_model = GeoUniForCausalLM.from_pretrained(
-                        self.geo_config.geouni.llm_model_path,
-                        **model_init_kwargs)
-                    model_config = GeoUniConfig.from_pretrained(self.geo_config.geouni.llm_model_path, 
-                                              vocab_size=self.geo_config.geouni.vocab_size,
-                                              num_vq_tokens=self.geo_config.geouni.num_vq_tokens,
-                                              num_new_special_tokens=self.geo_config.geouni.num_new_special_tokens,
-                                              llm_vocab_size=self.geo_config.geouni.llm_vocab_size,
-                                              codebook_size=self.geo_config.geouni.codebook_size)
-                    self.ref_model.resize_token_embeddings(model_config.vocab_size)
-                    self.ref_model.config = model_config
-                    self.ref_model.vocab_size = self.geo_config.geouni.vocab_size
-                    self.ref_model.num_vq_tokens = self.geo_config.geouni.num_vq_tokens
-                    self.ref_model.num_new_special_tokens = self.geo_config.geouni.num_new_special_tokens
-                    self.ref_model.llm_vocab_size = self.geo_config.geouni.llm_vocab_size
-                    self.ref_model.codebook_size = self.geo_config.geouni.codebook_size
-                    
-                self.ref_model.requires_grad_(False)
-                self.ref_model.eval()
+        if peft_config is None:
+            if is_deepspeed_zero3_enabled():
+                if "GeoUni" in model_id:
+                    if self.geo_config.geouni.load_from_geouni:
+                        print(f"Loaded GeoUni reference model from {self.geo_config.geouni.pretrained_model_path}")
+                        self.ref_model = GeoUniForCausalLM.from_pretrained(self.geo_config.geouni.pretrained_model_path, **model_init_kwargs)
+                    else:
+                        print(f"Loaded GeoUni reference model from {self.geo_config.geouni.llm_model_path}")
+                        self.ref_model = GeoUniForCausalLM.from_pretrained(
+                            self.geo_config.geouni.llm_model_path,
+                            **model_init_kwargs)
+                        model_config = GeoUniConfig.from_pretrained(self.geo_config.geouni.llm_model_path, 
+                                                vocab_size=self.geo_config.geouni.vocab_size,
+                                                num_vq_tokens=self.geo_config.geouni.num_vq_tokens,
+                                                num_new_special_tokens=self.geo_config.geouni.num_new_special_tokens,
+                                                llm_vocab_size=self.geo_config.geouni.llm_vocab_size,
+                                                codebook_size=self.geo_config.geouni.codebook_size)
+                        self.ref_model.resize_token_embeddings(model_config.vocab_size)
+                        self.ref_model.config = model_config
+                        self.ref_model.vocab_size = self.geo_config.geouni.vocab_size
+                        self.ref_model.num_vq_tokens = self.geo_config.geouni.num_vq_tokens
+                        self.ref_model.num_new_special_tokens = self.geo_config.geouni.num_new_special_tokens
+                        self.ref_model.llm_vocab_size = self.geo_config.geouni.llm_vocab_size
+                        self.ref_model.codebook_size = self.geo_config.geouni.codebook_size
+                        
+                    self.ref_model.requires_grad_(False)
+                    self.ref_model.eval()
                 
-        elif peft_config is None:
-            # If PEFT configuration is not provided, create a reference model based on the initial model.
-            self.ref_model = create_reference_model(model)
+            else:
+                # If PEFT configuration is not provided, create a reference model based on the initial model.
+                self.ref_model = create_reference_model(model)
         else:
             # If PEFT is used, the reference model is not needed since the adapter can be disabled
             # to revert to the initial model.
@@ -288,15 +305,6 @@ class GeoUniGRPOTrainer(Trainer):
         
         # Initialize the metrics
         self._metrics = defaultdict(list)
-        
-        
-        # 不确定是否需要传入    
-        # if optimizers == (None, None):
-        #     optimizer = AdamW(model.parameters(), lr=5e-5)
-        #     scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: 0.95 ** epoch)
-        # else:
-        #     optimizer, scheduler = optimizers
-        # optimizers = (optimizer, scheduler)
     
             
         super().__init__(
@@ -349,6 +357,28 @@ class GeoUniGRPOTrainer(Trainer):
             self.vq_model.eval()
             print("Loaded VQ model from", self.geo_config.vq_model.pretrained_model_path)
     
+    def _enable_gradient_checkpointing(self, model: PreTrainedModel, args: GRPOConfig) -> PreTrainedModel:
+        """Enables gradient checkpointing for the model."""
+        # Ensure use_cache is disabled
+        model.config.use_cache = False
+
+        # Enable gradient checkpointing on the base model for PEFT
+        if is_peft_model(model):
+            model.base_model.gradient_checkpointing_enable()
+        # Enable gradient checkpointing for non-PEFT models
+        else:
+            model.gradient_checkpointing_enable()
+
+        gradient_checkpointing_kwargs = args.gradient_checkpointing_kwargs or {}
+        use_reentrant = (
+            "use_reentrant" not in gradient_checkpointing_kwargs or gradient_checkpointing_kwargs["use_reentrant"]
+        )
+
+        if use_reentrant:
+            model.enable_input_require_grads()
+
+        return model
+    
     def _set_signature_columns_if_needed(self):
         # If `self.args.remove_unused_columns` is True, non-signature columns are removed.
         # By default, this method sets `self._signature_columns` to the model's expected inputs.
@@ -382,7 +412,7 @@ class GeoUniGRPOTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
         if return_outputs:
             raise ValueError("GRPOTrainer does not support returning outputs")
-        
+
         # -------------------------------------------------------------------
         # 1. 从输入中提取 "prompt"、"image" 与 "ground_truth"
         # -------------------------------------------------------------------
@@ -511,7 +541,7 @@ class GeoUniGRPOTrainer(Trainer):
             if self.ref_model is not None:
                 ref_per_token_logps = self._get_per_token_logps(self.ref_model, prompt_completion_ids, attention_mask)
             else:
-                with self.accelerator.unwrap_model(model).disable_adapters():
+                with self.accelerator.unwrap_model(model).disable_adapter():
                     ref_per_token_logps = self._get_per_token_logps(model, prompt_completion_ids, attention_mask)
         ref_per_token_logps = ref_per_token_logps[:, prompt_length - 1:]
         

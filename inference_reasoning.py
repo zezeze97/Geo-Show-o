@@ -25,6 +25,7 @@ from src.open_r1.trainer.custom_data import image_transform
 from transformers import AutoTokenizer
 import json
 from omegaconf import OmegaConf
+from peft import PeftModel
 
 def expand2square(pil_img, background_color):
     width, height = pil_img.size
@@ -87,7 +88,7 @@ if __name__ == '__main__':
     save_file_name = config.save_file_name
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    tokenizer = AutoTokenizer.from_pretrained(config.geouni.llm_model_path)
+    tokenizer = AutoTokenizer.from_pretrained(config.pretrained_geouni_model_path)
 
     uni_prompting = UniversalPrompting(tokenizer,
                                        special_tokens=(
@@ -103,10 +104,11 @@ if __name__ == '__main__':
         vq_model.eval()
         print(f'Loaded from pretrained vq_model: {config.vq_model.pretrained_model_path}')
 
-
     # model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='sdpa', torch_dtype=torch.bfloat16).to(device)    
     model = GeoUniForCausalLM.from_pretrained(config.pretrained_geouni_model_path, attn_implementation='sdpa', torch_dtype=torch.bfloat16, device_map={'': device})   
     print(f'Loaded GeoUni from: {config.pretrained_geouni_model_path}') 
+    model = PeftModel.from_pretrained(model, config.lora_weights_path)
+    print(f'Loaded Lora weights from {config.lora_weights_path}')
     model.eval()
     
     
@@ -153,12 +155,9 @@ if __name__ == '__main__':
                                         eos_token_id = uni_prompting.text_tokenizer.eos_token_id,
                                         do_sample=False,
                                         top_p=None,
-                                        use_cache=False)
-
-
+                                        use_cache=True)
         response = uni_prompting.text_tokenizer.batch_decode(output_ids[:, input_ids.shape[1]:], skip_special_tokens=True)[0]
-        print(f'generate: {response}')   
-        
+        print(response)
         
         outputs.append({'question_id': image_id,
                         'prompt': prompt,

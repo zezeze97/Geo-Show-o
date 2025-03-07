@@ -19,21 +19,26 @@ torchrun --nproc_per_node=2 \
     --geo_config_path configs/geouni_512x512_0221.yaml \
     --dataset_name data/smalltest \
     --image_root_path data/ \
-    --deepspeed scripts/zero3.json \
-    --output_dir checkpoints/geo-grpo-0304-Overfit \
+    --deepspeed scripts/zero2.json \
+    --output_dir checkpoints/geo-grpo-0307-lora-debug \
     --model_name_or_path GeoUni \
     --max_prompt_length 1024 \
     --max_completion_length 1024 \
     --per_device_train_batch_size 1 \
-    --gradient_accumulation_steps 1 \
+    --gradient_accumulation_steps 2 \
     --logging_steps 1 \
     --bf16 \
     --report_to wandb \
     --gradient_checkpointing false \
     --attn_implementation sdpa \
     --save_total_limit 1 \
-    --num_train_epochs 100 \
+    --num_train_epochs 200 \
     --num_generations 8 \
-    --run_name GeoUni_GRPO_0304-Overfit \
+    --run_name GeoUni_GRPO_0307-lora-debug \
     --save_steps 10 \
-    --learning_rate 5e-6 \
+    --learning_rate 5e-5 \
+    --use_peft \
+    --lora_r 128 \
+    --lora_alpha 256 \
+    --beta 0.01 \
+    --lora_target_modules q_proj v_proj k_proj o_proj \
