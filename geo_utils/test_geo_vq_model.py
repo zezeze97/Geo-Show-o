@@ -95,7 +95,7 @@ if __name__ == '__main__':
     model_2 = load_vqgan_new(config_model, ckpt_path=ckpt_path).to(device)
     
     # 图片文件夹路径
-    img_folder = '/lustre/home/2001110054/GEO-Open-MAGVIT2/geo_data/val'  # 记得修改文件夹路径
+    img_folder = '/lustre/home/2001110054/GEO-Open-MAGVIT2/geo_data/formalgeo/val'  # 记得修改文件夹路径
     # img_folder = '/lustre/home/2001110054/01_backup/data/self-reasoning-data'
     
     # 获取文件夹中的所有图片文件

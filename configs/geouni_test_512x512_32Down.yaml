@@ -11,10 +11,10 @@ model:
             ch: 128
             ch_mult: [1,2,2,2,4,4]   # num_down = len(ch_mult)-1
             num_res_blocks: 4
-        pretrained_model_path: "/lustre/home/2201210053/GEOMETERY/OpenMagVit-CKPT/expr_1120_mask_down32_z13/ckpt/epoch=184-step=68820.ckpt"
+        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_0312_mask_down32_z13/ckpt/epoch=220-step=147344.ckpt"
 
     geouni:
-        load_from_geouni: false
+        load_from_geouni: true
         pretrained_model_path: "outputs/geouni-512x512-0217"
         vocab_size: 159867
         llm_vocab_size: 151665

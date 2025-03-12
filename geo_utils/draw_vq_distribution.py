@@ -8,7 +8,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from omegaconf import OmegaConf
 import sys
-sys.path.append('/lustre/home/2001110054/Show-o')  # 项目根目录
+sys.path.append('/lustre/home/2001110054/Geo-Show-o')  # 项目根目录
 from models import MAGVITv2, VQModel 
 from training.geo_data_aug import crop
 

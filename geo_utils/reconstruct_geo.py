@@ -8,7 +8,7 @@ import argparse
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 import sys
-sys.path.append('/lustre/home/2001110054/Show-o')  # 项目根目录
+sys.path.append('/lustre/home/2001110054/Geo-Show-o')  # 项目根目录
 from models import VQModel, MAGVITv2
 from training.geo_data_aug import crop
 
@@ -90,8 +90,8 @@ class MyCustomDataset(Dataset):
 
 def get_args():
     parser = argparse.ArgumentParser(description="inference parameters")
-    parser.add_argument("--config_file", required=True, type=str)
-    parser.add_argument("--ckpt_path", required=True, type=str)
+    parser.add_argument("--config_file", type=str, default=None)
+    parser.add_argument("--ckpt_path", type=str, default=None)
     parser.add_argument("--use_show_magvit", action='store_true')
     parser.add_argument("--image_size", default=512, type=int)
     parser.add_argument("--batch_size", default=1, type=int)
@@ -103,6 +103,7 @@ def get_args():
 def main(args):
     if args.use_show_magvit:
         model = MAGVITv2.from_pretrained('showlab/magvitv2').to(DEVICE)
+        print('Using MAGVITv2')
     else:
         # Load model configuration
         config_model = load_config(args.config_file, display=False)

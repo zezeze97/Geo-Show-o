@@ -5,8 +5,8 @@ wandb:
 
 experiment:
     project: "training"
-    name: "geouni-512x512-0217"
-    output_dir: "outputs/geouni-512x512-0217"
+    name: "geouni-512x512-0312-32down"
+    output_dir: "outputs/geouni-512x512-0312-32down"
     save_every: 500
     generate_every: 500
     log_every: 50
@@ -26,7 +26,7 @@ model:
             ch: 128
             ch_mult: [1,2,2,2,4,4]  # num_down = len(ch_mult)-1
             num_res_blocks: 4
-        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_1120_mask_down32_z13/ckpt/epoch=184-step=68820.ckpt"
+        pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_0312_mask_down32_z13/ckpt/epoch=220-step=147344.ckpt"
 
         
     geouni:
@@ -80,12 +80,12 @@ training:
     batch_size_t2i: 1
     batch_size_reasoning: 1
     batch_size_mixing: 1
-    num_train_epochs: 10000000
+    num_train_epochs: 2
     mixed_precision: "bf16"
     enable_tf32: True
     seed: 10086
     max_train_steps: 25000 # to be determined according to the scale of high-quality dataset
     max_grad_norm: null
     t2i_coeff: 1.0
-    reasoning_coeff: 1.0
+    reasoning_coeff: 0.5
     mixing_coeff: 1.0
