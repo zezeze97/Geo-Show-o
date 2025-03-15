@@ -289,7 +289,7 @@ def main():
     
     # Data for t2i
     dataset_t2i = LazySupervisedDataset(image_folder=dataset_config.t2i_image_folder,
-                                json_path=dataset_config.t2i_json_path,
+                                json_paths=dataset_config.t2i_json_paths,
                                 resolution=preproc_config.resolution,
                                 is_t2i=True)
     
@@ -311,7 +311,7 @@ def main():
     
     # Data for reasoning
     dataset_reasoning = LazySupervisedDataset(image_folder=dataset_config.reasoning_image_folder,
-                                json_path=dataset_config.reasoning_json_path,
+                                json_paths=dataset_config.reasoning_json_paths,
                                 resolution=preproc_config.resolution,
                                 is_reasoning=True)
     if accelerator.num_processes > 1:
@@ -332,7 +332,7 @@ def main():
     
     # Data for mix
     dataset_mixing = LazySupervisedDataset(image_folder=dataset_config.mixing_image_folder,
-                                json_path=dataset_config.mixing_json_path,
+                                json_paths=dataset_config.mixing_json_paths,
                                 resolution=preproc_config.resolution,
                                 is_mixing=True)
     if accelerator.num_processes > 1:

@@ -43,7 +43,7 @@ class LazySupervisedDataset(Dataset):
     """Dataset for supervised fine-tuning."""
 
     def __init__(self, image_folder: str=None,
-                 json_path: str=None, 
+                 json_paths: str=None, 
                  geo_customized_aug: bool=True,
                  image_aspect_ratio: str='pad',
                  resolution: int = 256,
@@ -53,9 +53,10 @@ class LazySupervisedDataset(Dataset):
                  is_mixing: bool = False,
                  ):
         super(LazySupervisedDataset, self).__init__()
-        
-        with open(json_path, "r") as f:
-            list_data_dict = json.load(f)
+        list_data_dict = []
+        for json_path in json_paths:
+            with open(json_path, "r") as f:
+                list_data_dict += json.load(f)
         self.image_folder = image_folder
         self.geo_customized_aug = geo_customized_aug
         self.image_aspect_ratio = image_aspect_ratio
@@ -117,9 +118,9 @@ class LazySupervisedDataset(Dataset):
 
 
 if __name__ == '__main__':
-    dataset = LazySupervisedDataset(image_folder='/lustre/home/2201210053/Geo-Show-o/data/formalgeo7k/formalgeo7k_v2',
-                                json_path='/lustre/home/2201210053/Geo-Show-o/data/formalgeo7k/formalgeo7k_v2/custom_json/qa_resoning/formalgeov2_aug_train.json',
-                                )
+    dataset = LazySupervisedDataset(image_folder='data',
+                                json_paths=['data/geouni_mixing_data/t2i/formalgeo_train.json', 'data/geouni_mixing_data/t2i/dataset1202_train.json', 'data/geouni_mixing_data/t2i/geoeval_train.json'],
+                                is_t2i=True)
     for item in dataset:
         print(item)
         break

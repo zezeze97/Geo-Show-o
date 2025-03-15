@@ -82,38 +82,35 @@ if __name__ == '__main__':
         os.makedirs(os.path.join(save_path, save_file_name))
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    tokenizer = AutoTokenizer.from_pretrained(config.model.geouni.llm_model_path)
+    tokenizer = AutoTokenizer.from_pretrained(config.pretrained_geouni_model_path)
 
-    uni_prompting = UniversalPrompting(tokenizer, max_len=config.dataset.preprocessing.max_seq_length,
+    uni_prompting = UniversalPrompting(tokenizer, max_len=4096,
                                        special_tokens=(
                                             "<|soi|>", "<|eoi|>", "<|t2i|>", "<|mmu|>", "<|mix|>", "<formalization>", "</formalization>", "<answer>", "</answer>"
                                        ),
                                        ignore_id=-100)
 
-    vq_model = get_vq_model_class(config.model.vq_model.type)
+    vq_model = get_vq_model_class(config.vq_model.type)
    
-    if config.model.vq_model.type == "geo": 
-        vq_model = load_geo_vqgan(vq_model, config.model.vq_model.vq_model_config, ckpt_path=config.model.vq_model.pretrained_model_path).to(device)
+    if config.vq_model.type == "geo": 
+        vq_model = load_geo_vqgan(vq_model, config.vq_model.vq_model_config, ckpt_path=config.vq_model.pretrained_model_path).to(device)
         vq_model.requires_grad_(False)
         vq_model.eval()
         
         print('Load from pretrained vq_model')
-    elif config.model.vq_model.type == "magvitv2":
-        vq_model = vq_model.from_pretrained(config.model.vq_model.vq_model_name).to(device)
+    elif config.vq_model.type == "magvitv2":
+        vq_model = vq_model.from_pretrained(config.vq_model.vq_model_name).to(device)
         vq_model.requires_grad_(False)
         vq_model.eval()
 
     # model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='sdpa', torch_dtype=torch.bfloat16).to(device) 
-    model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16, device_map={'': device})       
+    model = GeoUniForCausalLM.from_pretrained(config.pretrained_geouni_model_path, attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16, device_map={'': device})       
     model.eval()
     
     
-   # load from users passed arguments
-    if config.get("validation_prompts_file", None) is not None:
-        config.dataset.params.validation_prompts_file = config.validation_prompts_file
-    
+
     validation_info = []
-    with open(config.dataset.params.validation_prompts_file, "r") as f:
+    with open(config.validation_prompts_file, "r") as f:
         for line in f:
             validation_info.append(json.loads(line))
     

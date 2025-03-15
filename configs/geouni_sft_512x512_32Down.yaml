@@ -5,8 +5,8 @@ wandb:
 
 experiment:
     project: "training"
-    name: "geouni-512x512-0312-32down"
-    output_dir: "outputs/geouni-512x512-0312-32down"
+    name: "geouni-512x512-0313-32down"
+    output_dir: "outputs/geouni-512x512-0313-32down"
     save_every: 500
     generate_every: 500
     log_every: 50
@@ -42,15 +42,14 @@ model:
 dataset:
     combined_loader_mode: "max_size_cycle"
     params:
-        t2i_image_folder: data/formalgeo7k/formalgeo7k_v2
-        t2i_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/t2i/train.json
-        reasoning_image_folder: data/formalgeo7k/formalgeo7k_v2
-        reasoning_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/reasoning/train.json
-        mixing_image_folder: data/formalgeo7k/formalgeo7k_v2
-        mixing_json_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/mixing/train.json
-        t2i_validation_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/t2i/test_gpt_caption2i_en.jsonl
-        mmu_validation_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/reasoning/test_reasoning_cn.jsonl
-        mix_validation_path: data/formalgeo7k/formalgeo7k_v2/custom_json/geouni/mixing/test_mixing_cn_problem_ans_choice.jsonl
+        t2i_image_folder: data
+        t2i_json_paths: ['data/geouni_mixing_data/t2i/formalgeo_train.json', 'data/geouni_mixing_data/t2i/dataset1202_train_sampled.json', 'data/geouni_mixing_data/t2i/geoeval_train.json']
+        reasoning_image_folder: data
+        reasoning_json_paths: ['data/geouni_mixing_data/reasoning/formalgeo_train.json', 'data/geouni_mixing_data/reasoning/geoeval_train.json']
+        mixing_image_folder: data
+        mixing_json_paths: ['data/geouni_mixing_data/mixing/formalgeo_train.json', 'data/geouni_mixing_data/mixing/geoeval_train.json']
+        t2i_validation_path: data/geouni_mixing_data/t2i/test_gpt_caption2i_cn.jsonl
+        mmu_validation_path: data/geouni_mixing_data/reasoning/test_reasoning_cn.jsonl
         num_workers: 16
         pin_memory: True
         persistent_workers: True
@@ -76,15 +75,15 @@ lr_scheduler:
         warmup_steps: 200
 
 training:
-    gradient_accumulation_steps: 8
+    gradient_accumulation_steps: 1
     batch_size_t2i: 1
     batch_size_reasoning: 1
     batch_size_mixing: 1
-    num_train_epochs: 2
+    num_train_epochs: 1
     mixed_precision: "bf16"
     enable_tf32: True
     seed: 10086
-    max_train_steps: 25000 # to be determined according to the scale of high-quality dataset
+    max_train_steps: 43000 # to be determined according to the scale of high-quality dataset
     max_grad_norm: null
     t2i_coeff: 1.0
     reasoning_coeff: 0.5
