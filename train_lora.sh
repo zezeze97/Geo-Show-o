@@ -10,7 +10,7 @@ export CUDA_HOME=/usr/local/cuda
 export OMP_NUM_THREADS=16
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 # 运行任务
-torchrun --nproc_per_node=2 \
+torchrun --nproc_per_node=4 \
     --nnodes=1 \
     --node_rank=0 \
     --master_addr=$MASTER_ADDR \
@@ -20,12 +20,12 @@ torchrun --nproc_per_node=2 \
     --dataset_name data/smalltest \
     --image_root_path data/ \
     --deepspeed scripts/zero2.json \
-    --output_dir checkpoints/geo-grpo-0307-lora-debug \
+    --output_dir checkpoints/geo-grpo-0308-lora-debug \
     --model_name_or_path GeoUni \
     --max_prompt_length 1024 \
     --max_completion_length 1024 \
     --per_device_train_batch_size 1 \
-    --gradient_accumulation_steps 2 \
+    --gradient_accumulation_steps 1 \
     --logging_steps 1 \
     --bf16 \
     --report_to wandb \
@@ -34,7 +34,7 @@ torchrun --nproc_per_node=2 \
     --save_total_limit 1 \
     --num_train_epochs 200 \
     --num_generations 8 \
-    --run_name GeoUni_GRPO_0307-lora-debug \
+    --run_name GeoUni_GRPO_0308-lora-debug \
     --save_steps 10 \
     --learning_rate 5e-5 \
     --use_peft \
