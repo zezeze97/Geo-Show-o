@@ -76,8 +76,6 @@ if __name__ == '__main__':
     config = get_config()
     save_path = config.output_dir
     save_file_name = config.save_file_name
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
     if not os.path.exists(os.path.join(save_path, save_file_name)):
         os.makedirs(os.path.join(save_path, save_file_name))
 
