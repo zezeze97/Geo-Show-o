@@ -227,7 +227,10 @@ class GeoUniGRPOTrainer(Trainer):
         if processing_class is None:
             if "GeoUni" in model_id:
                 # 对于 GeoUni，使用 UniversalPrompting 进行图文联合处理
-                tokenizer = AutoTokenizer.from_pretrained(self.geo_config.geouni.llm_model_path)
+                if self.geo_config.geouni.load_from_geouni:
+                    tokenizer = AutoTokenizer.from_pretrained(self.geo_config.geouni.pretrained_model_path)
+                else:
+                    tokenizer = AutoTokenizer.from_pretrained(self.geo_config.geouni.llm_model_path)
                 self.uni_prompting = UniversalPrompting(
                     tokenizer,
                     # max_len=args.max_prompt_length,
@@ -419,6 +422,8 @@ class GeoUniGRPOTrainer(Trainer):
         prompts = [x["prompt"] for x in inputs]
         images = [x["image"] for x in inputs]
         ground_truths = [x["ground_truth"] for x in inputs] 
+        consCDLs = [x['consCDL'] for x in inputs]
+        imgCDLs = [x['imgCDL'] for x in inputs]
         
         
         # pil_images only for visualization
@@ -562,11 +567,11 @@ class GeoUniGRPOTrainer(Trainer):
         # -------------------------------------------------------------------
         rewards_per_func = torch.zeros(len(prompts_repeated), len(self.reward_funcs), device=self.device)
         
-        # 如果 ground_truths 存在，则对其也重复，保证数量与 completions 一致
-        if ground_truths[0] is not None:
-            ground_truths_repeated = [gt for gt in ground_truths for _ in range(self.num_generations)]
-        else:
-            ground_truths_repeated = None
+        # 对ground_truths, consCDLs, imgCDLs 重复，保证数量与 completions 一致
+        ground_truths_repeated = [gt for gt in ground_truths for _ in range(self.num_generations)]
+        consCDLs_repeated = [consCDL for consCDL in consCDLs for _ in range(self.num_generations)]
+        imgCDLs_repeated = [imgCDL for imgCDL in imgCDLs for _ in range(self.num_generations)]
+        
 
         for i, reward_func in enumerate(self.reward_funcs):
             if isinstance(self.reward_processing_classes, dict):
@@ -589,10 +594,11 @@ class GeoUniGRPOTrainer(Trainer):
             else:
                 # 处理自定义的奖励函数
                 # 如果存在 ground_truths，则传入 ground_truths_repeated，否则只传入 completions
-                if ground_truths_repeated is not None:
-                    rewards_list = reward_func(completions, ground_truths_repeated)
-                else:
-                    rewards_list = reward_func(completions)
+                rewards_list = reward_func(completions=completions, 
+                                           ground_truths=ground_truths_repeated, 
+                                           consCDLs=consCDLs_repeated, 
+                                           imgCDLs=imgCDLs_repeated)
+                
                 # 将返回的奖励列表转换为 tensor，并写入 rewards_per_func
                 rewards_tensor = torch.tensor(rewards_list, device=self.device, dtype=torch.float)
                 rewards_per_func[:, i] = rewards_tensor       

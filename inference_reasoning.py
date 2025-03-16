@@ -156,6 +156,8 @@ if __name__ == '__main__':
                                         do_sample=False,
                                         top_p=None,
                                         use_cache=True)
+            # model.disable_adapter()
+            # model.t2i_generate()
         response = uni_prompting.text_tokenizer.batch_decode(output_ids[:, input_ids.shape[1]:], skip_special_tokens=True)[0]
         print(response)
         

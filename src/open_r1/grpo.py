@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 import math
 from datasets import load_dataset
+import Levenshtein
 
 # from omegaconf import DictConfig, ListConfig, OmegaConf
 from open_r1.trainer import GeoUniGRPOTrainer
@@ -44,27 +45,83 @@ class GRPOScriptArguments(ScriptArguments):
     """
 
     reward_funcs: list[str] = field(
-        default_factory=lambda: ["accuracy", "format"],
+        default_factory=lambda: ["accuracy", "format", "formalization"],
         metadata={"help": "List of reward functions. Possible values: 'accuracy', 'format'"},
     )
     image_root_path: Optional[str] = None
+
+
+def formalization_reward(completions, consCDLs, imgCDLs, **kwargs):
+    """Computes a reward based on the similarity of predicted consCDL and imgCDL to ground truth using Levenshtein distance."""
+    rewards = []
     
+    for completion, gt_consCDL, gt_imgCDL in zip(completions, consCDLs, imgCDLs):
+        # 如果 ground truth 为空，直接 0 分
+        if gt_consCDL is None and gt_imgCDL is None:
+            rewards.append(0.0)
+            continue
+        
+        # 使用正则表达式提取模型生成的 consCDL 和 imgCDL
+        match = re.search(r"<formalization>\s*consCDL:\s*(.*?)\s*imgCDL:\s*(.*?)\s*</formalization>", completion, re.DOTALL)
+        
+        if not match:  # 如果 completion 没有匹配到正确的 <formalization> 格式，则给 0 分
+            rewards.append(0.0)
+            continue
 
-def accuracy_reward(completions, ground_truth, **kwargs):
-    # Regular expression to capture content inside \boxed{}
-    matches = [re.search(r"\\boxed\{(.*?)\}", completion) for completion in completions]
-    contents = [match.group(1) if match else "" for match in matches]
-    # Reward 1 if the content is the same as the ground truth, 0 otherwise
-    return [1.0 if c == gt else 0.0 for c, gt in zip(contents, ground_truth)]
+        pred_consCDL = match.group(1).strip()
+        pred_imgCDL = match.group(2).strip()
 
-def format_reward(completions, ground_truth=None, **kwargs):
+        # 计算 Levenshtein 距离（编辑距离）
+        consCDL_dist = Levenshtein.distance(pred_consCDL, gt_consCDL)
+        imgCDL_dist = Levenshtein.distance(pred_imgCDL, gt_imgCDL)
+
+        # 计算归一化相似度得分（1 - 归一化编辑距离）
+        consCDL_score = 1.0 - (consCDL_dist / max(len(gt_consCDL), 1))
+        imgCDL_score = 1.0 - (imgCDL_dist / max(len(gt_imgCDL), 1))
+
+        # 取两者的平均作为最终 reward（确保不低于 0）
+        final_reward = max(0.0, (consCDL_score + imgCDL_score) / 2)
+        rewards.append(final_reward)
+
+    return rewards
+
+
+def accuracy_reward(completions, ground_truths, **kwargs):
+    """Extracts the boxed answer from <answer>...</answer> and compares with ground truth."""
+    
+    # 先提取 <answer>...</answer> 内的内容
+    answer_matches = [re.search(r"<answer>\s*([\s\S]*?)\s*</answer>", completion) for completion in completions]
+    answer_contents = [match.group(1) if match else "" for match in answer_matches]
+
+    # 在 <answer> 里面查找 \boxed{}
+    boxed_matches = [re.search(r"\\boxed\{(.*?)\}", answer) for answer in answer_contents]
+    boxed_contents = [match.group(1) if match else "" for match in boxed_matches]
+
+    # 计算奖励：\boxed{} 里的内容是否等于 ground truth
+    return [1.0 if c == gt else 0.0 for c, gt in zip(boxed_contents, ground_truths)]
+
+def format_reward(completions, consCDLs, imgCDLs, **kwargs):
     """Reward function that checks if the completion has a specific format."""
-    pattern = r"^<think>.*?</think><answer>.*?</answer>$"
-    completion_contents = [completion for completion in completions]
-    matches = [re.match(pattern, content, re.DOTALL) for content in completion_contents]
-    return [1.0 if match else 0.0 for match in matches]
+    rewards = []
+    
+    for completion, consCDL, imgCDL in zip(completions, consCDLs, imgCDLs):
+        if consCDL is None and imgCDL is None:
+            # 仅包含 <think> 和 <answer>
+            pattern = r"^<think>[\s\S]*?</think>\n<answer>[\s\S]*?</answer>$"
+        else:
+            # 需要包含 <formalization>，<think> 和 <answer>
+            pattern = (
+                r"^<formalization>\s*consCDL:\s*(.+?)\s*imgCDL:\s*(.+?)\s*</formalization>\n"
+                r"<think>[\s\S]*?</think>\n<answer>[\s\S]*?</answer>$"
+            )
+        
+        match = re.match(pattern, completion)
+        score = 1.0 if match else 0.0
+        rewards.append(score)
+    
+    return rewards
 
-def length_reward(completions, ground_truth=None, **kwargs):
+def length_reward(completions, *kwargs):
     """
     软性奖励函数：当 completion 的长度低于或等于所有样本的平均长度时，奖励为 1
     当长度超过平均长度时，采用指数衰减给予惩罚，使得奖励值在 0 到 1 之间。
@@ -106,6 +163,7 @@ reward_funcs_registry = {
     "accuracy": accuracy_reward,
     "length": length_reward,
     "format": format_reward,
+    "formalization": formalization_reward,
 }
 
 

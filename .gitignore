@@ -10,3 +10,4 @@ checkpoints/
 transformers/
 src/open_r1.egg-info
 outputs/
+logs/
