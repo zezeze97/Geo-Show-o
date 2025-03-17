@@ -17,28 +17,28 @@ torchrun --nproc_per_node=2 \
     --master_port=$MASTER_PORT \
     src/open_r1/grpo.py \
     --geo_config_path configs/geouni_512x512_32down.yaml \
-    --dataset_name data/grpo \
+    --dataset_name data/smalltest \
     --image_root_path data/ \
     --deepspeed scripts/zero2.json \
-    --output_dir checkpoints/geo-grpo-0316-lora-debug \
+    --output_dir checkpoints/geo-grpo-0317-lora-debug \
     --model_name_or_path GeoUni \
     --max_prompt_length 1024 \
     --max_completion_length 1024 \
     --per_device_train_batch_size 1 \
-    --gradient_accumulation_steps 4 \
+    --gradient_accumulation_steps 2 \
     --logging_steps 1 \
     --bf16 \
     --report_to wandb \
     --gradient_checkpointing false \
     --attn_implementation sdpa \
     --save_total_limit 1 \
-    --num_train_epochs 1 \
+    --num_train_epochs 200 \
     --num_generations 8 \
-    --run_name GeoUni_GRPO_0316-lora-debug \
+    --run_name GeoUni_GRPO_0317-lora-debug \
     --save_steps 10 \
     --learning_rate 5e-5 \
     --use_peft \
-    --lora_r 128 \
-    --lora_alpha 256 \
+    --lora_r 256 \
+    --lora_alpha 512 \
     --beta 0.01 \
     --lora_target_modules q_proj v_proj k_proj o_proj \
