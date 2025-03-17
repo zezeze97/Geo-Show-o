@@ -15,7 +15,7 @@ module load gcc/12.2.0
 module load openmpi
 export PYTHONPATH=$PYTHONPATH:/lustre/home/2001110054/Geo-Show-o
 export OMP_NUM_THREADS=64
-# source activate show-o
+source activate show-o
 
 
 CUDA_VISIBLE_DEVICES=2 python3 inference_mix.py config=configs/geouni_test_512x512_16Down.yaml \

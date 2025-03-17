@@ -14,23 +14,17 @@
 # limitations under the License.
 
 import os
-
-os.environ["TOKENIZERS_PARALLELISM"] = "true"
-# os.environ["WANDB_MODE"]="offline"
 from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
 import numpy as np
 import torch
-# import wandb
 from models import VQModel, MAGVITv2, GeoUniForCausalLM
-from omegaconf import OmegaConf
 from training.prompting_utils import UniversalPrompting
 from training.utils import get_config
 from transformers import AutoTokenizer
 import torch.nn.functional as F
 import json
-from training.geo_data_aug import crop
-from training.custom_data import expand2square
+from peft import PeftModel
 
 def get_vq_model_class(model_type):
     if model_type == "magvitv2":
@@ -45,7 +39,7 @@ def load_geo_vqgan(vq_model, config, ckpt_path=None, use_ema=True):
     
     if ckpt_path is not None:
         # 加载检查点文件中的 state_dict
-        sd = torch.load(ckpt_path, map_location="cpu")["state_dict"]
+        sd = torch.load(ckpt_path, map_location="cpu", weights_only=True)["state_dict"]
         
          # 提取出普通模型权重和 EMA 权重
         if use_ema:
@@ -98,9 +92,12 @@ if __name__ == '__main__':
         vq_model.eval()
 
     # model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='sdpa', torch_dtype=torch.bfloat16).to(device)    
-    model = GeoUniForCausalLM.from_pretrained(config.pretrained_geouni_model_path, attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16, device_map={'': device})    
+    model = GeoUniForCausalLM.from_pretrained(config.pretrained_geouni_model_path, attn_implementation='sdpa', torch_dtype=torch.bfloat16, device_map={'': device})    
+    print(f'Loaded GeiUni from: {config.pretrained_geouni_model_path}')
+    if config.lora_weights_path is not None:
+        model = PeftModel.from_pretrained(model, config.lora_weights_path)
+        print(f'Loaded Lora weights from {config.lora_weights_path}')
     model.eval()
-
 
         
     validation_info = []
@@ -114,13 +111,24 @@ if __name__ == '__main__':
         input_ids, attention_masks = uni_prompting(prompt, 't2i_gen')
         input_ids = input_ids.to(device)
         attention_masks = attention_masks.to(device)
-        with torch.no_grad():
+        if config.lora_weights_path is not None:
+            with model.disable_adapter():
+                gen_token_ids = model.t2i_generate(
+                input_ids=input_ids,
+                pad_token_id=uni_prompting.text_tokenizer.pad_token_id,
+                attention_masks=attention_masks,
+                temperature=1.0,
+            )
+        else:
             gen_token_ids = model.t2i_generate(
                 input_ids=input_ids,
                 pad_token_id=uni_prompting.text_tokenizer.pad_token_id,
                 attention_masks=attention_masks,
                 temperature=1.0,
             )
+            
+                
+                
 
         image = vq_model.decode_code(gen_token_ids)
 

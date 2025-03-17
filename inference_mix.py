@@ -26,6 +26,7 @@ from training.geo_data_aug import crop
 from training.custom_data import image_transform
 from transformers import AutoTokenizer
 import json
+from peft import PeftModel
 
 def expand2square(pil_img, background_color):
     width, height = pil_img.size
@@ -54,7 +55,7 @@ def load_geo_vqgan(vq_model, config, ckpt_path=None, use_ema=True):
     
     if ckpt_path is not None:
         # 加载检查点文件中的 state_dict
-        sd = torch.load(ckpt_path, map_location="cpu")["state_dict"]
+        sd = torch.load(ckpt_path, map_location="cpu", weights_only=True)["state_dict"]
         
          # 提取出普通模型权重和 EMA 权重
         if use_ema:
@@ -102,7 +103,10 @@ if __name__ == '__main__':
         vq_model.eval()
 
     # model = GeoUniForCausalLM.from_pretrained(config.model.geouni.pretrained_model_path, attn_implementation='sdpa', torch_dtype=torch.bfloat16).to(device) 
-    model = GeoUniForCausalLM.from_pretrained(config.pretrained_geouni_model_path, attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16, device_map={'': device})       
+    model = GeoUniForCausalLM.from_pretrained(config.pretrained_geouni_model_path, attn_implementation='sdpa', torch_dtype=torch.bfloat16, device_map={'': device})       
+    if config.lora_weights_path is not None:
+        model = PeftModel.from_pretrained(model, config.lora_weights_path)
+        print(f'Loaded Lora weights from {config.lora_weights_path}')
     model.eval()
     
     
@@ -119,14 +123,23 @@ if __name__ == '__main__':
         prob_id = item['prob_id']
         input_ids, _ = uni_prompting(prompt, 'mix_gen')
         input_ids = input_ids.to(device)
-        with torch.no_grad():
+        if config.lora_weights_path is not None:
+            with model.disable_adapter():
+                image_tokens, text_tokens = model.mix_generate(input_ids=input_ids,
+                                            max_new_tokens=config.max_new_tokens,
+                                            temperature=temperature,
+                                            pad_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('[PAD]'),
+                                            eos_token_id = uni_prompting.text_tokenizer.eos_token_id,
+                                            soi_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('<|soi|>'),
+                                            eoi_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('<|eoi|>'))
+        else:
             image_tokens, text_tokens = model.mix_generate(input_ids=input_ids,
-                                        max_new_tokens=config.max_new_tokens,
-                                        temperature=temperature,
-                                        pad_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('[PAD]'),
-                                        eos_token_id = uni_prompting.text_tokenizer.eos_token_id,
-                                        soi_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('<|soi|>'),
-                                        eoi_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('<|eoi|>'))
+                                            max_new_tokens=config.max_new_tokens,
+                                            temperature=temperature,
+                                            pad_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('[PAD]'),
+                                            eos_token_id = uni_prompting.text_tokenizer.eos_token_id,
+                                            soi_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('<|soi|>'),
+                                            eoi_token_id=uni_prompting.text_tokenizer.convert_tokens_to_ids('<|eoi|>'))
         
         
         
