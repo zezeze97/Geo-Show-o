@@ -5,8 +5,8 @@ wandb:
 
 experiment:
     project: "training"
-    name: "geouni-512x512-0317-32down-debug"
-    output_dir: "outputs/geouni-512x512-0317-32down-debug"
+    name: "geouni-512x512-0319-32down"
+    output_dir: "outputs/geouni-512x512-0319-32down"
     save_every: 500
     generate_every: 500
     log_every: 50
@@ -55,7 +55,7 @@ dataset:
         persistent_workers: True
 
     preprocessing:
-        max_seq_length: 4096
+        max_seq_length: 2048
         resolution: 512
 
 optimizer:
@@ -76,7 +76,7 @@ lr_scheduler:
 
 training:
     gradient_accumulation_steps: 1
-    batch_size_t2i: 1
+    batch_size_t2i: 2
     batch_size_reasoning: 1
     batch_size_mixing: 1
     num_train_epochs: 1

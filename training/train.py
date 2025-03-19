@@ -52,7 +52,6 @@ from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
 
-SYSTEM_PROMPT_LEN = 28
 
 from training.utils import get_config, flatten_omega_conf, AverageMeter
 

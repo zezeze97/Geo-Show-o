@@ -23,7 +23,7 @@ def load_vqgan_new(config, ckpt_path=None, use_ema=True):
     model = VQModel(**config.model.init_args.ddconfig)
     if ckpt_path is not None:
         # 加载检查点文件中的 state_dict
-        sd = torch.load(ckpt_path, map_location="cpu")["state_dict"]
+        sd = torch.load(ckpt_path, map_location="cpu", weights_only=True)["state_dict"]
         
         # 提取出普通模型权重和 EMA 权重
         if use_ema:
