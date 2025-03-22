@@ -5,8 +5,8 @@ wandb:
 
 experiment:
     project: "training"
-    name: "geouni-512x512-0320-32down"
-    output_dir: "outputs/geouni-512x512-0320-32down"
+    name: "geouni-512x512-0322-32down"
+    output_dir: "outputs/geouni-512x512-0322-32down"
     save_every: 500
     generate_every: 500
     log_every: 50
@@ -43,7 +43,7 @@ dataset:
     combined_loader_mode: "max_size_cycle"
     params:
         t2i_image_folder: data
-        t2i_json_paths: ['data/geouni_mixing_data/t2i/formalgeo_train.json']
+        t2i_json_paths: ['data/geouni_mixing_data/t2i/formalgeo_train.json', 'data/geouni_mixing_data/t2i/dataset1202_train_sampled.json']
         reasoning_image_folder: data
         reasoning_json_paths: ['data/geouni_mixing_data/reasoning/formalgeo_train.json']
         mixing_image_folder: data
@@ -83,7 +83,7 @@ training:
     mixed_precision: "bf16"
     enable_tf32: True
     seed: 10086
-    max_train_steps: 48000 # to be determined according to the scale of high-quality dataset
+    max_train_steps: 50000 # to be determined according to the scale of high-quality dataset
     max_grad_norm: null
     t2i_coeff: 1.0
     reasoning_coeff: 0.5

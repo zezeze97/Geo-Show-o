@@ -77,7 +77,7 @@ if __name__ == '__main__':
     config = get_config()
     save_path = config.output_dir
     if not os.path.exists(save_path):
-        os.makedirs(save_path)
+        os.makedirs(save_path, exist_ok=True)
     save_file_name = config.save_file_name
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

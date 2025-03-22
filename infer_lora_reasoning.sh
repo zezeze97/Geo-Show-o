@@ -15,90 +15,90 @@ module load openmpi
 export PYTHONPATH=$PYTHONPATH:/lustre/home/2001110054/Geo-Show-o
 source activate show-o
 
-CUDA_VISIBLE_DEVICES=0 python3 inference_reasoning.py config=configs/geouni_test_512x512_32Down_old.yaml \
-pretrained_geouni_model_path='outputs/geouni-512x512-0313-32down' \
-lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0318-lora' \
+CUDA_VISIBLE_DEVICES=0 python3 inference_reasoning.py config=configs/geouni_test_512x512_32Down.yaml \
+pretrained_geouni_model_path='outputs/geouni-512x512-0320-32down' \
+lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0321-lora' \
 max_new_tokens=3000 \
 mmu_image_root='./data' \
 validation_prompts_file=data/geouni_mixing_data/reasoning/test_reasoning_cn.jsonl \
-output_dir='outputs/model_predict/geo-grpo-0318-lora' \
+output_dir='outputs/model_predict/geo-grpo-0321-lora' \
 save_file_name='test_reasoning_cn' \
 language='cn' \
 formalization=False > logs/test_reasoning_cn.log 2>&1 &
 
-CUDA_VISIBLE_DEVICES=1 python3 inference_reasoning.py config=configs/geouni_test_512x512_32Down_old.yaml \
-pretrained_geouni_model_path='outputs/geouni-512x512-0313-32down' \
-lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0318-lora' \
+CUDA_VISIBLE_DEVICES=1 python3 inference_reasoning.py config=configs/geouni_test_512x512_32Down.yaml \
+pretrained_geouni_model_path='outputs/geouni-512x512-0320-32down' \
+lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0321-lora' \
 max_new_tokens=3000 \
 mmu_image_root='./data' \
 validation_prompts_file=data/geouni_mixing_data/reasoning/test_reasoning_en.jsonl \
-output_dir='outputs/model_predict/geo-grpo-0318-lora' \
+output_dir='outputs/model_predict/geo-grpo-0321-lora' \
 save_file_name='test_reasoning_en' \
 language='en' \
 formalization=False > logs/test_reasoning_en.log 2>&1 &
 
-CUDA_VISIBLE_DEVICES=2 python3 inference_reasoning.py config=configs/geouni_test_512x512_32Down_old.yaml \
-pretrained_geouni_model_path='outputs/geouni-512x512-0313-32down' \
-lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0318-lora' \
+CUDA_VISIBLE_DEVICES=2 python3 inference_reasoning.py config=configs/geouni_test_512x512_32Down.yaml \
+pretrained_geouni_model_path='outputs/geouni-512x512-0320-32down' \
+lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0321-lora' \
 max_new_tokens=3000 \
 mmu_image_root='./data' \
 validation_prompts_file=data/geouni_mixing_data/reasoning/test_reasoning_choice_cn.jsonl \
-output_dir='outputs/model_predict/geo-grpo-0318-lora' \
+output_dir='outputs/model_predict/geo-grpo-0321-lora' \
 save_file_name='test_reasoning_choice_cn' \
 language='cn' \
 formalization=False > logs/test_reasoning_choice_cn.log 2>&1 &
 
-CUDA_VISIBLE_DEVICES=3 python3 inference_reasoning.py config=configs/geouni_test_512x512_32Down_old.yaml \
-pretrained_geouni_model_path='outputs/geouni-512x512-0313-32down' \
-lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0318-lora' \
+CUDA_VISIBLE_DEVICES=3 python3 inference_reasoning.py config=configs/geouni_test_512x512_32Down.yaml \
+pretrained_geouni_model_path='outputs/geouni-512x512-0320-32down' \
+lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0321-lora' \
 max_new_tokens=3000 \
 mmu_image_root='./data' \
 validation_prompts_file=data/geouni_mixing_data/reasoning/test_reasoning_choice_en.jsonl \
-output_dir='outputs/model_predict/geo-grpo-0318-lora' \
+output_dir='outputs/model_predict/geo-grpo-0321-lora' \
 save_file_name='test_reasoning_choice_en' \
 language='en' \
 formalization=False > logs/test_reasoning_choice_en.log 2>&1 &
 
-CUDA_VISIBLE_DEVICES=0 python3 inference_reasoning.py config=configs/geouni_test_512x512_32Down_old.yaml \
-pretrained_geouni_model_path='outputs/geouni-512x512-0313-32down' \
-lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0318-lora' \
+CUDA_VISIBLE_DEVICES=0 python3 inference_reasoning.py config=configs/geouni_test_512x512_32Down.yaml \
+pretrained_geouni_model_path='outputs/geouni-512x512-0320-32down' \
+lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0321-lora' \
 max_new_tokens=3000 \
 mmu_image_root='./data' \
 validation_prompts_file=data/geouni_mixing_data/reasoning/test_reasoning_cn.jsonl \
-output_dir='outputs/model_predict/geo-grpo-0318-lora' \
+output_dir='outputs/model_predict/geo-grpo-0321-lora' \
 save_file_name='test_reasoning_cn_pre_formalization' \
 language='cn' \
 formalization=True > logs/test_reasoning_cn_pre_formalization.log 2>&1 &
 
-CUDA_VISIBLE_DEVICES=1 python3 inference_reasoning.py config=configs/geouni_test_512x512_32Down_old.yaml \
-pretrained_geouni_model_path='outputs/geouni-512x512-0313-32down' \
-lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0318-lora' \
+CUDA_VISIBLE_DEVICES=1 python3 inference_reasoning.py config=configs/geouni_test_512x512_32Down.yaml \
+pretrained_geouni_model_path='outputs/geouni-512x512-0320-32down' \
+lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0321-lora' \
 max_new_tokens=3000 \
 mmu_image_root='./data' \
 validation_prompts_file=data/geouni_mixing_data/reasoning/test_reasoning_en.jsonl \
-output_dir='outputs/model_predict/geo-grpo-0318-lora' \
+output_dir='outputs/model_predict/geo-grpo-0321-lora' \
 save_file_name='test_reasoning_en_pre_formalization' \
 language='en' \
 formalization=True > logs/test_reasoning_en_pre_formalization.log 2>&1 &
 
-CUDA_VISIBLE_DEVICES=2 python3 inference_reasoning.py config=configs/geouni_test_512x512_32Down_old.yaml \
-pretrained_geouni_model_path='outputs/geouni-512x512-0313-32down' \
-lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0318-lora' \
+CUDA_VISIBLE_DEVICES=2 python3 inference_reasoning.py config=configs/geouni_test_512x512_32Down.yaml \
+pretrained_geouni_model_path='outputs/geouni-512x512-0320-32down' \
+lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0321-lora' \
 max_new_tokens=3000 \
 mmu_image_root='./data' \
 validation_prompts_file=data/geouni_mixing_data/reasoning/test_reasoning_choice_cn.jsonl \
-output_dir='outputs/model_predict/geo-grpo-0318-lora' \
+output_dir='outputs/model_predict/geo-grpo-0321-lora' \
 save_file_name='test_reasoning_choice_cn_pre_formalization' \
 language='cn' \
 formalization=True > logs/test_reasoning_choice_cn_pre_formalization.log 2>&1 &
 
-CUDA_VISIBLE_DEVICES=3 python3 inference_reasoning.py config=configs/geouni_test_512x512_32Down_old.yaml \
-pretrained_geouni_model_path='outputs/geouni-512x512-0313-32down' \
-lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0318-lora' \
+CUDA_VISIBLE_DEVICES=3 python3 inference_reasoning.py config=configs/geouni_test_512x512_32Down.yaml \
+pretrained_geouni_model_path='outputs/geouni-512x512-0320-32down' \
+lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0321-lora' \
 max_new_tokens=3000 \
 mmu_image_root='./data' \
 validation_prompts_file=data/geouni_mixing_data/reasoning/test_reasoning_choice_en.jsonl \
-output_dir='outputs/model_predict/geo-grpo-0318-lora' \
+output_dir='outputs/model_predict/geo-grpo-0321-lora' \
 save_file_name='test_reasoning_choice_en_pre_formalization' \
 language='en' \
 formalization=True > logs/test_reasoning_choice_en_pre_formalization.log 2>&1 &
