@@ -137,6 +137,11 @@ class GeoUniForCausalLM(Qwen2ForCausalLM):
         assert batch_size == 1
         image_tokens = output_ids[:, 1:1+self.num_vq_tokens]
         image_tokens = image_tokens - (self.llm_vocab_size + self.num_new_special_tokens)
+        pad_length = self.num_vq_tokens - image_tokens.shape[1]
+        # 如果不足，后面用0补齐
+        if pad_length > 0:
+            padding = torch.zeros((image_tokens.shape[0], pad_length), dtype=image_tokens.dtype, device=image_tokens.device)
+            image_tokens = torch.cat([image_tokens, padding], dim=1)
         image_tokens = torch.clamp(image_tokens, max=self.codebook_size - 1, min=0)
         text_tokens = output_ids[:, 2+self.num_vq_tokens:]
         return image_tokens, text_tokens

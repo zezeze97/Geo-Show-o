@@ -20,7 +20,7 @@ torchrun --nproc_per_node=2 \
     --dataset_name data/smalltest \
     --image_root_path data/ \
     --deepspeed scripts/zero2.json \
-    --output_dir checkpoints/geo-grpo-0317-lora-debug \
+    --output_dir checkpoints/geo-grpo-0318-lora-debug \
     --model_name_or_path GeoUni \
     --max_prompt_length 1024 \
     --max_completion_length 1024 \
@@ -34,7 +34,7 @@ torchrun --nproc_per_node=2 \
     --save_total_limit 1 \
     --num_train_epochs 200 \
     --num_generations 8 \
-    --run_name GeoUni_GRPO_0317-lora-debug \
+    --run_name GeoUni_GRPO_0318-lora-debug \
     --save_steps 10 \
     --learning_rate 5e-5 \
     --use_peft \

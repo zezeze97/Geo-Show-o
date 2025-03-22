@@ -6,9 +6,9 @@ def formalization_reward(completions, consCDLs, imgCDLs, **kwargs):
     rewards = []
     
     for completion, gt_consCDL, gt_imgCDL in zip(completions, consCDLs, imgCDLs):
-        # 如果 ground truth 为空，直接 0 分
+        # 如果 ground truth 为空，直接 1 分
         if gt_consCDL is None and gt_imgCDL is None:
-            rewards.append(0.0)
+            rewards.append(1.0)
             continue
         
         # 使用正则表达式提取模型生成的 consCDL 和 imgCDL
