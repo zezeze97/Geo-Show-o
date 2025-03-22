@@ -10,13 +10,13 @@ def extract_ans(q, answer, i):
     if match:
         answer_content = match.group(1)  # 提取出 <answer> 中的内容
         # 第二步: 提取 \boxed{...} 中的内容
-        boxed_match = re.search(r'The final answer is:\\boxed\{(.*?)\}', answer_content, re.DOTALL)
+        boxed_match = re.search(r'\\boxed\{(.*?)\}', answer_content, re.DOTALL)
         if boxed_match:
             raw_answer = boxed_match.group(1)  # 返回 \boxed{...} 中的内容
             # print(f"extract answer: {raw_answer}")
             return raw_answer
         
-        boxed_match = re.search(r'最终这个题的答案是：\\boxed\{(.*?)\}', answer_content, re.DOTALL)
+        boxed_match = re.search(r'\\boxed\{(.*?)\}', answer_content, re.DOTALL)
         if boxed_match:
             raw_answer = boxed_match.group(1)  # 返回 \boxed{...} 中的内容
             # print(f"extract answer: {raw_answer}")
@@ -74,18 +74,29 @@ def calculate_accuracy(args):
 
         # Calculate accuracy
         total = len(ground_truth)
+        total_geoqa = len([source for source in sources if 'GeoQA' in source])
+        total_geo3k = len([source for source in sources if 'Geometry3k' in source])
+        assert total == total_geo3k + total_geoqa
         correct = 0
+        correct_geoqa = 0
+        correct_geo3k = 0
         correct_list, wrong_list = [], []
         for prob_id, source, q, gt, pred_a, pred in zip(predictions_ids, sources, questions, ground_truth, predicted_ans, predictions):
             # print(f'pred_a: {pred_a} gt: {gt}')
             if pred_a == gt:
                 correct+=1
                 correct_list.append({"probID": prob_id, "source": source, "question": q, "pred": pred, "gt": gt})
+                if 'GeoQA' in source:
+                    correct_geoqa += 1
+                if 'Geometry3k' in source:
+                    correct_geo3k += 1
             else:
                 wrong_list.append({"probID": prob_id, "source": source, "question": q, "pred": pred, "gt": gt})
         accuracy = correct / total * 100
+        accuracy_geoqa = correct_geoqa / total_geoqa * 100
+        accuracy_geo3k = correct_geo3k / total_geo3k * 100
 
-        return accuracy
+        return accuracy, accuracy_geoqa, accuracy_geo3k
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -93,5 +104,7 @@ if __name__ == "__main__":
     parser.add_argument("--prediction", type=str, default=None)
     parser.add_argument("--choice_mode", action='store_true')
     args = parser.parse_args()
-    accuracy = calculate_accuracy(args)
+    accuracy, accuracy_geoqa, accuracy_geo3k = calculate_accuracy(args)
     print(f"Accuracy: {accuracy:.2f}%")
+    print(f"Accuracy GeoQA: {accuracy_geoqa:.2f}%")
+    print(f"Accuracy Geo3K: {accuracy_geo3k:.2f}%")

@@ -9,6 +9,6 @@ vq_model:
         ch: 128
         ch_mult: [1,2,2,2,4,4]   # num_down = len(ch_mult)-1
         num_res_blocks: 4
-    pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_0312_mask_down32_z13/ckpt/epoch=220-step=147344.ckpt"
+    pretrained_model_path: "/lustre/home/2001110054/GEO-Open-MAGVIT2/outputs/expr_0317_mask_down32_z13/ckpt/epoch=284-step=231376.ckpt"
     
 lora_weights_path: null

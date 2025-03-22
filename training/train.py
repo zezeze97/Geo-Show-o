@@ -483,7 +483,7 @@ def main():
                     accelerator.clip_grad_norm_(model.parameters(), config.training.max_grad_norm)
 
                 optimizer.step()
-                lr_scheduler.step()
+                lr_scheduler.step(global_step)
 
                 # log gradient norm before zeroing it
                 if (
