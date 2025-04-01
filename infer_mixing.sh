@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -o job.%j.out
 #SBATCH --partition=GPU80G
-#SBATCH --qos=low
+#SBATCH --qos=normal
 #SBATCH -J Infer-Mixing
 #SBATCH --nodes=1    
 #SBATCH --ntasks-per-node=1          # crucial - only 1 task per dist per node!
@@ -20,60 +20,68 @@ source activate show-o
 
 # Mixing
 CUDA_VISIBLE_DEVICES=0 python3 inference_mix.py config=configs/geouni_test_512x512_32Down.yaml \
-pretrained_geouni_model_path='outputs/geouni-512x512-0320-32down' \
+pretrained_geouni_model_path='outputs/geouni-512x512-0322-32down' \
+lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0323-lora' \
 max_new_tokens=3000 \
 validation_prompts_file=data/geouni_mixing_data/mixing/test_mixing_en_problem.jsonl \
-output_dir=outputs/model_predict/geouni-512x512-0320-32down/ \
+output_dir=outputs/model_predict/geo-grpo-0323-lora/ \
 save_file_name='test_mixing_en_problem' > logs/test_mixing_en_problem.log 2>&1 &
 
 CUDA_VISIBLE_DEVICES=1 python3 inference_mix.py config=configs/geouni_test_512x512_32Down.yaml \
 max_new_tokens=3000 \
 validation_prompts_file=data/geouni_mixing_data/mixing/test_mixing_cn_problem.jsonl \
-pretrained_geouni_model_path='outputs/geouni-512x512-0320-32down' \
-output_dir=outputs/model_predict/geouni-512x512-0320-32down/ \
+pretrained_geouni_model_path='outputs/geouni-512x512-0322-32down' \
+lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0323-lora' \
+output_dir=outputs/model_predict/geo-grpo-0323-lora/ \
 save_file_name='test_mixing_cn_problem' > logs/test_mixing_cn_problem.log 2>&1 &
 
 CUDA_VISIBLE_DEVICES=2 python3 inference_mix.py config=configs/geouni_test_512x512_32Down.yaml \
-pretrained_geouni_model_path='outputs/geouni-512x512-0320-32down' \
+pretrained_geouni_model_path='outputs/geouni-512x512-0322-32down' \
+lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0323-lora' \
 max_new_tokens=3000 \
 validation_prompts_file=data/geouni_mixing_data/mixing/test_mixing_en_problem_ans.jsonl \
-output_dir=outputs/model_predict/geouni-512x512-0320-32down/ \
+output_dir=outputs/model_predict/geo-grpo-0323-lora/ \
 save_file_name='test_mixing_en_problem_ans' > logs/test_mixing_en_problem_ans.log 2>&1 &
 
 CUDA_VISIBLE_DEVICES=3 python3 inference_mix.py config=configs/geouni_test_512x512_32Down.yaml \
-pretrained_geouni_model_path='outputs/geouni-512x512-0320-32down' \
+pretrained_geouni_model_path='outputs/geouni-512x512-0322-32down' \
+lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0323-lora' \
 max_new_tokens=3000 \
 validation_prompts_file=data/geouni_mixing_data/mixing/test_mixing_cn_problem_ans.jsonl \
-output_dir=outputs/model_predict/geouni-512x512-0320-32down/ \
+output_dir=outputs/model_predict/geo-grpo-0323-lora/ \
 save_file_name='test_mixing_cn_problem_ans' > logs/test_mixing_cn_problem_ans.log 2>&1 &
 
 
 CUDA_VISIBLE_DEVICES=0 python3 inference_mix.py config=configs/geouni_test_512x512_32Down.yaml \
-pretrained_geouni_model_path='outputs/geouni-512x512-0320-32down' \
+pretrained_geouni_model_path='outputs/geouni-512x512-0322-32down' \
+lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0323-lora' \
 max_new_tokens=3000 \
 validation_prompts_file=data/geouni_mixing_data/mixing/test_mixing_en_problem_choice.jsonl \
-output_dir=outputs/model_predict/geouni-512x512-0320-32down/ \
+output_dir=outputs/model_predict/geo-grpo-0323-lora/ \
 save_file_name='test_mixing_en_problem_choice' > logs/test_mixing_en_problem_choice.log 2>&1 &
 
 CUDA_VISIBLE_DEVICES=1 python3 inference_mix.py config=configs/geouni_test_512x512_32Down.yaml \
-pretrained_geouni_model_path='outputs/geouni-512x512-0320-32down' \
+pretrained_geouni_model_path='outputs/geouni-512x512-0322-32down' \
+lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0323-lora' \
 max_new_tokens=3000 \
 validation_prompts_file=data/geouni_mixing_data/mixing/test_mixing_cn_problem_choice.jsonl \
-output_dir=outputs/model_predict/geouni-512x512-0320-32down/ \
+output_dir=outputs/model_predict/geo-grpo-0323-lora/ \
 save_file_name='test_mixing_cn_problem_choice' > logs/test_mixing_cn_problem_choice.log 2>&1 &
 
 CUDA_VISIBLE_DEVICES=2 python3 inference_mix.py config=configs/geouni_test_512x512_32Down.yaml \
-pretrained_geouni_model_path='outputs/geouni-512x512-0320-32down' \
+pretrained_geouni_model_path='outputs/geouni-512x512-0322-32down' \
+lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0323-lora' \
 max_new_tokens=3000 \
 validation_prompts_file=data/geouni_mixing_data/mixing/test_mixing_en_problem_ans_choice.jsonl \
-output_dir=outputs/model_predict/geouni-512x512-0320-32down/ \
+output_dir=outputs/model_predict/geo-grpo-0323-lora/ \
 save_file_name='test_mixing_en_problem_ans_choice' > logs/test_mixing_en_problem_ans_choice.log 2>&1 &
 
 CUDA_VISIBLE_DEVICES=3 python3 inference_mix.py config=configs/geouni_test_512x512_32Down.yaml \
-pretrained_geouni_model_path='outputs/geouni-512x512-0320-32down' \
+pretrained_geouni_model_path='outputs/geouni-512x512-0322-32down' \
+lora_weights_path='/lustre/home/2001110054/GeoUni-GRPO/checkpoints/geo-grpo-0323-lora' \
 max_new_tokens=3000 \
 validation_prompts_file=data/geouni_mixing_data/mixing/test_mixing_cn_problem_ans_choice.jsonl \
-output_dir=outputs/model_predict/geouni-512x512-0320-32down/ \
+output_dir=outputs/model_predict/geo-grpo-0323-lora/ \
 save_file_name='test_mixing_cn_problem_ans_choice' > logs/test_mixing_cn_problem_ans_choice.log 2>&1 &
 
 wait  # 等待所有任务完成
