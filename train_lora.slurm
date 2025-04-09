@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -o job.%j.out
 #SBATCH --partition=GPU80G
-#SBATCH --qos=high
+#SBATCH --qos=normal
 #SBATCH -J GeoUni-GRPO-Lora
 #SBATCH --nodes=1    
 #SBATCH --ntasks-per-node=1          # crucial - only 1 task per dist per node!
@@ -32,7 +32,7 @@ torchrun --nproc_per_node=4 \
     --dataset_name data/grpo_formalization \
     --image_root_path data/ \
     --deepspeed scripts/zero2.json \
-    --output_dir checkpoints/geo-grpo-0321-lora \
+    --output_dir checkpoints/geo-grpo-0324-lora \
     --model_name_or_path GeoUni \
     --max_prompt_length 1024 \
     --max_completion_length 1024 \
@@ -44,9 +44,9 @@ torchrun --nproc_per_node=4 \
     --gradient_checkpointing false \
     --attn_implementation sdpa \
     --save_total_limit 1 \
-    --num_train_epochs 4 \
+    --num_train_epochs 10 \
     --num_generations 8 \
-    --run_name GeoUni_GRPO_0321-lora \
+    --run_name GeoUni_GRPO_0324-lora \
     --save_steps 10 \
     --learning_rate 5e-5 \
     --use_peft \
